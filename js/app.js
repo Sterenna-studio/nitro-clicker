@@ -20,6 +20,7 @@ let state;
 let userId;
 let saveTimer;
 let lastTick = performance.now();
+let lastUpgradeSignature = '';
 
 function fmt(value) {
   return Math.floor(Number(value ?? 0)).toLocaleString('fr-FR');
@@ -86,6 +87,7 @@ function renderShell() {
     const gain = clickCore(state);
     spawnPop(event.clientX, event.clientY, `+${fmt(gain)}`);
     renderStats();
+    refreshUpgradesIfNeeded();
     scheduleSave();
   });
 
@@ -138,14 +140,29 @@ function renderStats() {
   btn.disabled = state.totalEnergy < req;
 }
 
+function getUpgradeSignature() {
+  return UPGRADES.map(upgrade => {
+    const level = state.upgrades[upgrade.id] ?? 0;
+    const cost = upgradeCost(upgrade, level);
+    return `${upgrade.id}:${level}:${state.energy >= cost ? 1 : 0}`;
+  }).join('|');
+}
+
+function refreshUpgradesIfNeeded() {
+  const signature = getUpgradeSignature();
+  if (signature === lastUpgradeSignature) return;
+  renderUpgrades();
+}
+
 function renderUpgrades() {
   const root = document.getElementById('upgrade-list');
+  lastUpgradeSignature = getUpgradeSignature();
   root.innerHTML = UPGRADES.map(upgrade => {
     const level = state.upgrades[upgrade.id] ?? 0;
     const cost = upgradeCost(upgrade, level);
     const canBuy = state.energy >= cost;
     return `
-      <button class="upgrade-btn" data-upgrade="${upgrade.id}" ${canBuy ? '' : 'disabled'}>
+      <button class="upgrade-btn ${canBuy ? 'can-buy' : ''}" data-upgrade="${upgrade.id}" ${canBuy ? '' : 'disabled'}>
         <div class="upgrade-head">
           <span class="upgrade-name">${upgrade.icon} ${upgrade.name} <small>Lv.${level}</small></span>
           <span class="upgrade-cost">${fmt(cost)} E</span>
@@ -179,6 +196,7 @@ function startLoop() {
     if (state.passiveRate > 0) {
       tickPassive(state, delta);
       renderStats();
+      refreshUpgradesIfNeeded();
     }
   }, 1000);
 
