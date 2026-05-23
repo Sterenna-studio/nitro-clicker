@@ -51,6 +51,7 @@ const FX = {
     osc.stop(ctx.currentTime + dur + 0.02);
   },
   click() { this.tone(660 + Math.random() * 120, 'triangle', 0.035, 0.055); },
+  zap() { [880, 1240, 660].forEach((f, i) => setTimeout(() => this.tone(f + Math.random() * 80, 'sawtooth', 0.035, 0.045), i * 28)); },
   ready() { [523, 659, 784].forEach((f, i) => setTimeout(() => this.tone(f, 'sine', 0.055, 0.09), i * 55)); },
   buy() { [392, 523, 659, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 'triangle', 0.065, 0.11), i * 58)); },
   prestige() { [262, 392, 523, 784, 1047, 1568].forEach((f, i) => setTimeout(() => this.tone(f, i % 2 ? 'triangle' : 'square', 0.055, 0.13), i * 70)); },
@@ -74,6 +75,7 @@ function renderShell() {
   const name = getDisplayNameFromUser(auth.user, profile);
   app.classList.toggle('fx-disabled', !fxEnabled);
   app.innerHTML = `
+    <svg class="lightning-layer" id="lightning-layer" aria-hidden="true"></svg>
     <header class="topbar">
       <div>
         <h1 class="brand-title">NITRO <span>CLICKER</span></h1>
@@ -95,6 +97,7 @@ function renderShell() {
 
     <section class="game-grid">
       <article class="panel core-panel" id="core-panel">
+        <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
         <div class="energy-field" id="energy-field" aria-hidden="true"></div>
         <div class="module-orbit" id="module-orbit" aria-hidden="true"></div>
         <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro">
@@ -141,6 +144,8 @@ function renderShell() {
     spawnPop(event.clientX, event.clientY, `+${fmt(gain)}`);
     spawnEnergyBurst(event.clientX, event.clientY, Math.min(9, 3 + Math.floor(gain / 3)));
     pulseReactor();
+    sparkTendrils();
+    if (Math.random() > 0.45) zapToRandomModule();
     renderStats();
     refreshUpgradesIfNeeded(true);
     scheduleSave();
@@ -165,6 +170,7 @@ function renderShell() {
     saveAll(userId, state);
     renderAll();
     spawnSystemWave('PRESTIGE +1');
+    lightningStorm(7);
     toast('Prestige activé. Noyau réinitialisé.');
   });
 
@@ -207,6 +213,13 @@ function pulseReactor() {
   requestAnimationFrame(() => core?.classList.add('pulse-hit'));
 }
 
+function sparkTendrils() {
+  if (!fxEnabled) return;
+  const panel = document.getElementById('core-panel');
+  panel?.classList.remove('tendril-hit');
+  requestAnimationFrame(() => panel?.classList.add('tendril-hit'));
+}
+
 function spawnModule(upgradeId, level) {
   if (!fxEnabled) return;
   const orbit = document.getElementById('module-orbit');
@@ -233,10 +246,70 @@ function spawnSystemWave(text) {
   setTimeout(() => node.remove(), 1600);
 }
 
+function getCoreCenter() {
+  const core = document.getElementById('click-core');
+  const rect = core?.getBoundingClientRect();
+  if (!rect) return null;
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function makeLightningPath(x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const steps = 7;
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const jitter = i === 0 || i === steps ? 0 : (Math.random() * 2 - 1) * 22;
+    const nx = -dy;
+    const ny = dx;
+    const len = Math.max(1, Math.hypot(nx, ny));
+    points.push({ x: x1 + dx * t + (nx / len) * jitter, y: y1 + dy * t + (ny / len) * jitter });
+  }
+  return points.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+}
+
+function spawnLightningToElement(element, label = '') {
+  if (!fxEnabled || !element) return;
+  const layer = document.getElementById('lightning-layer');
+  const core = getCoreCenter();
+  const rect = element.getBoundingClientRect();
+  if (!layer || !core || !rect) return;
+  const target = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('class', 'lightning-bolt');
+  path.setAttribute('d', makeLightningPath(core.x, core.y, target.x, target.y));
+  layer.appendChild(path);
+  setTimeout(() => path.remove(), 520);
+  FX.zap();
+
+  if (label) {
+    const tag = document.createElement('div');
+    tag.className = 'zap-label';
+    tag.textContent = label;
+    tag.style.left = `${target.x}px`;
+    tag.style.top = `${target.y}px`;
+    document.body.appendChild(tag);
+    setTimeout(() => tag.remove(), 850);
+  }
+}
+
+function zapToRandomModule() {
+  const modules = [...document.querySelectorAll('.spawned-module')];
+  if (!modules.length) return;
+  spawnLightningToElement(modules[Math.floor(Math.random() * modules.length)]);
+}
+
+function lightningStorm(count = 5) {
+  const targets = [...document.querySelectorAll('.upgrade-btn, .spawned-module')].sort(() => Math.random() - 0.5).slice(0, count);
+  targets.forEach((target, i) => setTimeout(() => spawnLightningToElement(target), i * 70));
+}
+
 function renderAll() {
   renderStats();
   renderUpgrades();
   renderModules();
+  renderTendrils();
 }
 
 function getNextAffordableCost() {
@@ -289,7 +362,11 @@ function refreshUpgradesIfNeeded(playReadySound = false) {
     return prev.endsWith(':0') && part.endsWith(':1');
   });
   renderUpgrades();
-  if (becameReady) FX.ready();
+  if (becameReady) {
+    FX.ready();
+    const ready = [...document.querySelectorAll('.upgrade-btn.can-buy')].at(-1);
+    if (ready) spawnLightningToElement(ready, 'READY');
+  }
 }
 
 function renderUpgrades() {
@@ -317,6 +394,7 @@ function renderUpgrades() {
       if (!result.ok) return toast('Énergie insuffisante.');
       FX.buy();
       spawnModule(btn.dataset.upgrade, result.level);
+      spawnLightningToElement(event.currentTarget, 'LINKED');
       spawnEnergyBurst(event.clientX, event.clientY, 12);
       renderAll();
       scheduleSave();
@@ -344,6 +422,20 @@ function renderModules() {
   }
 }
 
+function renderTendrils() {
+  const layer = document.getElementById('tendril-layer');
+  if (!layer) return;
+  const totalLevels = UPGRADES.reduce((sum, upgrade) => sum + (state.upgrades[upgrade.id] ?? 0), 0);
+  const count = Math.min(18, 8 + totalLevels);
+  layer.innerHTML = Array.from({ length: count }, (_, i) => {
+    const angle = (360 / count) * i + (i % 2 ? 8 : -8);
+    const length = 112 + (i % 5) * 20 + Math.min(70, totalLevels * 3);
+    const width = 8 + (i % 3) * 2;
+    const delay = -(i * 0.23).toFixed(2);
+    return `<span class="bio-tendril" style="--angle:${angle}deg;--len:${length}px;--w:${width}px;--delay:${delay}s"><i></i></span>`;
+  }).join('');
+}
+
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => saveAll(userId, state), 900);
@@ -363,6 +455,7 @@ function startLoop() {
         lastEnergyPulse = now;
         const panel = document.getElementById('core-panel')?.getBoundingClientRect();
         if (panel) spawnEnergyBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(5, Math.ceil(state.passiveRate)));
+        if (Math.random() > 0.35) zapToRandomModule();
       }
     }
   }, 1000);
