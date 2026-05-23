@@ -3,26 +3,32 @@ import { getProfile, getDisplayNameFromUser } from '/shared/profile.js';
 import {
   UPGRADES,
   applyOfflineProgress,
-  buyUpgrade,
+  buyUpgradeAmount,
   clickCore,
   doPrestige,
   prestigeRequirement,
   tickPassive,
+  upgradeBulkCost,
   upgradeCost,
 } from './clicker-state.js';
 import { deleteLocalSave, loadSave, saveAll } from './clicker-save.js';
 
 const app = document.getElementById('app');
 const FX_KEY = 'nitro-clicker.fx.enabled';
+const BUY_MULT_KEY = 'nitro-clicker.buy.multiplier';
+const BUY_MULTIPLIERS = [1, 5, 10];
 
 let auth;
 let profile;
 let state;
 let userId;
 let saveTimer;
+let uiLoop;
 let lastTick = performance.now();
 let lastUpgradeSignature = '';
 let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
+let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
+if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
 let audioCtx = null;
 let lastEnergyPulse = 0;
 
@@ -113,7 +119,13 @@ function renderShell() {
       </article>
 
       <aside class="panel">
-        <h2 class="panel-title">UPGRADES</h2>
+        <div class="upgrade-title-row">
+          <h2 class="panel-title">UPGRADES</h2>
+          <div class="buy-mult-row" role="group" aria-label="Multiplicateur d'achat">
+            ${BUY_MULTIPLIERS.map(mult => `<button class="buy-mult-btn ${buyMultiplier === mult ? 'active' : ''}" data-buy-mult="${mult}" type="button">×${mult}</button>`).join('')}
+          </div>
+        </div>
+        <div class="upgrade-sync-hint" id="upgrade-sync-hint">SYNC LIVE · ACHAT ×${buyMultiplier}</div>
         <div class="upgrade-list" id="upgrade-list"></div>
 
         <h2 class="panel-title" style="margin-top:22px">PRESTIGE</h2>
@@ -138,6 +150,17 @@ function renderShell() {
     if (fxEnabled) FX.ready();
   });
 
+  document.querySelectorAll('[data-buy-mult]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      buyMultiplier = Number(btn.dataset.buyMult);
+      localStorage.setItem(BUY_MULT_KEY, String(buyMultiplier));
+      document.querySelectorAll('[data-buy-mult]').forEach(node => node.classList.toggle('active', Number(node.dataset.buyMult) === buyMultiplier));
+      document.getElementById('upgrade-sync-hint').textContent = `SYNC LIVE · ACHAT ×${buyMultiplier}`;
+      renderUpgrades();
+      FX.ready();
+    });
+  });
+
   document.getElementById('click-core').addEventListener('click', event => {
     const gain = clickCore(state);
     FX.click();
@@ -146,8 +169,7 @@ function renderShell() {
     pulseReactor();
     sparkTendrils();
     if (Math.random() > 0.45) zapToRandomModule();
-    renderStats();
-    refreshUpgradesIfNeeded(true);
+    renderLive();
     scheduleSave();
   });
 
@@ -312,6 +334,11 @@ function renderAll() {
   renderTendrils();
 }
 
+function renderLive() {
+  renderStats();
+  renderUpgradesLive();
+}
+
 function getNextAffordableCost() {
   return Math.min(...UPGRADES.map(upgrade => upgradeCost(upgrade, state.upgrades[upgrade.id] ?? 0)));
 }
@@ -348,18 +375,22 @@ function setMeter(id, ratio) {
 function getUpgradeSignature() {
   return UPGRADES.map(upgrade => {
     const level = state.upgrades[upgrade.id] ?? 0;
-    const cost = upgradeCost(upgrade, level);
-    return `${upgrade.id}:${level}:${state.energy >= cost ? 1 : 0}`;
+    const single = upgradeCost(upgrade, level);
+    const bulk = upgradeBulkCost(upgrade, level, buyMultiplier);
+    return `${upgrade.id}:${level}:${state.energy >= single ? 1 : 0}:${state.energy >= bulk ? 1 : 0}:${buyMultiplier}`;
   }).join('|');
 }
 
 function refreshUpgradesIfNeeded(playReadySound = false) {
   const previous = lastUpgradeSignature;
   const signature = getUpgradeSignature();
-  if (signature === previous) return;
+  if (signature === previous) {
+    renderUpgradesLive();
+    return;
+  }
   const becameReady = playReadySound && previous && signature.split('|').some((part, idx) => {
     const prev = previous.split('|')[idx] ?? '';
-    return prev.endsWith(':0') && part.endsWith(':1');
+    return prev.split(':')[2] === '0' && part.split(':')[2] === '1';
   });
   renderUpgrades();
   if (becameReady) {
@@ -374,33 +405,80 @@ function renderUpgrades() {
   lastUpgradeSignature = getUpgradeSignature();
   root.innerHTML = UPGRADES.map(upgrade => {
     const level = state.upgrades[upgrade.id] ?? 0;
-    const cost = upgradeCost(upgrade, level);
-    const canBuy = state.energy >= cost;
-    const progress = Math.min(1, state.energy / Math.max(1, cost));
+    const singleCost = upgradeCost(upgrade, level);
+    const bulkCost = upgradeBulkCost(upgrade, level, buyMultiplier);
+    const canBuySingle = state.energy >= singleCost;
+    const canBuyBulk = state.energy >= bulkCost;
+    const progress = Math.min(1, state.energy / Math.max(1, bulkCost));
     return `
-      <button class="upgrade-btn ${canBuy ? 'can-buy' : ''}" data-upgrade="${upgrade.id}" ${canBuy ? '' : 'disabled'}>
-        <span class="upgrade-fill" style="transform:scaleX(${progress})"></span>
+      <button class="upgrade-btn ${canBuySingle ? 'can-buy' : ''} ${canBuyBulk ? 'can-buy-bulk' : ''}" data-upgrade="${upgrade.id}" ${canBuyBulk ? '' : 'disabled'}>
+        <span class="upgrade-fill" data-upgrade-fill="${upgrade.id}" style="transform:scaleX(${progress})"></span>
         <div class="upgrade-head">
-          <span class="upgrade-name">${upgrade.icon} ${upgrade.name} <small>Lv.${level}</small></span>
-          <span class="upgrade-cost">${fmt(cost)} E</span>
+          <span class="upgrade-name">${upgrade.icon} ${upgrade.name} <small data-upgrade-level="${upgrade.id}">Lv.${level}</small></span>
+          <span class="upgrade-cost" data-upgrade-cost="${upgrade.id}">${fmt(bulkCost)} E</span>
         </div>
         <div class="upgrade-desc">${upgrade.desc}</div>
+        <div class="upgrade-buy-meta" data-upgrade-meta="${upgrade.id}">Achat ×${buyMultiplier} · unité ${fmt(singleCost)} E</div>
       </button>`;
   }).join('');
 
   root.querySelectorAll('[data-upgrade]').forEach(btn => {
     btn.addEventListener('click', event => {
-      const result = buyUpgrade(state, btn.dataset.upgrade);
-      if (!result.ok) return toast('Énergie insuffisante.');
+      const result = buyUpgradeAmount(state, btn.dataset.upgrade, buyMultiplier);
+      if (!result.ok) return toast(`Énergie insuffisante pour ×${buyMultiplier}.`);
       FX.buy();
       spawnModule(btn.dataset.upgrade, result.level);
-      spawnLightningToElement(event.currentTarget, 'LINKED');
-      spawnEnergyBurst(event.clientX, event.clientY, 12);
+      spawnLightningToElement(event.currentTarget, `×${result.amount}`);
+      spawnEnergyBurst(event.clientX, event.clientY, Math.min(24, 8 + result.amount * 2));
       renderAll();
       scheduleSave();
-      toast(`Upgrade acheté · niveau ${result.level}`);
+      toast(`Upgrade ×${result.amount} acheté · niveau ${result.level}`);
     });
   });
+}
+
+function renderUpgradesLive() {
+  let signatureChanged = false;
+  for (const upgrade of UPGRADES) {
+    const level = state.upgrades[upgrade.id] ?? 0;
+    const singleCost = upgradeCost(upgrade, level);
+    const bulkCost = upgradeBulkCost(upgrade, level, buyMultiplier);
+    const canBuySingle = state.energy >= singleCost;
+    const canBuyBulk = state.energy >= bulkCost;
+    const progress = Math.min(1, state.energy / Math.max(1, bulkCost));
+    const btn = document.querySelector(`[data-upgrade="${upgrade.id}"]`);
+    if (!btn) { signatureChanged = true; continue; }
+    const wasSingle = btn.classList.contains('can-buy');
+    const wasBulk = btn.classList.contains('can-buy-bulk');
+    if (wasSingle !== canBuySingle || wasBulk !== canBuyBulk) signatureChanged = true;
+    btn.classList.toggle('can-buy', canBuySingle);
+    btn.classList.toggle('can-buy-bulk', canBuyBulk);
+    btn.disabled = !canBuyBulk;
+    const fill = btn.querySelector(`[data-upgrade-fill="${upgrade.id}"]`);
+    if (fill) fill.style.transform = `scaleX(${progress})`;
+    const cost = btn.querySelector(`[data-upgrade-cost="${upgrade.id}"]`);
+    if (cost) cost.textContent = `${fmt(bulkCost)} E`;
+    const levelNode = btn.querySelector(`[data-upgrade-level="${upgrade.id}"]`);
+    if (levelNode) levelNode.textContent = `Lv.${level}`;
+    const meta = btn.querySelector(`[data-upgrade-meta="${upgrade.id}"]`);
+    if (meta) meta.textContent = `Achat ×${buyMultiplier} · unité ${fmt(singleCost)} E`;
+  }
+  const nextSignature = getUpgradeSignature();
+  if (signatureChanged && lastUpgradeSignature && nextSignature !== lastUpgradeSignature) {
+    const previous = lastUpgradeSignature;
+    lastUpgradeSignature = nextSignature;
+    const becameReady = nextSignature.split('|').some((part, idx) => {
+      const prev = previous.split('|')[idx] ?? '';
+      return prev.split(':')[2] === '0' && part.split(':')[2] === '1';
+    });
+    if (becameReady) {
+      FX.ready();
+      const ready = [...document.querySelectorAll('.upgrade-btn.can-buy')].at(-1);
+      if (ready) spawnLightningToElement(ready, 'READY');
+    }
+  } else {
+    lastUpgradeSignature = nextSignature;
+  }
 }
 
 function renderModules() {
@@ -449,17 +527,19 @@ function startLoop() {
     lastTick = now;
     if (state.passiveRate > 0) {
       tickPassive(state, delta);
-      renderStats();
-      refreshUpgradesIfNeeded(true);
+      renderLive();
       if (fxEnabled && now - lastEnergyPulse > 1800) {
         lastEnergyPulse = now;
         const panel = document.getElementById('core-panel')?.getBoundingClientRect();
         if (panel) spawnEnergyBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(5, Math.ceil(state.passiveRate)));
         if (Math.random() > 0.35) zapToRandomModule();
       }
+    } else {
+      renderUpgradesLive();
     }
-  }, 1000);
+  }, 250);
 
+  uiLoop = setInterval(() => renderLive(), 500);
   setInterval(() => saveAll(userId, state), 15000);
 }
 
