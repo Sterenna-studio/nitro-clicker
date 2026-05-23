@@ -4,8 +4,13 @@ import {
   UPGRADES,
   applyOfflineProgress,
   buyUpgradeAmount,
+  checkAndClaimMilestones,
   clickCore,
   doPrestige,
+  getCurrency,
+  getScalingLayer,
+  getVisibleMilestones,
+  isUpgradeUnlocked,
   prestigeRequirement,
   tickPassive,
   upgradeBulkCost,
@@ -23,9 +28,9 @@ let profile;
 let state;
 let userId;
 let saveTimer;
-let uiLoop;
 let lastTick = performance.now();
 let lastUpgradeSignature = '';
+let lastLayerId = '';
 let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
@@ -60,11 +65,21 @@ const FX = {
   zap() { [880, 1240, 660].forEach((f, i) => setTimeout(() => this.tone(f + Math.random() * 80, 'sawtooth', 0.035, 0.045), i * 28)); },
   ready() { [523, 659, 784].forEach((f, i) => setTimeout(() => this.tone(f, 'sine', 0.055, 0.09), i * 55)); },
   buy() { [392, 523, 659, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 'triangle', 0.065, 0.11), i * 58)); },
+  milestone() { [784, 988, 1175].forEach((f, i) => setTimeout(() => this.tone(f, 'sine', 0.055, 0.12), i * 70)); },
+  overdrive() { [110, 220, 440, 880, 1760].forEach((f, i) => setTimeout(() => this.tone(f, i < 2 ? 'sawtooth' : 'square', 0.045, 0.09), i * 42)); },
   prestige() { [262, 392, 523, 784, 1047, 1568].forEach((f, i) => setTimeout(() => this.tone(f, i % 2 ? 'triangle' : 'square', 0.055, 0.13), i * 70)); },
 };
 
 function fmt(value) {
-  return Math.floor(Number(value ?? 0)).toLocaleString('fr-FR');
+  const n = Math.floor(Number(value ?? 0));
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 100_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString('fr-FR');
+}
+
+function currencyLabel(currency) {
+  return currency === 'fragments' ? 'F' : 'E';
 }
 
 function toast(message) {
@@ -74,7 +89,7 @@ function toast(message) {
   node.className = 'toast';
   node.textContent = message;
   document.body.appendChild(node);
-  setTimeout(() => node.remove(), 2600);
+  setTimeout(() => node.remove(), 2800);
 }
 
 function renderShell() {
@@ -85,7 +100,7 @@ function renderShell() {
     <header class="topbar">
       <div>
         <h1 class="brand-title">NITRO <span>CLICKER</span></h1>
-        <div class="brand-sub">// AGENT ${name.toUpperCase()} · LOCAL CORE ENERGY LOOP</div>
+        <div class="brand-sub">// AGENT ${name.toUpperCase()} · PROGRESSION PAR ÉCHELLES</div>
       </div>
       <nav class="top-actions">
         <button class="nav-btn" id="fx-toggle" type="button">${fxEnabled ? '✨ FX ON' : 'FX OFF'}</button>
@@ -94,23 +109,30 @@ function renderShell() {
       </nav>
     </header>
 
-    <section class="stats-grid">
+    <section class="stats-grid stats-grid-extended">
       <article class="stat-card energy-stat"><div class="stat-label">ÉNERGIE</div><div class="stat-value primary" id="stat-energy">0</div><div class="stat-meter"><span id="meter-energy"></span></div></article>
+      <article class="stat-card"><div class="stat-label">FRAGMENTS</div><div class="stat-value fragment" id="stat-fragments">0</div><div class="stat-meter fragment"><span id="meter-fragments"></span></div></article>
       <article class="stat-card"><div class="stat-label">PAR CLIC</div><div class="stat-value" id="stat-click">1</div><div class="stat-meter small"><span id="meter-click"></span></div></article>
       <article class="stat-card"><div class="stat-label">AUTO / SEC</div><div class="stat-value" id="stat-passive">0</div><div class="stat-meter small"><span id="meter-passive"></span></div></article>
+      <article class="stat-card"><div class="stat-label">SURCHARGE</div><div class="stat-value danger" id="stat-surcharge">0%</div><div class="stat-meter danger"><span id="meter-surcharge"></span></div></article>
+      <article class="stat-card"><div class="stat-label">ÉCHELLE</div><div class="stat-value layer" id="stat-layer">CORE</div><div class="stat-meter layer"><span id="meter-layer"></span></div></article>
       <article class="stat-card"><div class="stat-label">PRESTIGE</div><div class="stat-value accent" id="stat-prestige">0</div><div class="stat-meter accent"><span id="meter-prestige"></span></div></article>
+      <article class="stat-card"><div class="stat-label">USINES</div><div class="stat-value factory" id="stat-factory">0</div><div class="stat-meter factory"><span id="meter-factory"></span></div></article>
     </section>
 
-    <section class="game-grid">
+    <section class="game-grid game-grid-wide">
       <article class="panel core-panel" id="core-panel">
+        <div class="scale-radar" id="scale-radar" aria-hidden="true"></div>
+        <div class="factory-field" id="factory-field" aria-hidden="true"></div>
         <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
         <div class="energy-field" id="energy-field" aria-hidden="true"></div>
         <div class="module-orbit" id="module-orbit" aria-hidden="true"></div>
         <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro">
           <span class="core-rings"></span>
           <span class="core-glyph">⬡</span>
-          <small>CLICK CORE</small>
+          <small id="core-label">CLICK CORE</small>
         </button>
+        <div class="layer-caption" id="layer-caption"></div>
         <div class="reactor-gauges" aria-hidden="true">
           <div class="reactor-gauge"><span id="reactor-a"></span></div>
           <div class="reactor-gauge"><span id="reactor-b"></span></div>
@@ -118,7 +140,7 @@ function renderShell() {
         </div>
       </article>
 
-      <aside class="panel">
+      <aside class="panel progression-panel">
         <div class="upgrade-title-row">
           <h2 class="panel-title">UPGRADES</h2>
           <div class="buy-mult-row" role="group" aria-label="Multiplicateur d'achat">
@@ -127,11 +149,18 @@ function renderShell() {
         </div>
         <div class="upgrade-sync-hint" id="upgrade-sync-hint">SYNC LIVE · ACHAT ×${buyMultiplier}</div>
         <div class="upgrade-list" id="upgrade-list"></div>
+      </aside>
+
+      <aside class="panel meta-panel">
+        <h2 class="panel-title">ÉCHELLE & MILESTONES</h2>
+        <div class="scale-card" id="scale-card"></div>
+        <div class="milestone-list" id="milestone-list"></div>
 
         <h2 class="panel-title" style="margin-top:22px">PRESTIGE</h2>
-        <button class="upgrade-btn" id="prestige-btn">
-          <div class="upgrade-head"><span class="upgrade-name">✦ Réinitialiser le noyau</span><span class="upgrade-cost" id="prestige-cost"></span></div>
-          <div class="upgrade-desc">Repart à zéro avec +1 puissance de base et un petit bonus passif permanent.</div>
+        <button class="upgrade-btn prestige-card" id="prestige-btn">
+          <span class="upgrade-fill" id="prestige-fill"></span>
+          <div class="upgrade-head"><span class="upgrade-name">✦ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
+          <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l’échelle et débloque des systèmes.</div>
         </button>
 
         <div class="save-row">
@@ -142,6 +171,11 @@ function renderShell() {
     </section>
   `;
 
+  bindStaticEvents();
+  renderAll();
+}
+
+function bindStaticEvents() {
   document.getElementById('fx-toggle').addEventListener('click', () => {
     fxEnabled = !fxEnabled;
     localStorage.setItem(FX_KEY, String(fxEnabled));
@@ -162,14 +196,23 @@ function renderShell() {
   });
 
   document.getElementById('click-core').addEventListener('click', event => {
-    const gain = clickCore(state);
+    const result = clickCore(state);
+    const gain = typeof result === 'number' ? result : result.gain;
     FX.click();
     spawnPop(event.clientX, event.clientY, `+${fmt(gain)}`);
-    spawnEnergyBurst(event.clientX, event.clientY, Math.min(9, 3 + Math.floor(gain / 3)));
+    spawnEnergyBurst(event.clientX, event.clientY, Math.min(14, 4 + Math.floor(gain / Math.max(1, state.clickPower / 3))));
     pulseReactor();
     sparkTendrils();
+
+    if (result?.overdrive) {
+      FX.overdrive();
+      spawnSystemWave(`OVERDRIVE +${fmt(result.overdriveGain)}`);
+      lightningStorm(5);
+    }
+    if (result?.fragments) toast(`Fragment Nitro obtenu +${result.fragments}`);
     if (Math.random() > 0.45) zapToRandomModule();
-    renderLive();
+
+    claimMilestonesAndRender();
     scheduleSave();
   });
 
@@ -185,6 +228,7 @@ function renderShell() {
   });
 
   document.getElementById('prestige-btn').addEventListener('click', () => {
+    const beforeLayer = getScalingLayer(state).id;
     const result = doPrestige(state);
     if (!result.ok) return toast('Prestige pas encore prêt. Continue à charger le noyau.');
     state = result.state;
@@ -192,10 +236,25 @@ function renderShell() {
     saveAll(userId, state);
     renderAll();
     spawnSystemWave('PRESTIGE +1');
-    lightningStorm(7);
-    toast('Prestige activé. Noyau réinitialisé.');
+    lightningStorm(9);
+    if (getScalingLayer(state).id !== beforeLayer) spawnScaleShift();
+    claimMilestonesAndRender();
+    toast('Prestige activé. Échelle du système recalculée.');
   });
+}
 
+function claimMilestonesAndRender() {
+  const claimed = checkAndClaimMilestones(state);
+  if (claimed.length) {
+    FX.milestone();
+    for (const m of claimed) {
+      const bits = [];
+      if (m.reward?.energy) bits.push(`+${fmt(m.reward.energy)} E`);
+      if (m.reward?.fragments) bits.push(`+${fmt(m.reward.fragments)} F`);
+      toast(`Milestone : ${m.label} · ${bits.join(' · ')}`);
+      spawnSystemWave(m.label.toUpperCase());
+    }
+  }
   renderAll();
 }
 
@@ -220,8 +279,8 @@ function spawnEnergyBurst(x, y, count = 5) {
     p.className = 'energy-particle';
     p.style.left = `${x - rect.left}px`;
     p.style.top = `${y - rect.top}px`;
-    p.style.setProperty('--dx', `${(Math.random() * 2 - 1) * 160}px`);
-    p.style.setProperty('--dy', `${-80 - Math.random() * 150}px`);
+    p.style.setProperty('--dx', `${(Math.random() * 2 - 1) * 190}px`);
+    p.style.setProperty('--dy', `${-80 - Math.random() * 170}px`);
     p.style.setProperty('--delay', `${Math.random() * 90}ms`);
     field.appendChild(p);
     setTimeout(() => p.remove(), 950);
@@ -252,9 +311,9 @@ function spawnModule(upgradeId, level) {
   node.textContent = upgrade?.icon ?? '◆';
   node.title = `${upgrade?.name ?? upgradeId} Lv.${level}`;
   node.style.setProperty('--angle', `${Math.random() * 360}deg`);
-  node.style.setProperty('--radius', `${118 + Math.random() * 82}px`);
+  node.style.setProperty('--radius', `${118 + Math.random() * 90}px`);
   orbit.appendChild(node);
-  while (orbit.children.length > 18) orbit.firstElementChild.remove();
+  while (orbit.children.length > 26) orbit.firstElementChild.remove();
 }
 
 function spawnSystemWave(text) {
@@ -265,7 +324,14 @@ function spawnSystemWave(text) {
   node.className = 'system-wave';
   node.textContent = text;
   panel.appendChild(node);
-  setTimeout(() => node.remove(), 1600);
+  setTimeout(() => node.remove(), 1700);
+}
+
+function spawnScaleShift() {
+  if (!fxEnabled) return;
+  app.classList.remove('scale-shift');
+  requestAnimationFrame(() => app.classList.add('scale-shift'));
+  setTimeout(() => app.classList.remove('scale-shift'), 1800);
 }
 
 function getCoreCenter() {
@@ -323,15 +389,18 @@ function zapToRandomModule() {
 }
 
 function lightningStorm(count = 5) {
-  const targets = [...document.querySelectorAll('.upgrade-btn, .spawned-module')].sort(() => Math.random() - 0.5).slice(0, count);
+  const targets = [...document.querySelectorAll('.upgrade-btn:not(.locked), .spawned-module, .factory-node')].sort(() => Math.random() - 0.5).slice(0, count);
   targets.forEach((target, i) => setTimeout(() => spawnLightningToElement(target), i * 70));
 }
 
 function renderAll() {
   renderStats();
+  renderScaleCard();
   renderUpgrades();
+  renderMilestones();
   renderModules();
   renderTendrils();
+  renderFactories();
 }
 
 function renderLive() {
@@ -340,31 +409,56 @@ function renderLive() {
 }
 
 function getNextAffordableCost() {
-  return Math.min(...UPGRADES.map(upgrade => upgradeCost(upgrade, state.upgrades[upgrade.id] ?? 0)));
+  const costs = UPGRADES
+    .filter(upgrade => isUpgradeUnlocked(state, upgrade))
+    .map(upgrade => upgradeBulkCost(upgrade, state.upgrades[upgrade.id] ?? 0, buyMultiplier));
+  return Math.min(...costs, prestigeRequirement(state));
 }
 
 function renderStats() {
+  const layer = getScalingLayer(state);
+  app.dataset.layer = layer.id;
+  const corePanel = document.getElementById('core-panel');
+  if (corePanel) corePanel.dataset.layer = layer.id;
+
+  if (lastLayerId && lastLayerId !== layer.id) spawnScaleShift();
+  lastLayerId = layer.id;
+
   document.getElementById('stat-energy').textContent = fmt(state.energy);
+  document.getElementById('stat-fragments').textContent = fmt(state.fragments);
   document.getElementById('stat-click').textContent = fmt(state.clickPower);
   document.getElementById('stat-passive').textContent = `${Number(state.passiveRate ?? 0).toFixed(2)}`;
   document.getElementById('stat-prestige').textContent = fmt(state.prestige);
+  document.getElementById('stat-surcharge').textContent = `${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%`;
+  document.getElementById('stat-layer').textContent = layer.short;
+  document.getElementById('stat-factory').textContent = fmt(state.factoryRate);
 
   const nextCost = getNextAffordableCost();
-  const energyRatio = Math.min(1, state.energy / Math.max(1, nextCost));
-  setMeter('meter-energy', energyRatio);
-  setMeter('meter-click', Math.min(1, state.clickPower / 50));
-  setMeter('meter-passive', Math.min(1, state.passiveRate / 25));
+  setMeter('meter-energy', Math.min(1, state.energy / Math.max(1, nextCost)));
+  setMeter('meter-fragments', Math.min(1, state.fragments / 25));
+  setMeter('meter-click', Math.min(1, state.clickPower / 1000));
+  setMeter('meter-passive', Math.min(1, state.passiveRate / 2500));
+  setMeter('meter-surcharge', Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge)));
+  setMeter('meter-layer', Math.min(1, (state.prestige + 1) / 10));
+  setMeter('meter-factory', Math.min(1, state.factoryRate / 50));
 
   const req = prestigeRequirement(state);
   const prestigeRatio = Math.min(1, state.totalEnergy / Math.max(1, req));
   setMeter('meter-prestige', prestigeRatio);
-  setMeter('reactor-a', energyRatio);
-  setMeter('reactor-b', Math.min(1, (state.clickPower + state.passiveRate) / 75));
+  setMeter('prestige-fill', prestigeRatio);
+  setMeter('reactor-a', Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge)));
+  setMeter('reactor-b', Math.min(1, (state.clickPower + state.passiveRate) / 5000));
   setMeter('reactor-c', prestigeRatio);
 
   const btn = document.getElementById('prestige-btn');
   document.getElementById('prestige-cost').textContent = `${fmt(state.totalEnergy)} / ${fmt(req)}`;
   btn.disabled = state.totalEnergy < req;
+  btn.classList.toggle('can-buy', state.totalEnergy >= req);
+
+  const caption = document.getElementById('layer-caption');
+  if (caption) caption.innerHTML = `<strong>${layer.name}</strong><span>${layer.desc}</span>`;
+  const coreLabel = document.getElementById('core-label');
+  if (coreLabel) coreLabel.textContent = layer.id === 'factory' || layer.id === 'district' || layer.id === 'orbital' ? 'RUN FACTORIES' : 'CLICK CORE';
 }
 
 function setMeter(id, ratio) {
@@ -374,11 +468,74 @@ function setMeter(id, ratio) {
 
 function getUpgradeSignature() {
   return UPGRADES.map(upgrade => {
+    const unlocked = isUpgradeUnlocked(state, upgrade) ? 1 : 0;
     const level = state.upgrades[upgrade.id] ?? 0;
     const single = upgradeCost(upgrade, level);
     const bulk = upgradeBulkCost(upgrade, level, buyMultiplier);
-    return `${upgrade.id}:${level}:${state.energy >= single ? 1 : 0}:${state.energy >= bulk ? 1 : 0}:${buyMultiplier}`;
+    const currency = upgrade.currency ?? 'energy';
+    const held = getCurrency(state, currency);
+    return `${upgrade.id}:${unlocked}:${level}:${held >= single ? 1 : 0}:${held >= bulk ? 1 : 0}:${buyMultiplier}:${currency}`;
   }).join('|');
+}
+
+function renderUpgrades() {
+  const root = document.getElementById('upgrade-list');
+  lastUpgradeSignature = getUpgradeSignature();
+  root.innerHTML = UPGRADES.map(upgrade => renderUpgradeButton(upgrade)).join('');
+  bindUpgradeButtons();
+}
+
+function renderUpgradeButton(upgrade) {
+  const level = state.upgrades[upgrade.id] ?? 0;
+  const unlocked = isUpgradeUnlocked(state, upgrade);
+  const currency = upgrade.currency ?? 'energy';
+  const held = getCurrency(state, currency);
+  const singleCost = upgradeCost(upgrade, level);
+  const bulkCost = upgradeBulkCost(upgrade, level, buyMultiplier);
+  const canBuySingle = unlocked && held >= singleCost;
+  const canBuyBulk = unlocked && held >= bulkCost;
+  const progress = unlocked ? Math.min(1, held / Math.max(1, bulkCost)) : 0;
+  const lockText = upgrade.lockedText ?? 'Upgrade verrouillé.';
+
+  if (!unlocked) {
+    return `
+      <button class="upgrade-btn locked" data-upgrade="${upgrade.id}" disabled>
+        <span class="upgrade-fill" data-upgrade-fill="${upgrade.id}" style="transform:scaleX(0)"></span>
+        <div class="upgrade-head">
+          <span class="upgrade-name">??? <small data-upgrade-level="${upgrade.id}">Tier ${upgrade.tier}</small></span>
+          <span class="upgrade-cost" data-upgrade-cost="${upgrade.id}">LOCKED</span>
+        </div>
+        <div class="upgrade-desc">${lockText}</div>
+        <div class="upgrade-buy-meta" data-upgrade-meta="${upgrade.id}">Déblocage progressif</div>
+      </button>`;
+  }
+
+  return `
+    <button class="upgrade-btn ${canBuySingle ? 'can-buy' : ''} ${canBuyBulk ? 'can-buy-bulk' : ''}" data-upgrade="${upgrade.id}" ${canBuyBulk ? '' : 'disabled'}>
+      <span class="upgrade-fill" data-upgrade-fill="${upgrade.id}" style="transform:scaleX(${progress})"></span>
+      <div class="upgrade-head">
+        <span class="upgrade-name">${upgrade.icon} ${upgrade.name} <small data-upgrade-level="${upgrade.id}">Lv.${level}</small></span>
+        <span class="upgrade-cost" data-upgrade-cost="${upgrade.id}">${fmt(bulkCost)} ${currencyLabel(currency)}</span>
+      </div>
+      <div class="upgrade-desc">${upgrade.desc}</div>
+      <div class="upgrade-buy-meta" data-upgrade-meta="${upgrade.id}">Achat ×${buyMultiplier} · unité ${fmt(singleCost)} ${currencyLabel(currency)}</div>
+    </button>`;
+}
+
+function bindUpgradeButtons() {
+  document.querySelectorAll('[data-upgrade]:not(.locked)').forEach(btn => {
+    btn.addEventListener('click', event => {
+      const result = buyUpgradeAmount(state, btn.dataset.upgrade, buyMultiplier);
+      if (!result.ok) return toast(result.reason === 'locked' ? 'Upgrade verrouillé.' : `Ressource insuffisante pour ×${buyMultiplier}.`);
+      FX.buy();
+      spawnModule(btn.dataset.upgrade, result.level);
+      spawnLightningToElement(event.currentTarget, `×${result.amount}`);
+      spawnEnergyBurst(event.clientX, event.clientY, Math.min(26, 8 + result.amount * 2));
+      claimMilestonesAndRender();
+      scheduleSave();
+      toast(`Upgrade ×${result.amount} acheté · niveau ${result.level}`);
+    });
+  });
 }
 
 function refreshUpgradesIfNeeded(playReadySound = false) {
@@ -390,7 +547,9 @@ function refreshUpgradesIfNeeded(playReadySound = false) {
   }
   const becameReady = playReadySound && previous && signature.split('|').some((part, idx) => {
     const prev = previous.split('|')[idx] ?? '';
-    return prev.split(':')[2] === '0' && part.split(':')[2] === '1';
+    const p = prev.split(':');
+    const n = part.split(':');
+    return (p[1] === '0' && n[1] === '1') || (p[3] === '0' && n[3] === '1');
   });
   renderUpgrades();
   if (becameReady) {
@@ -400,85 +559,53 @@ function refreshUpgradesIfNeeded(playReadySound = false) {
   }
 }
 
-function renderUpgrades() {
-  const root = document.getElementById('upgrade-list');
-  lastUpgradeSignature = getUpgradeSignature();
-  root.innerHTML = UPGRADES.map(upgrade => {
+function renderUpgradesLive() {
+  const signature = getUpgradeSignature();
+  if (signature !== lastUpgradeSignature) {
+    refreshUpgradesIfNeeded(true);
+    return;
+  }
+  for (const upgrade of UPGRADES) {
+    if (!isUpgradeUnlocked(state, upgrade)) continue;
     const level = state.upgrades[upgrade.id] ?? 0;
+    const currency = upgrade.currency ?? 'energy';
+    const held = getCurrency(state, currency);
     const singleCost = upgradeCost(upgrade, level);
     const bulkCost = upgradeBulkCost(upgrade, level, buyMultiplier);
-    const canBuySingle = state.energy >= singleCost;
-    const canBuyBulk = state.energy >= bulkCost;
-    const progress = Math.min(1, state.energy / Math.max(1, bulkCost));
-    return `
-      <button class="upgrade-btn ${canBuySingle ? 'can-buy' : ''} ${canBuyBulk ? 'can-buy-bulk' : ''}" data-upgrade="${upgrade.id}" ${canBuyBulk ? '' : 'disabled'}>
-        <span class="upgrade-fill" data-upgrade-fill="${upgrade.id}" style="transform:scaleX(${progress})"></span>
-        <div class="upgrade-head">
-          <span class="upgrade-name">${upgrade.icon} ${upgrade.name} <small data-upgrade-level="${upgrade.id}">Lv.${level}</small></span>
-          <span class="upgrade-cost" data-upgrade-cost="${upgrade.id}">${fmt(bulkCost)} E</span>
-        </div>
-        <div class="upgrade-desc">${upgrade.desc}</div>
-        <div class="upgrade-buy-meta" data-upgrade-meta="${upgrade.id}">Achat ×${buyMultiplier} · unité ${fmt(singleCost)} E</div>
-      </button>`;
-  }).join('');
-
-  root.querySelectorAll('[data-upgrade]').forEach(btn => {
-    btn.addEventListener('click', event => {
-      const result = buyUpgradeAmount(state, btn.dataset.upgrade, buyMultiplier);
-      if (!result.ok) return toast(`Énergie insuffisante pour ×${buyMultiplier}.`);
-      FX.buy();
-      spawnModule(btn.dataset.upgrade, result.level);
-      spawnLightningToElement(event.currentTarget, `×${result.amount}`);
-      spawnEnergyBurst(event.clientX, event.clientY, Math.min(24, 8 + result.amount * 2));
-      renderAll();
-      scheduleSave();
-      toast(`Upgrade ×${result.amount} acheté · niveau ${result.level}`);
-    });
-  });
+    const btn = document.querySelector(`[data-upgrade="${upgrade.id}"]`);
+    if (!btn) continue;
+    btn.classList.toggle('can-buy', held >= singleCost);
+    btn.classList.toggle('can-buy-bulk', held >= bulkCost);
+    btn.disabled = held < bulkCost;
+    const fill = btn.querySelector(`[data-upgrade-fill="${upgrade.id}"]`);
+    if (fill) fill.style.transform = `scaleX(${Math.min(1, held / Math.max(1, bulkCost))})`;
+  }
 }
 
-function renderUpgradesLive() {
-  let signatureChanged = false;
-  for (const upgrade of UPGRADES) {
-    const level = state.upgrades[upgrade.id] ?? 0;
-    const singleCost = upgradeCost(upgrade, level);
-    const bulkCost = upgradeBulkCost(upgrade, level, buyMultiplier);
-    const canBuySingle = state.energy >= singleCost;
-    const canBuyBulk = state.energy >= bulkCost;
-    const progress = Math.min(1, state.energy / Math.max(1, bulkCost));
-    const btn = document.querySelector(`[data-upgrade="${upgrade.id}"]`);
-    if (!btn) { signatureChanged = true; continue; }
-    const wasSingle = btn.classList.contains('can-buy');
-    const wasBulk = btn.classList.contains('can-buy-bulk');
-    if (wasSingle !== canBuySingle || wasBulk !== canBuyBulk) signatureChanged = true;
-    btn.classList.toggle('can-buy', canBuySingle);
-    btn.classList.toggle('can-buy-bulk', canBuyBulk);
-    btn.disabled = !canBuyBulk;
-    const fill = btn.querySelector(`[data-upgrade-fill="${upgrade.id}"]`);
-    if (fill) fill.style.transform = `scaleX(${progress})`;
-    const cost = btn.querySelector(`[data-upgrade-cost="${upgrade.id}"]`);
-    if (cost) cost.textContent = `${fmt(bulkCost)} E`;
-    const levelNode = btn.querySelector(`[data-upgrade-level="${upgrade.id}"]`);
-    if (levelNode) levelNode.textContent = `Lv.${level}`;
-    const meta = btn.querySelector(`[data-upgrade-meta="${upgrade.id}"]`);
-    if (meta) meta.textContent = `Achat ×${buyMultiplier} · unité ${fmt(singleCost)} E`;
-  }
-  const nextSignature = getUpgradeSignature();
-  if (signatureChanged && lastUpgradeSignature && nextSignature !== lastUpgradeSignature) {
-    const previous = lastUpgradeSignature;
-    lastUpgradeSignature = nextSignature;
-    const becameReady = nextSignature.split('|').some((part, idx) => {
-      const prev = previous.split('|')[idx] ?? '';
-      return prev.split(':')[2] === '0' && part.split(':')[2] === '1';
-    });
-    if (becameReady) {
-      FX.ready();
-      const ready = [...document.querySelectorAll('.upgrade-btn.can-buy')].at(-1);
-      if (ready) spawnLightningToElement(ready, 'READY');
-    }
-  } else {
-    lastUpgradeSignature = nextSignature;
-  }
+function renderScaleCard() {
+  const node = document.getElementById('scale-card');
+  if (!node) return;
+  const layer = getScalingLayer(state);
+  node.innerHTML = `
+    <div class="scale-card-main">
+      <span class="scale-chip">${layer.short}</span>
+      <div><strong>${layer.name}</strong><p>${layer.desc}</p></div>
+    </div>
+    <div class="scale-card-sub">Multiplicateur d’échelle ×${layer.mult} · prochain dézoom aux prestiges 3 / 10 / 25 / 50</div>
+  `;
+}
+
+function renderMilestones() {
+  const root = document.getElementById('milestone-list');
+  if (!root) return;
+  const items = getVisibleMilestones(state);
+  root.innerHTML = items.map(m => {
+    const done = !!state.milestones[m.id];
+    const reward = [];
+    if (m.reward?.energy) reward.push(`+${fmt(m.reward.energy)} E`);
+    if (m.reward?.fragments) reward.push(`+${fmt(m.reward.fragments)} F`);
+    return `<div class="milestone ${done ? 'done' : ''}"><span>${done ? '✓' : '◇'}</span><div><strong>${m.label}</strong><small>${m.desc}</small></div><em>${reward.join(' · ')}</em></div>`;
+  }).join('') || '<div class="milestone"><span>◇</span><div><strong>Aucun signal</strong><small>Continue à charger le noyau.</small></div></div>';
 }
 
 function renderModules() {
@@ -487,27 +614,35 @@ function renderModules() {
   orbit.innerHTML = '';
   for (const upgrade of UPGRADES) {
     const level = state.upgrades[upgrade.id] ?? 0;
-    const count = Math.min(5, level);
+    const count = Math.min(upgrade.id.includes('Factory') || upgrade.id.includes('Plant') ? 8 : 5, level);
     for (let i = 0; i < count; i++) {
       const node = document.createElement('div');
       node.className = 'spawned-module persistent';
       node.textContent = upgrade.icon;
       node.title = `${upgrade.name} Lv.${level}`;
       node.style.setProperty('--angle', `${((i + 1) / (count + 1)) * 360 + UPGRADES.indexOf(upgrade) * 35}deg`);
-      node.style.setProperty('--radius', `${116 + UPGRADES.indexOf(upgrade) * 22}px`);
+      node.style.setProperty('--radius', `${112 + UPGRADES.indexOf(upgrade) * 18}px`);
       orbit.appendChild(node);
     }
   }
+}
+
+function renderFactories() {
+  const field = document.getElementById('factory-field');
+  if (!field) return;
+  const layer = getScalingLayer(state);
+  const count = Math.min(28, Math.floor((state.factoryRate ?? 0) + (layer.prestige >= 10 ? 8 : 0)));
+  field.innerHTML = Array.from({ length: count }, (_, i) => `<span class="factory-node" style="--x:${6 + (i * 17) % 88}%;--y:${12 + (i * 29) % 74}%;--d:${(i * -0.17).toFixed(2)}s">${i % 3 === 0 ? '🏭' : i % 3 === 1 ? '⚙' : '⬡'}</span>`).join('');
 }
 
 function renderTendrils() {
   const layer = document.getElementById('tendril-layer');
   if (!layer) return;
   const totalLevels = UPGRADES.reduce((sum, upgrade) => sum + (state.upgrades[upgrade.id] ?? 0), 0);
-  const count = Math.min(18, 8 + totalLevels);
+  const count = Math.min(26, 8 + totalLevels + Math.floor(state.prestige / 2));
   layer.innerHTML = Array.from({ length: count }, (_, i) => {
     const angle = (360 / count) * i + (i % 2 ? 8 : -8);
-    const length = 112 + (i % 5) * 20 + Math.min(70, totalLevels * 3);
+    const length = 112 + (i % 5) * 20 + Math.min(100, totalLevels * 3 + state.prestige * 2);
     const width = 8 + (i % 3) * 2;
     const delay = -(i * 0.23).toFixed(2);
     return `<span class="bio-tendril" style="--angle:${angle}deg;--len:${length}px;--w:${width}px;--delay:${delay}s"><i></i></span>`;
@@ -525,21 +660,22 @@ function startLoop() {
     const now = performance.now();
     const delta = Math.min(2, (now - lastTick) / 1000);
     lastTick = now;
-    if (state.passiveRate > 0) {
-      tickPassive(state, delta);
-      renderLive();
-      if (fxEnabled && now - lastEnergyPulse > 1800) {
-        lastEnergyPulse = now;
-        const panel = document.getElementById('core-panel')?.getBoundingClientRect();
-        if (panel) spawnEnergyBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(5, Math.ceil(state.passiveRate)));
-        if (Math.random() > 0.35) zapToRandomModule();
-      }
-    } else {
-      renderUpgradesLive();
+    if (state.passiveRate > 0) tickPassive(state, delta);
+    renderLive();
+    refreshUpgradesIfNeeded(true);
+    if (fxEnabled && now - lastEnergyPulse > 1800) {
+      lastEnergyPulse = now;
+      const panel = document.getElementById('core-panel')?.getBoundingClientRect();
+      if (panel && state.passiveRate > 0) spawnEnergyBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(8, Math.ceil(state.passiveRate / 4)));
+      if (Math.random() > 0.35) zapToRandomModule();
     }
   }, 250);
 
-  uiLoop = setInterval(() => renderLive(), 500);
+  setInterval(() => {
+    const claimed = checkAndClaimMilestones(state);
+    if (claimed.length) claimMilestonesAndRender();
+  }, 1000);
+
   setInterval(() => saveAll(userId, state), 15000);
 }
 
@@ -554,6 +690,7 @@ async function init() {
 
   renderShell();
   startLoop();
+  claimMilestonesAndRender();
   if (offlineGain > 0) toast(`Progression hors-ligne : +${fmt(offlineGain)} énergie.`);
 }
 
