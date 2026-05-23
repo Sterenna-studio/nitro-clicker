@@ -1,0 +1,4 @@
+Nitro Clicker deploy trigger
+
+Purpose: manual trigger file for GitHub Actions deployments.
+Last trigger: 2026-05-23
