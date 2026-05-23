@@ -10,7 +10,7 @@ import {
   tickPassive,
   upgradeCost,
 } from './clicker-state.js';
-import { loadSave, saveAll } from './clicker-save.js';
+import { deleteLocalSave, loadSave, saveAll } from './clicker-save.js';
 
 const app = document.getElementById('app');
 
@@ -41,7 +41,7 @@ function renderShell() {
     <header class="topbar">
       <div>
         <h1 class="brand-title">NITRO <span>CLICKER</span></h1>
-        <div class="brand-sub">// AGENT ${name.toUpperCase()} · CORE ENERGY LOOP</div>
+        <div class="brand-sub">// AGENT ${name.toUpperCase()} · LOCAL CORE ENERGY LOOP</div>
       </div>
       <nav class="top-actions">
         <a href="/star/" class="nav-btn">⬡ STAR</a>
@@ -75,7 +75,7 @@ function renderShell() {
         </button>
 
         <div class="save-row">
-          <button class="action-btn" id="save-btn">💾 SAUVER</button>
+          <button class="action-btn" id="save-btn">💾 SAUVER LOCAL</button>
           <button class="action-btn danger" id="reset-btn">⚠ RESET LOCAL</button>
         </div>
       </aside>
@@ -89,22 +89,22 @@ function renderShell() {
     scheduleSave();
   });
 
-  document.getElementById('save-btn').addEventListener('click', async () => {
-    const cloud = await saveAll(userId, state);
-    toast(cloud ? 'Sauvegarde cloud + locale OK.' : 'Sauvegarde locale OK. Cloud indisponible pour le moment.');
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const ok = saveAll(userId, state);
+    toast(ok ? 'Sauvegarde locale OK.' : 'Sauvegarde locale impossible.');
   });
 
   document.getElementById('reset-btn').addEventListener('click', () => {
-    if (!confirm('Reset la sauvegarde locale/cloud chargée dans cette session ?')) return;
-    localStorage.removeItem(`nitro-clicker.save.${userId}`);
+    if (!confirm('Reset la sauvegarde locale de Nitro Clicker ?')) return;
+    deleteLocalSave(userId);
     location.reload();
   });
 
-  document.getElementById('prestige-btn').addEventListener('click', async () => {
+  document.getElementById('prestige-btn').addEventListener('click', () => {
     const result = doPrestige(state);
     if (!result.ok) return toast('Prestige pas encore prêt. Continue à charger le noyau.');
     state = result.state;
-    await saveAll(userId, state);
+    saveAll(userId, state);
     renderAll();
     toast('Prestige activé. Noyau réinitialisé.');
   });
@@ -191,7 +191,7 @@ async function init() {
 
   userId = auth.user.id;
   profile = await getProfile(userId);
-  state = await loadSave(userId);
+  state = loadSave(userId);
   const offlineGain = applyOfflineProgress(state);
 
   renderShell();
