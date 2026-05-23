@@ -74,6 +74,13 @@ export function upgradeCost(upgrade, level) {
   return Math.floor(upgrade.baseCost * Math.pow(upgrade.scale, level));
 }
 
+export function upgradeBulkCost(upgrade, level, amount = 1) {
+  const qty = Math.max(1, Math.floor(Number(amount) || 1));
+  let total = 0;
+  for (let i = 0; i < qty; i++) total += upgradeCost(upgrade, level + i);
+  return total;
+}
+
 export function hydrateState(raw, userId = null) {
   const base = createDefaultState(userId);
   const merged = { ...base, ...(raw ?? {}) };
@@ -123,16 +130,24 @@ export function tickPassive(state, deltaSeconds) {
 }
 
 export function buyUpgrade(state, upgradeId) {
+  return buyUpgradeAmount(state, upgradeId, 1);
+}
+
+export function buyUpgradeAmount(state, upgradeId, amount = 1) {
   const upgrade = UPGRADES.find(u => u.id === upgradeId);
   if (!upgrade) return { ok: false, reason: 'unknown_upgrade' };
+
+  const qty = Math.max(1, Math.floor(Number(amount) || 1));
   const level = state.upgrades[upgrade.id] ?? 0;
-  const cost = upgradeCost(upgrade, level);
-  if (state.energy < cost) return { ok: false, reason: 'not_enough_energy', cost };
+  const cost = upgradeBulkCost(upgrade, level, qty);
+
+  if (state.energy < cost) return { ok: false, reason: 'not_enough_energy', cost, amount: qty };
+
   state.energy -= cost;
-  state.upgrades[upgrade.id] = level + 1;
+  state.upgrades[upgrade.id] = level + qty;
   recalcDerivedStats(state);
   state.updatedAt = Date.now();
-  return { ok: true, cost, level: level + 1 };
+  return { ok: true, cost, amount: qty, level: level + qty };
 }
 
 export function canPrestige(state) {
