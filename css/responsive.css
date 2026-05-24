@@ -5,8 +5,8 @@
   --nc-gap: clamp(10px, 1.4vw, 18px);
   --nc-card-pad: clamp(12px, 1.5vw, 20px);
   --nc-radius: clamp(14px, 1.6vw, 22px);
-  --nc-core-size: clamp(210px, 30vw, 330px);
-  --nc-core-min-h: clamp(340px, 52vh, 560px);
+  --nc-core-size: clamp(170px, 18vw, 260px);
+  --nc-core-min-h: clamp(460px, 66vh, 760px);
   --nc-stat-min: minmax(132px, 1fr);
 }
 
@@ -17,8 +17,8 @@ body {
 }
 
 .clicker-shell {
-  width: min(100%, 1580px);
-  max-width: 1580px;
+  width: min(100%, 1680px);
+  max-width: 1680px;
   padding: var(--nc-page-pad) var(--nc-page-pad) clamp(26px, 4vh, 56px);
 }
 
@@ -85,7 +85,7 @@ body {
 .game-grid-wide {
   display: grid;
   gap: var(--nc-gap);
-  grid-template-columns: minmax(360px, 1.08fr) minmax(290px, .72fr) minmax(290px, .72fr);
+  grid-template-columns: minmax(520px, 1.55fr) minmax(280px, .62fr) minmax(280px, .62fr);
   align-items: start;
 }
 
@@ -109,8 +109,8 @@ body {
 
 .click-core {
   width: var(--nc-core-size);
-  max-width: min(72cqw, 72vh, 340px);
-  font-size: clamp(54px, 7vw, 86px);
+  max-width: min(46cqw, 48vh, 280px);
+  font-size: clamp(44px, 5vw, 72px);
 }
 
 .click-core small {
@@ -131,15 +131,15 @@ body {
 }
 
 .scale-radar::before {
-  width: min(420px, 82cqw);
-  height: min(420px, 82cqw);
-  margin: calc(min(420px, 82cqw) / -2) 0 0 calc(min(420px, 82cqw) / -2);
+  width: min(560px, 88cqw);
+  height: min(560px, 88cqw);
+  margin: calc(min(560px, 88cqw) / -2) 0 0 calc(min(560px, 88cqw) / -2);
 }
 
 .scale-radar::after {
-  width: min(560px, 104cqw);
-  height: min(560px, 104cqw);
-  margin: calc(min(560px, 104cqw) / -2) 0 0 calc(min(560px, 104cqw) / -2);
+  width: min(740px, 118cqw);
+  height: min(740px, 118cqw);
+  margin: calc(min(740px, 118cqw) / -2) 0 0 calc(min(740px, 118cqw) / -2);
 }
 
 .spawned-module {
@@ -229,7 +229,7 @@ body {
 }
 
 .peripheral-ring span {
-  transform: rotate(var(--a)) translateX(min(250px, 38cqw)) rotate(calc(-1 * var(--a)));
+  transform: rotate(var(--a)) translateX(min(330px, 44cqw)) rotate(calc(-1 * var(--a)));
 }
 
 .toast {
@@ -239,8 +239,9 @@ body {
 }
 
 @media (min-width: 1360px) {
-  :root { --nc-core-size: clamp(300px, 24vw, 390px); }
-  .game-grid-wide { grid-template-columns: minmax(430px, 1.12fr) minmax(330px, .72fr) minmax(330px, .72fr); }
+  :root { --nc-core-size: clamp(190px, 15vw, 275px); }
+  .game-grid-wide { grid-template-columns: minmax(620px, 1.7fr) minmax(320px, .62fr) minmax(320px, .62fr); }
+  .core-panel { min-height: clamp(560px, 68vh, 820px); }
 }
 
 @media (max-width: 1180px) {
@@ -248,7 +249,8 @@ body {
   .game-grid-wide {
     grid-template-columns: minmax(0, 1fr) minmax(300px, .86fr);
   }
-  .core-panel { grid-column: 1 / -1; }
+  .core-panel { grid-column: 1 / -1; min-height: clamp(460px, 58vh, 660px); }
+  .click-core { max-width: min(42cqw, 44vh, 260px); }
   .meta-panel,
   .progression-panel {
     max-height: none;
@@ -258,8 +260,8 @@ body {
 @media (max-width: 820px) {
   :root {
     --nc-page-pad: 12px;
-    --nc-core-size: clamp(210px, 70vw, 300px);
-    --nc-core-min-h: clamp(330px, 58vh, 470px);
+    --nc-core-size: clamp(170px, 52vw, 250px);
+    --nc-core-min-h: clamp(380px, 58vh, 520px);
   }
 
   .topbar {
@@ -314,7 +316,7 @@ body {
 @media (max-width: 560px) {
   :root {
     --nc-card-pad: 12px;
-    --nc-core-min-h: 330px;
+    --nc-core-min-h: 350px;
   }
 
   .brand-title {
@@ -340,8 +342,9 @@ body {
   }
 
   .click-core {
-    width: min(230px, 72vw);
-    font-size: 58px;
+    width: min(205px, 58vw);
+    max-width: min(205px, 58vw);
+    font-size: 50px;
   }
 
   .reactor-gauges {
@@ -394,19 +397,20 @@ body {
   }
 
   .core-panel {
-    min-height: 300px;
+    min-height: 320px;
   }
 
   .click-core {
-    width: min(200px, 72vw);
-    font-size: 50px;
+    width: min(180px, 56vw);
+    max-width: min(180px, 56vw);
+    font-size: 44px;
   }
 }
 
 @media (max-height: 760px) and (min-width: 1181px) {
   :root {
-    --nc-core-min-h: calc(100vh - 240px);
-    --nc-core-size: min(280px, 42vh);
+    --nc-core-min-h: calc(100vh - 190px);
+    --nc-core-size: min(220px, 32vh);
   }
 
   .progression-panel,
