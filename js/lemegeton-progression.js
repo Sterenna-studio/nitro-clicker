@@ -11,48 +11,56 @@ const STAGES = [
     min: 0,
     id: 'dormant',
     label: 'SYSTÈME DORMANT',
+    objective: 'Objectif : produire 100M énergie totale pour remplir la première bonbonne.',
     text: 'Le Gwen Ha Star attend une source Nitro stable.',
   },
   {
     min: 1,
     id: 'charging',
     label: 'BPRD · ACCUMULATION',
+    objective: 'Objectif : remplir les 10 bonbonnes BPRD, 100M énergie totale chacune.',
     text: 'Les bonbonnes arrière-plan stockent l’énergie du noyau.',
   },
   {
     min: 10,
     id: 'lemegeton_boot',
     label: 'LEMEGETON · BOOT',
-    text: 'Ordinateur de bord chargé. Lancement du programme LEMEGETON.',
+    objective: 'Objectif : activer l’auto-clicker et atteindre les prestiges suivants.',
+    text: 'Ordinateur de bord chargé. Lancement du programme LEMEGETON. Réparation du Gwen Ha Star enclenchée.',
   },
   {
     min: 12,
     id: 'auto_detected',
     label: 'LEMEGETON · ANOMALIE',
-    text: 'Activité automatisée détectée dans les circuits. Référence auto-clicker confirmée.',
+    objective: 'Objectif : renforcer l’auto-clicker pour laisser LEMEGETON analyser les circuits.',
+    text: 'LEMEGETON détecte une activité automatisée dans les circuits.',
   },
   {
     min: 16,
     id: 'auto_control',
     label: 'LEMEGETON · CONTRÔLE',
-    text: 'LEMEGETON prend le contrôle du maintien automatique.',
+    objective: 'Objectif : laisser LEMEGETON prendre le contrôle du maintien automatique.',
+    text: 'LEMEGETON prend le contrôle de l’auto-clicker.',
   },
   {
     min: 22,
     id: 'fusion',
     label: 'FUSION NOYAU/LEMEGETON',
+    objective: 'Objectif : poursuivre les prestiges pour synchroniser noyau et ordinateur de bord.',
     text: 'Préparation de la fusion cognitive avec le noyau Nitro.',
   },
   {
     min: 30,
     id: 'cells',
     label: 'DÉMULTIPLICATION CELLULAIRE',
+    objective: 'Objectif : multiplier les cellules-noyaux et alimenter le réseau BPRD.',
     text: 'Le noyau se duplique en cellules énergétiques synchronisées.',
   },
   {
     min: 45,
     id: 'ship_power',
     label: 'GWEN HA STAR · RÉSEAU COMPLET',
+    objective: 'Objectif final actuel : alimenter le système électrique complet du Gwen Ha Star.',
     text: 'Alimentation progressive du système électrique BPRD, puis du vaisseau complet.',
   },
 ];
@@ -69,6 +77,7 @@ function mount() {
         <div class="energy-tank" data-tank="${i}">
           <span class="energy-tank-fill"></span>
           <i></i>
+          <em>${i + 1}</em>
         </div>
       `).join('')}
     </div>
@@ -76,6 +85,9 @@ function mount() {
       <span id="lemegeton-kicker">BPRD POWER GRID</span>
       <strong id="lemegeton-label">SYSTÈME DORMANT</strong>
       <p id="lemegeton-text">Le Gwen Ha Star attend une source Nitro stable.</p>
+      <small id="lemegeton-objective">Objectif : produire 100M énergie totale.</small>
+      <div class="lemegeton-progress"><b id="lemegeton-progress-fill"></b></div>
+      <small id="lemegeton-progress-text">0 / 10 bonbonnes · prochaine 0%</small>
     </div>
     <div class="core-cell-field" id="core-cell-field" aria-hidden="true"></div>
   `);
@@ -102,7 +114,7 @@ function update() {
   const prestige = Number(state.prestige ?? 0);
   const autoLevel = Number(state.upgrades?.autoClicker ?? 0);
   const filled = Math.min(TANK_COUNT, Math.floor(totalEnergy / TANK_STEP));
-  const nextProgress = Math.min(1, (totalEnergy % TANK_STEP) / TANK_STEP);
+  const nextProgress = filled >= TANK_COUNT ? 1 : Math.min(1, (totalEnergy % TANK_STEP) / TANK_STEP);
 
   document.querySelectorAll('.energy-tank').forEach((tank, i) => {
     const fill = tank.querySelector('.energy-tank-fill');
@@ -127,6 +139,9 @@ function update() {
 
   document.getElementById('lemegeton-label').textContent = stage.label;
   document.getElementById('lemegeton-text').textContent = stage.text;
+  document.getElementById('lemegeton-objective').textContent = stage.objective;
+  document.getElementById('lemegeton-progress-fill').style.transform = `scaleX(${Math.min(1, totalEnergy / (TANK_STEP * TANK_COUNT))})`;
+  document.getElementById('lemegeton-progress-text').textContent = `${filled} / ${TANK_COUNT} bonbonnes · prochaine ${Math.floor(nextProgress * 100)}% · ${formatEnergy(totalEnergy)} total`;
 
   if (stage.id !== lastStage) {
     lastStage = stage.id;
@@ -140,6 +155,7 @@ function getStage(filled, prestige, autoLevel) {
   let powerIndex = filled;
   if (filled >= 10) powerIndex += Math.floor(prestige / 3);
   if (autoLevel > 0 && filled >= 10) powerIndex = Math.max(powerIndex, 12);
+  if (autoLevel >= 10 && filled >= 10) powerIndex = Math.max(powerIndex, 16);
   return [...STAGES].reverse().find(stage => powerIndex >= stage.min) ?? STAGES[0];
 }
 
@@ -174,6 +190,14 @@ function dispatchLoreWave(text) {
   node.textContent = text;
   panel.appendChild(node);
   setTimeout(() => node.remove(), 2200);
+}
+
+function formatEnergy(value) {
+  const n = Math.floor(Number(value ?? 0));
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return `${n}`;
 }
 
 const boot = setInterval(() => {
