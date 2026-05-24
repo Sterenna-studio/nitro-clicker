@@ -7,6 +7,7 @@ import './app.js';
 import './ui/panels.js';
 import './ui/svg-replacer.js';
 import './ui/shared-assets.js';
+import './ui/upgrade-ux.js';
 
 // Gameplay/runtime helpers
 import './engine/core-controls.js';
