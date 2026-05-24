@@ -68,6 +68,7 @@ const STAGES = [
 function mount() {
   if (mounted) return;
   const panel = document.getElementById('core-panel');
+  const metaPanel = document.querySelector('.meta-panel');
   if (!panel) return;
   mounted = true;
 
@@ -81,16 +82,25 @@ function mount() {
         </div>
       `).join('')}
     </div>
-    <div class="lemegeton-status" id="lemegeton-status">
+    <div class="core-cell-field" id="core-cell-field" aria-hidden="true"></div>
+  `);
+
+  const statusHtml = `
+    <section class="lemegeton-status" id="lemegeton-status">
       <span id="lemegeton-kicker">BPRD POWER GRID</span>
       <strong id="lemegeton-label">SYSTÈME DORMANT</strong>
       <p id="lemegeton-text">Le Gwen Ha Star attend une source Nitro stable.</p>
       <small id="lemegeton-objective">Objectif : produire 100M énergie totale.</small>
       <div class="lemegeton-progress"><b id="lemegeton-progress-fill"></b></div>
       <small id="lemegeton-progress-text">0 / 10 bonbonnes · prochaine 0%</small>
-    </div>
-    <div class="core-cell-field" id="core-cell-field" aria-hidden="true"></div>
-  `);
+    </section>
+  `;
+
+  if (metaPanel && !document.getElementById('lemegeton-status')) {
+    metaPanel.insertAdjacentHTML('afterbegin', statusHtml);
+  } else if (!document.getElementById('lemegeton-status')) {
+    panel.insertAdjacentHTML('afterend', statusHtml);
+  }
 
   update();
   setInterval(update, 700);
@@ -137,11 +147,16 @@ function update() {
     panel.style.setProperty('--cell-count', String(getCellCount(filled, prestige)));
   }
 
-  document.getElementById('lemegeton-label').textContent = stage.label;
-  document.getElementById('lemegeton-text').textContent = stage.text;
-  document.getElementById('lemegeton-objective').textContent = stage.objective;
-  document.getElementById('lemegeton-progress-fill').style.transform = `scaleX(${Math.min(1, totalEnergy / (TANK_STEP * TANK_COUNT))})`;
-  document.getElementById('lemegeton-progress-text').textContent = `${filled} / ${TANK_COUNT} bonbonnes · prochaine ${Math.floor(nextProgress * 100)}% · ${formatEnergy(totalEnergy)} total`;
+  const label = document.getElementById('lemegeton-label');
+  const text = document.getElementById('lemegeton-text');
+  const objective = document.getElementById('lemegeton-objective');
+  const progressFill = document.getElementById('lemegeton-progress-fill');
+  const progressText = document.getElementById('lemegeton-progress-text');
+  if (label) label.textContent = stage.label;
+  if (text) text.textContent = stage.text;
+  if (objective) objective.textContent = stage.objective;
+  if (progressFill) progressFill.style.transform = `scaleX(${Math.min(1, totalEnergy / (TANK_STEP * TANK_COUNT))})`;
+  if (progressText) progressText.textContent = `${filled} / ${TANK_COUNT} bonbonnes · prochaine ${Math.floor(nextProgress * 100)}% · ${formatEnergy(totalEnergy)} total`;
 
   if (stage.id !== lastStage) {
     lastStage = stage.id;
