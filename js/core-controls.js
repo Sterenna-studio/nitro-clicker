@@ -3,8 +3,7 @@ const SAVE_PREFIX = 'nitro-clicker.save.';
 let mounted = false;
 let spinVelocity = 0;
 let spinCharge = 0;
-let rotX = -12;
-let rotY = 18;
+let rotZ = 0;
 let autoAccumulator = 0;
 let lastAutoTick = performance.now();
 let lastSpinPulse = 0;
@@ -18,8 +17,7 @@ function mountCoreControls() {
 
   core.classList.add('core-3d-ready');
   panel.classList.add('core-control-ready');
-  panel.style.setProperty('--core-rot-x', `${rotX}deg`);
-  panel.style.setProperty('--core-rot-y', `${rotY}deg`);
+  panel.style.setProperty('--core-rot-z', `${rotZ}deg`);
 
   injectSpinHud(panel);
 
@@ -27,21 +25,19 @@ function mountCoreControls() {
     if (!event.target.closest?.('#core-panel')) return;
     event.preventDefault();
     const delta = -event.deltaY;
-    rotateCore(delta * 0.28, event.deltaX * 0.08, Math.abs(delta) * 0.28);
+    rotateCore(delta * 0.42, Math.abs(delta) * 0.3);
   }, { passive: false });
 
   requestAnimationFrame(loop);
 }
 
-function rotateCore(dx, dy, force) {
+function rotateCore(dz, force) {
   const panel = document.getElementById('core-panel');
   if (!panel) return;
-  rotY += dx * 0.5;
-  rotX = clamp(rotX - dy * 0.22, -34, 34);
-  spinVelocity = Math.min(140, spinVelocity + force * 0.08);
-  spinCharge = Math.min(100, spinCharge + force * 0.05);
-  panel.style.setProperty('--core-rot-x', `${rotX.toFixed(2)}deg`);
-  panel.style.setProperty('--core-rot-y', `${rotY.toFixed(2)}deg`);
+  rotZ += dz;
+  spinVelocity = Math.min(160, spinVelocity + force * 0.09);
+  spinCharge = Math.min(100, spinCharge + force * 0.055);
+  panel.style.setProperty('--core-rot-z', `${rotZ.toFixed(2)}deg`);
   panel.style.setProperty('--spin-charge', `${spinCharge.toFixed(1)}%`);
   panel.classList.add('core-spinning');
   updateSpinHud();
@@ -51,13 +47,12 @@ function loop(now) {
   const delta = Math.min(1, (now - lastAutoTick) / 1000);
   lastAutoTick = now;
 
-  rotY += spinVelocity * delta * 0.26;
+  rotZ += spinVelocity * delta * 0.32;
   spinVelocity *= Math.pow(0.9, delta * 10);
   spinCharge *= Math.pow(0.968, delta * 10);
   const panel = document.getElementById('core-panel');
   if (panel) {
-    panel.style.setProperty('--core-rot-x', `${rotX.toFixed(2)}deg`);
-    panel.style.setProperty('--core-rot-y', `${rotY.toFixed(2)}deg`);
+    panel.style.setProperty('--core-rot-z', `${rotZ.toFixed(2)}deg`);
     panel.style.setProperty('--spin-charge', `${spinCharge.toFixed(1)}%`);
     panel.classList.toggle('core-spinning', spinCharge > 4);
   }
@@ -137,7 +132,7 @@ function injectSpinHud(panel) {
     <div class="spin-hud" id="spin-hud" aria-hidden="true">
       <div class="spin-hud-top"><span>SPIN BOOST</span><strong id="spin-hud-value">0%</strong></div>
       <div class="spin-hud-meter"><i id="spin-hud-meter"></i></div>
-      <small>Molette sur la fenêtre du noyau pour faire tourner la sphère et maintenir la génération.</small>
+      <small>Molette sur la fenêtre du noyau : rotation sur l’axe face au joueur.</small>
     </div>
   `);
 }
@@ -169,6 +164,6 @@ const boot = setInterval(() => {
 }, 250);
 
 window.NitroCoreControls = {
-  spin(amount = 50) { rotateCore(amount, 0, Math.abs(amount)); },
+  spin(amount = 50) { rotateCore(amount, Math.abs(amount)); },
   autoClick() { syntheticCoreClick('auto'); },
 };
