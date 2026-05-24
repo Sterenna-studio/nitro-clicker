@@ -4,6 +4,7 @@
 // UI scheduling / asset cache should be available before app-side UI modules.
 import './ui/window-manager.js';
 import './ui/asset-cache.js';
+import './ui/render-cache.js';
 
 import './app.js';
 
