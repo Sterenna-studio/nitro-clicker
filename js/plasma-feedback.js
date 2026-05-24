@@ -83,7 +83,6 @@ function scanDopamineTriggers() {
   scanMeters();
   scanStats();
   scanMilestones();
-  scanAffordableButtons();
 }
 
 function scanMeters() {
@@ -136,16 +135,6 @@ function scanMilestones() {
     if (target) fireRewardBurst(target, 'DONE');
   }
   lastMilestoneDone = done;
-}
-
-function scanAffordableButtons() {
-  document.querySelectorAll('.upgrade-btn.can-buy:not([data-ready-pulsed])').forEach(button => {
-    button.dataset.readyPulsed = 'true';
-    button.classList.add('dopamine-ready-pop');
-    fireRewardBurst(button, 'READY');
-    setTimeout(() => button.classList.remove('dopamine-ready-pop'), 700);
-  });
-  document.querySelectorAll('.upgrade-btn:not(.can-buy)[data-ready-pulsed]').forEach(button => delete button.dataset.readyPulsed);
 }
 
 function pulseMeter(node, bucket) {
