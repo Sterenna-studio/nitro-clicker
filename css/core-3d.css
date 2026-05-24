@@ -1,10 +1,10 @@
-/* Nitro Clicker — 3D core sphere, spin boost and auto-clicker feedback */
+/* Nitro Clicker — real 3D core sphere, wheel spin boost and auto-clicker feedback */
 
 .core-panel.core-control-ready {
-  --core-rot-x: -14deg;
+  --core-rot-x: -12deg;
   --core-rot-y: 18deg;
   --spin-charge: 0%;
-  perspective: 900px;
+  perspective: 1200px;
   overflow: visible;
 }
 
@@ -13,51 +13,38 @@
   transform-style: preserve-3d;
   transform: rotateX(var(--core-rot-x)) rotateY(var(--core-rot-y));
   border-radius: 50%;
-  cursor: grab;
+  cursor: pointer;
   user-select: none;
-  touch-action: none;
+  touch-action: manipulation;
   background:
-    radial-gradient(circle at 30% 24%, rgba(255,255,255,.42), transparent 12%),
-    radial-gradient(circle at 34% 32%, rgba(0,255,204,.42), transparent 20%),
-    radial-gradient(circle at 70% 74%, rgba(255,61,242,.38), transparent 32%),
-    radial-gradient(circle at 50% 50%, rgba(4,16,24,.92), rgba(1,4,12,.98) 68%, rgba(0,0,0,1));
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,.82) 0 4%, rgba(255,255,255,.28) 9%, transparent 18%),
+    radial-gradient(circle at 36% 32%, rgba(0,255,204,.62), transparent 27%),
+    radial-gradient(circle at 72% 75%, rgba(255,61,242,.48), transparent 36%),
+    radial-gradient(circle at 50% 50%, rgba(9,28,38,.96) 0 36%, rgba(2,12,22,.98) 64%, rgba(0,0,0,1) 100%);
   box-shadow:
-    inset -24px -30px 52px rgba(0,0,0,.62),
-    inset 18px 18px 36px rgba(255,255,255,.075),
-    inset 0 0 44px rgba(0,255,204,.18),
-    0 0 0 1px rgba(0,255,204,.42),
-    0 0 44px rgba(0,255,204,.34),
-    0 0 90px rgba(255,61,242,.18),
-    0 32px 58px rgba(0,0,0,.46);
+    inset -38px -44px 72px rgba(0,0,0,.72),
+    inset 22px 22px 42px rgba(255,255,255,.12),
+    inset 0 0 52px rgba(0,255,204,.24),
+    0 0 0 1px rgba(0,255,204,.46),
+    0 0 44px rgba(0,255,204,.36),
+    0 0 92px rgba(255,61,242,.20),
+    0 36px 64px rgba(0,0,0,.52);
   transition: box-shadow .18s ease-out, filter .18s ease-out;
-}
-
-.click-core.core-3d-ready.is-dragging {
-  cursor: grabbing;
-  filter: brightness(1.28) saturate(1.35);
-  box-shadow:
-    inset -24px -30px 52px rgba(0,0,0,.62),
-    inset 18px 18px 36px rgba(255,255,255,.09),
-    inset 0 0 60px rgba(0,255,204,.28),
-    0 0 0 1px rgba(255,204,0,.62),
-    0 0 62px rgba(255,204,0,.30),
-    0 0 110px rgba(255,61,242,.24),
-    0 36px 64px rgba(0,0,0,.50);
 }
 
 .click-core.core-3d-ready::before {
   content: '';
   position: absolute;
-  inset: 7%;
+  inset: 0;
   border-radius: 50%;
-  transform: translateZ(20px);
+  transform: translateZ(28px);
   background:
-    radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), transparent 14%),
-    radial-gradient(circle at 55% 46%, rgba(0,255,204,.10), transparent 38%),
-    linear-gradient(125deg, rgba(255,255,255,.06), transparent 38%, rgba(255,61,242,.08));
-  box-shadow: inset 0 0 42px rgba(255,255,255,.06);
+    radial-gradient(circle at 30% 22%, rgba(255,255,255,.72), transparent 13%),
+    linear-gradient(118deg, rgba(255,255,255,.16), transparent 28%, rgba(255,255,255,.035) 46%, transparent 62%),
+    radial-gradient(circle at 58% 56%, transparent 0 44%, rgba(0,255,204,.12) 52%, transparent 66%);
+  box-shadow: inset 0 0 44px rgba(255,255,255,.06);
   pointer-events: none;
-  z-index: 2;
+  z-index: 7;
 }
 
 .click-core.core-3d-ready::after {
@@ -65,48 +52,63 @@
   position: absolute;
   inset: -8%;
   border-radius: 50%;
-  transform: translateZ(-14px);
-  background: conic-gradient(from 0deg, rgba(0,255,204,.2), rgba(255,61,242,.18), rgba(255,204,0,.12), rgba(0,255,204,.2));
-  filter: blur(18px);
-  opacity: .55;
+  transform: translateZ(-22px);
+  background: conic-gradient(from var(--core-rot-y), rgba(0,255,204,.22), rgba(255,61,242,.18), rgba(255,204,0,.12), rgba(0,255,204,.22));
+  filter: blur(20px);
+  opacity: .58;
   pointer-events: none;
   z-index: 0;
 }
 
 .core-rings {
-  transform: translateZ(32px);
+  transform: translateZ(42px) rotateX(72deg) rotateZ(var(--core-rot-y));
   border-radius: 50%;
   background:
-    conic-gradient(from var(--core-rot-y), rgba(0,255,204,.76), transparent 18%, rgba(255,61,242,.42), transparent 44%, rgba(255,204,0,.55), transparent 72%, rgba(0,255,204,.76)),
-    radial-gradient(circle, transparent 48%, rgba(0,255,204,.12) 50%, transparent 58%);
-  mask: radial-gradient(circle, transparent 48%, #000 50%, #000 61%, transparent 64%);
-  opacity: .82;
+    conic-gradient(from 0deg, rgba(0,255,204,.88), transparent 16%, rgba(255,61,242,.54), transparent 42%, rgba(255,204,0,.62), transparent 72%, rgba(0,255,204,.88)),
+    radial-gradient(circle, transparent 48%, rgba(0,255,204,.16) 50%, transparent 60%);
+  mask: radial-gradient(circle, transparent 50%, #000 52%, #000 61%, transparent 64%);
+  opacity: .68;
+  z-index: 4;
 }
 
 .core-glyph {
-  transform: translateZ(52px);
+  transform: translateZ(58px);
+  opacity: .55;
+  z-index: 6;
+}
+
+.core-glyph .nc-svg-core {
+  width: min(42%, 110px);
+  height: min(42%, 110px);
 }
 
 .shared-core-center-asset {
-  opacity: .62 !important;
-  width: 52% !important;
-  height: 52% !important;
-  z-index: 8 !important;
+  opacity: .88 !important;
+  width: 58% !important;
+  height: 58% !important;
+  top: 46% !important;
+  z-index: 9 !important;
+  transform: translate(-50%, -50%) translateZ(72px) !important;
+  mix-blend-mode: screen;
   filter:
-    drop-shadow(0 0 12px rgba(0,255,204,.75))
-    drop-shadow(0 0 28px rgba(255,61,242,.36))
-    drop-shadow(0 0 2px rgba(255,255,255,.8)) !important;
+    drop-shadow(0 0 10px rgba(255,255,255,.65))
+    drop-shadow(0 0 18px rgba(0,255,204,.9))
+    drop-shadow(0 0 38px rgba(255,61,242,.42)) !important;
 }
 
 .click-core small {
   position: relative;
   z-index: 10;
-  transform: translateZ(64px);
+  transform: translateZ(76px);
   text-shadow: 0 0 10px rgba(0,255,204,.8);
 }
 
 .core-panel.core-spinning .click-core {
   filter: brightness(calc(1 + min(.32, var(--spin-charge) / 300))) saturate(1.25);
+}
+
+.core-panel.core-spinning .shared-core-center-asset {
+  animation: coreLogoInsideSpin .7s linear infinite;
 }
 
 .click-core.auto-click-pulse {
@@ -115,6 +117,11 @@
 
 .click-core.spin-click-pulse {
   animation: spinClickPulse .28s ease-out;
+}
+
+@keyframes coreLogoInsideSpin {
+  from { transform: translate(-50%, -50%) translateZ(72px) rotate(0deg); }
+  to { transform: translate(-50%, -50%) translateZ(72px) rotate(360deg); }
 }
 
 @keyframes autoClickPulse {
@@ -201,7 +208,7 @@
   }
 
   .shared-core-center-asset {
-    width: 50% !important;
-    height: 50% !important;
+    width: 54% !important;
+    height: 54% !important;
   }
 }
