@@ -69,21 +69,27 @@ function mount() {
   if (mounted) return;
   const panel = document.getElementById('core-panel');
   const metaPanel = document.querySelector('.meta-panel');
-  if (!panel) return;
+  const shell = document.querySelector('.clicker-shell');
+  if (!panel || !shell) return;
   mounted = true;
 
-  panel.insertAdjacentHTML('afterbegin', `
-    <div class="lemegeton-bg" id="lemegeton-bg" aria-hidden="true">
-      ${Array.from({ length: TANK_COUNT }, (_, i) => `
-        <div class="energy-tank" data-tank="${i}">
-          <span class="energy-tank-fill"></span>
-          <i></i>
-          <em>${i + 1}</em>
-        </div>
-      `).join('')}
-    </div>
-    <div class="core-cell-field" id="core-cell-field" aria-hidden="true"></div>
-  `);
+  if (!document.getElementById('lemegeton-bg')) {
+    document.body.insertAdjacentHTML('afterbegin', `
+      <div class="lemegeton-bg" id="lemegeton-bg" aria-hidden="true">
+        ${Array.from({ length: TANK_COUNT }, (_, i) => `
+          <div class="energy-tank" data-tank="${i}">
+            <span class="energy-tank-fill"></span>
+            <i></i>
+            <em>${i + 1}</em>
+          </div>
+        `).join('')}
+      </div>
+    `);
+  }
+
+  if (!document.getElementById('core-cell-field')) {
+    panel.insertAdjacentHTML('afterbegin', '<div class="core-cell-field" id="core-cell-field" aria-hidden="true"></div>');
+  }
 
   const statusHtml = `
     <section class="lemegeton-status" id="lemegeton-status">
