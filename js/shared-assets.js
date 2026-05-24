@@ -1,3 +1,5 @@
+import { applyCssImageVar, resolveImage as resolveCachedImage } from './ui/asset-cache.js';
+
 const SHARED_BASE = '/shared';
 
 const SHARED_ASSETS = {
@@ -8,76 +10,79 @@ const SHARED_ASSETS = {
   ],
 };
 
-const loaded = new Map();
-let mounted = false;
+let resolvedStarLogo = null;
+let resolvingStarLogo = null;
+let lastFavicon = '';
 
-function resolveImage(candidates) {
-  const key = candidates.join('|');
-  if (loaded.has(key)) return loaded.get(key);
-
-  const promise = new Promise(resolve => {
-    let index = 0;
-    const tryNext = () => {
-      const src = candidates[index];
-      if (!src) return resolve(null);
-      const img = new Image();
-      img.onload = () => resolve(src);
-      img.onerror = () => {
-        index += 1;
-        tryNext();
-      };
-      img.src = src;
-    };
-    tryNext();
-  });
-
-  loaded.set(key, promise);
-  return promise;
+function resolveImage(candidates, key = candidates.join('|')) {
+  return resolveCachedImage(candidates, key);
 }
 
 function setImage(node, src) {
   if (!node || !src) return;
-  node.style.setProperty('--shared-star-logo', `url("${src}")`);
+  applyCssImageVar(node, '--shared-star-logo', src);
   node.dataset.sharedAssetReady = 'true';
 }
 
-function mountSharedAssets() {
-  if (mounted) return;
+function ensureSharedAssetNodes() {
   const shell = document.querySelector('.clicker-shell');
   const corePanel = document.getElementById('core-panel');
   const clickCore = document.getElementById('click-core');
   const brandTitle = document.querySelector('.brand-title');
-  if (!shell || !corePanel || !clickCore || !brandTitle) return;
-  mounted = true;
+  if (!shell || !corePanel || !clickCore || !brandTitle) return false;
 
   if (!document.getElementById('shared-brand-mark')) {
-    brandTitle.insertAdjacentHTML('beforebegin', '<div class="shared-brand-mark" id="shared-brand-mark" aria-hidden="true"></div>');
+    brandTitle.insertAdjacentHTML('beforebegin', '<div class="shared-brand-mark shared-asset-node" id="shared-brand-mark" aria-hidden="true"></div>');
   }
 
   if (!document.getElementById('shared-reactor-watermark')) {
-    corePanel.insertAdjacentHTML('afterbegin', '<div class="shared-reactor-watermark" id="shared-reactor-watermark" aria-hidden="true"></div>');
+    corePanel.insertAdjacentHTML('afterbegin', '<div class="shared-reactor-watermark shared-asset-node" id="shared-reactor-watermark" aria-hidden="true"></div>');
   }
 
   if (!document.getElementById('shared-bg-sigil')) {
-    shell.insertAdjacentHTML('afterbegin', '<div class="shared-bg-sigil" id="shared-bg-sigil" aria-hidden="true"></div>');
+    shell.insertAdjacentHTML('afterbegin', '<div class="shared-bg-sigil shared-asset-node" id="shared-bg-sigil" aria-hidden="true"></div>');
   }
 
   if (!document.getElementById('shared-core-center-asset')) {
-    clickCore.insertAdjacentHTML('beforeend', '<span class="shared-core-center-asset" id="shared-core-center-asset" aria-hidden="true"></span>');
+    clickCore.insertAdjacentHTML('beforeend', '<span class="shared-core-center-asset shared-asset-node" id="shared-core-center-asset" aria-hidden="true"></span>');
   }
 
-  resolveImage(SHARED_ASSETS.starLogo).then(src => {
-    if (!src) return;
-    document.documentElement.style.setProperty('--shared-star-logo', `url("${src}")`);
-    setImage(document.getElementById('shared-brand-mark'), src);
-    setImage(document.getElementById('shared-reactor-watermark'), src);
-    setImage(document.getElementById('shared-bg-sigil'), src);
-    setImage(document.getElementById('shared-core-center-asset'), src);
-    updateFavicon(src);
-  });
+  return true;
+}
+
+function applyResolvedAssets(src) {
+  if (!src) return;
+  applyCssImageVar(document.documentElement, '--shared-star-logo', src);
+  setImage(document.getElementById('shared-brand-mark'), src);
+  setImage(document.getElementById('shared-reactor-watermark'), src);
+  setImage(document.getElementById('shared-bg-sigil'), src);
+  setImage(document.getElementById('shared-core-center-asset'), src);
+  updateFavicon(src);
+}
+
+function mountSharedAssets() {
+  if (!ensureSharedAssetNodes()) return false;
+
+  if (resolvedStarLogo) {
+    applyResolvedAssets(resolvedStarLogo);
+    return true;
+  }
+
+  if (!resolvingStarLogo) {
+    resolvingStarLogo = resolveImage(SHARED_ASSETS.starLogo, 'starLogo').then(src => {
+      resolvedStarLogo = src;
+      applyResolvedAssets(src);
+      return src;
+    });
+  }
+
+  resolvingStarLogo.then(applyResolvedAssets);
+  return true;
 }
 
 function updateFavicon(src) {
+  if (!src || lastFavicon === src) return;
+  lastFavicon = src;
   let link = document.querySelector('link[rel="icon"]');
   if (!link) {
     link = document.createElement('link');
@@ -89,12 +94,16 @@ function updateFavicon(src) {
 }
 
 const boot = setInterval(() => {
-  mountSharedAssets();
-  if (mounted) clearInterval(boot);
+  if (mountSharedAssets()) clearInterval(boot);
 }, 250);
+
+window.addEventListener('nitro:ui-remounted', mountSharedAssets);
+window.addEventListener('nitro:upgrade-bought', mountSharedAssets);
+window.addEventListener('nitro:prestige-done', mountSharedAssets);
 
 window.NitroSharedAssets = {
   base: SHARED_BASE,
   assets: SHARED_ASSETS,
   resolveImage,
+  mount: mountSharedAssets,
 };
