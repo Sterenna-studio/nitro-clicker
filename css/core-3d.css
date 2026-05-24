@@ -10,7 +10,7 @@
 .click-core.core-3d-ready {
   position: absolute;
   transform-style: preserve-3d;
-  transform: rotateZ(var(--core-rot-z));
+  transform: none;
   border-radius: 50%;
   cursor: pointer;
   user-select: none;
@@ -51,8 +51,8 @@
   position: absolute;
   inset: -8%;
   border-radius: 50%;
-  transform: translateZ(-22px);
-  background: conic-gradient(from var(--core-rot-z), rgba(0,255,204,.22), rgba(255,61,242,.18), rgba(255,204,0,.12), rgba(0,255,204,.22));
+  transform: translateZ(-22px) rotateZ(var(--core-rot-z));
+  background: conic-gradient(from 0deg, rgba(0,255,204,.22), rgba(255,61,242,.18), rgba(255,204,0,.12), rgba(0,255,204,.22));
   filter: blur(20px);
   opacity: .58;
   pointer-events: none;
@@ -106,8 +106,9 @@
   filter: brightness(calc(1 + min(.32, var(--spin-charge) / 300))) saturate(1.25);
 }
 
-.core-panel.core-spinning .shared-core-center-asset {
-  animation: coreLogoInsideSpin .7s linear infinite;
+.core-panel.core-spinning .core-rings,
+.core-panel.core-spinning .click-core::after {
+  transition: transform .08s linear;
 }
 
 .click-core.auto-click-pulse {
@@ -116,11 +117,6 @@
 
 .click-core.spin-click-pulse {
   animation: spinClickPulse .28s ease-out;
-}
-
-@keyframes coreLogoInsideSpin {
-  from { transform: translate(-50%, -50%) translateZ(72px) rotate(0deg); }
-  to { transform: translate(-50%, -50%) translateZ(72px) rotate(360deg); }
 }
 
 @keyframes autoClickPulse {
