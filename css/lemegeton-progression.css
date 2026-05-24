@@ -95,12 +95,11 @@
 }
 
 .lemegeton-status {
-  position: absolute;
-  right: clamp(14px, 2vw, 28px);
-  top: clamp(82px, 11vh, 132px);
-  z-index: 14;
-  width: min(380px, calc(100% - 28px));
+  position: relative;
+  z-index: 1;
+  width: 100%;
   padding: 13px 14px;
+  margin: 0 0 16px;
   border-radius: 18px;
   border: 1px solid rgba(0,255,204,.16);
   background:
@@ -108,6 +107,7 @@
     rgba(2, 7, 14, .72);
   box-shadow: 0 0 24px rgba(0,255,204,.08), inset 0 0 24px rgba(255,61,242,.035);
   backdrop-filter: blur(9px);
+  text-align: left;
 }
 
 .lemegeton-status span,
@@ -226,14 +226,8 @@
   100% { opacity: 0; transform: translate(-50%, -98%) scale(.92); }
 }
 
-.core-panel[data-lemegeton-stage='lemegeton_boot'] .lemegeton-status,
-.core-panel[data-lemegeton-stage='auto_detected'] .lemegeton-status,
-.core-panel[data-lemegeton-stage='auto_control'] .lemegeton-status,
-.core-panel[data-lemegeton-stage='fusion'] .lemegeton-status,
-.core-panel[data-lemegeton-stage='cells'] .lemegeton-status,
-.core-panel[data-lemegeton-stage='ship_power'] .lemegeton-status {
-  border-color: rgba(255,204,0,.28);
-  box-shadow: 0 0 32px rgba(255,204,0,.12), inset 0 0 26px rgba(0,255,204,.06);
+.meta-panel .lemegeton-status {
+  border-color: rgba(0,255,204,.18);
 }
 
 .core-panel[data-lemegeton-stage='cells'] .click-core,
@@ -256,13 +250,6 @@
   }
 
   .energy-tank { min-height: 220px; }
-
-  .lemegeton-status {
-    top: 68px;
-    left: 12px;
-    right: 12px;
-    width: auto;
-  }
 
   .core-cell { width: 24px; height: 24px; margin: -12px; }
 }
