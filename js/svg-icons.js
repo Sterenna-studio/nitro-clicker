@@ -2,6 +2,7 @@ export const SVG_ICON_MAP = {
   core: coreIcon,
   clickAmplifier: lightningIcon,
   autoCore: reactorIcon,
+  autoClicker: autoClickerIcon,
   resonance: starResonanceIcon,
   surchargeCoil: helixIcon,
   prism: prismIcon,
@@ -60,6 +61,16 @@ function reactorIcon(className, title) {
     <circle class="svg-stroke thin" cx="32" cy="32" r="11"/>
     <circle class="svg-fill" cx="32" cy="32" r="4"/>
     <path class="svg-stroke" d="M32 10v10M32 44v10M10 32h10M44 32h10M16.5 16.5l7 7M40.5 40.5l7 7M47.5 16.5l-7 7M23.5 40.5l-7 7"/>
+  `);
+}
+
+function autoClickerIcon(className, title) {
+  return wrap(className, title, `
+    <circle class="svg-stroke" cx="32" cy="32" r="21"/>
+    <path class="svg-stroke" d="M32 14v8M32 42v8M14 32h8M42 32h8"/>
+    <path class="svg-fill" d="M31 20a12 12 0 1 1-10 18l7-2a5 5 0 1 0 4-9l-1-7Z"/>
+    <path class="svg-stroke thin" d="M23 20h12l-4 9M41 44H29l4-9"/>
+    <circle class="svg-fill-alt" cx="32" cy="32" r="3"/>
   `);
 }
 
