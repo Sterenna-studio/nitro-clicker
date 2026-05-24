@@ -3,38 +3,49 @@ import { svgIcon, upgradeIcon } from './svg-icons.js';
 
 const UPGRADE_BY_ID = new Map(UPGRADES.map(upgrade => [upgrade.id, upgrade]));
 const UPGRADE_BY_NAME = new Map(UPGRADES.map(upgrade => [upgrade.name, upgrade]));
+
+const pendingRoots = new Set();
 let scheduled = false;
+let observer = null;
+let observedRoot = null;
 
 function run() {
   scheduled = false;
-  replaceCoreGlyphs();
-  replaceUpgradeIcons();
-  replaceModuleIcons();
-  replaceFactoryIcons();
-  replaceMilestoneIcons();
-  replaceActionIcons();
+  const roots = pendingRoots.size ? [...pendingRoots] : [document.getElementById('app') ?? document.body];
+  pendingRoots.clear();
+
+  for (const root of roots) {
+    if (!root || !root.querySelectorAll) continue;
+    replaceCoreGlyphs(root);
+    replaceUpgradeIcons(root);
+    replaceModuleIcons(root);
+    replaceFactoryIcons(root);
+    replaceMilestoneIcons(root);
+    replaceActionIcons(root);
+  }
 }
 
-function schedule() {
+function schedule(root = null) {
+  if (root) pendingRoots.add(root.nodeType === Node.ELEMENT_NODE ? root : document.getElementById('app') ?? document.body);
   if (scheduled) return;
   scheduled = true;
   requestAnimationFrame(run);
 }
 
-function replaceCoreGlyphs() {
-  document.querySelectorAll('.core-glyph:not([data-svg-ready])').forEach(node => {
+function replaceCoreGlyphs(root) {
+  root.querySelectorAll('.core-glyph:not([data-svg-ready])').forEach(node => {
     node.dataset.svgReady = 'true';
     node.innerHTML = svgIcon('core', 'nc-svg-icon nc-svg-core', 'Noyau Nitro');
   });
 
-  document.querySelectorAll('.loading-orb:not([data-svg-ready])').forEach(node => {
+  root.querySelectorAll('.loading-orb:not([data-svg-ready])').forEach(node => {
     node.dataset.svgReady = 'true';
     node.innerHTML = svgIcon('core', 'nc-svg-icon nc-svg-core', 'Chargement Nitro');
   });
 }
 
-function replaceUpgradeIcons() {
-  document.querySelectorAll('[data-upgrade]').forEach(button => {
+function replaceUpgradeIcons(root) {
+  root.querySelectorAll('[data-upgrade]').forEach(button => {
     const id = button.dataset.upgrade;
     const upgrade = UPGRADE_BY_ID.get(id);
     const nameNode = button.querySelector('.upgrade-name');
@@ -54,7 +65,7 @@ function replaceUpgradeIcons() {
     nameNode.innerHTML = `${upgradeIcon(id, 'nc-svg-icon nc-svg-upgrade')} <span class="upgrade-label">${escapeHtml(upgrade.name)}</span> ${levelHtml}`;
   });
 
-  const prestige = document.querySelector('#prestige-btn .upgrade-name:not([data-svg-ready])');
+  const prestige = root.querySelector('#prestige-btn .upgrade-name:not([data-svg-ready])');
   if (prestige) {
     prestige.dataset.svgReady = 'true';
     prestige.classList.add('upgrade-name-svg');
@@ -62,8 +73,8 @@ function replaceUpgradeIcons() {
   }
 }
 
-function replaceModuleIcons() {
-  document.querySelectorAll('.spawned-module:not([data-svg-ready])').forEach(node => {
+function replaceModuleIcons(root) {
+  root.querySelectorAll('.spawned-module:not([data-svg-ready])').forEach(node => {
     const title = node.getAttribute('title') ?? '';
     const upgrade = [...UPGRADE_BY_NAME.entries()].find(([name]) => title.startsWith(name))?.[1];
     node.dataset.svgReady = 'true';
@@ -71,8 +82,8 @@ function replaceModuleIcons() {
   });
 }
 
-function replaceFactoryIcons() {
-  document.querySelectorAll('.factory-node:not([data-svg-ready])').forEach((node, index) => {
+function replaceFactoryIcons(root) {
+  root.querySelectorAll('.factory-node:not([data-svg-ready])').forEach((node, index) => {
     const raw = node.textContent.trim();
     node.dataset.svgReady = 'true';
     const icon = raw.includes('🏭') ? 'nitroFactory' : raw.includes('⚙') ? 'enginePlant' : index % 3 === 2 ? 'core' : 'nitroFactory';
@@ -80,45 +91,67 @@ function replaceFactoryIcons() {
   });
 }
 
-function replaceMilestoneIcons() {
-  document.querySelectorAll('.milestone > span:not([data-svg-ready])').forEach(node => {
+function replaceMilestoneIcons(root) {
+  root.querySelectorAll('.milestone > span:not([data-svg-ready])').forEach(node => {
     const done = node.textContent.includes('✓');
     node.dataset.svgReady = 'true';
     node.innerHTML = svgIcon(done ? 'milestoneDone' : 'milestoneOpen', 'nc-svg-icon nc-svg-milestone');
   });
 }
 
-function replaceActionIcons() {
-  const fx = document.getElementById('fx-toggle');
+function replaceActionIcons(root) {
+  const fx = root.querySelector('#fx-toggle');
   if (fx && fx.dataset.svgReady !== 'true') {
     const isOn = fx.textContent.includes('ON');
     fx.dataset.svgReady = 'true';
     fx.innerHTML = `${svgIcon('fx', 'nc-svg-icon nc-svg-inline')} ${isOn ? 'FX ON' : 'FX OFF'}`;
   }
 
-  const save = document.getElementById('save-btn');
+  const save = root.querySelector('#save-btn');
   if (save && save.dataset.svgReady !== 'true') {
     save.dataset.svgReady = 'true';
     save.innerHTML = `${svgIcon('save', 'nc-svg-icon nc-svg-inline')} SAUVER LOCAL`;
   }
 
-  const reset = document.getElementById('reset-btn');
+  const reset = root.querySelector('#reset-btn');
   if (reset && reset.dataset.svgReady !== 'true') {
     reset.dataset.svgReady = 'true';
     reset.innerHTML = `${svgIcon('reset', 'nc-svg-icon nc-svg-inline')} RESET LOCAL`;
   }
 
-  document.querySelectorAll('.stat-value.fragment:not([data-svg-stat])').forEach(node => {
+  root.querySelectorAll('.stat-value.fragment:not([data-svg-stat])').forEach(node => {
     node.dataset.svgStat = 'true';
     node.insertAdjacentHTML('beforebegin', `<div class="stat-icon-bg">${svgIcon('fragment', 'nc-svg-icon nc-svg-stat-bg')}</div>`);
   });
+}
+
+function mountObserver() {
+  const root = document.getElementById('app') ?? document.body;
+  if (!root || observedRoot === root) return;
+  observer?.disconnect();
+  observedRoot = root;
+  observer = new MutationObserver(records => {
+    for (const record of records) {
+      for (const node of record.addedNodes) {
+        if (!(node instanceof HTMLElement)) continue;
+        schedule(node);
+      }
+    }
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  schedule(root);
 }
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 }
 
-const observer = new MutationObserver(schedule);
-observer.observe(document.documentElement, { childList: true, subtree: true });
+const boot = setInterval(() => {
+  mountObserver();
+  if (observedRoot?.id === 'app') clearInterval(boot);
+}, 200);
 
-schedule();
+window.NitroSvgReplacer = {
+  run: () => schedule(document.getElementById('app') ?? document.body),
+  schedule,
+};
