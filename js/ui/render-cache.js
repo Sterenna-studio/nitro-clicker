@@ -5,6 +5,17 @@ const textCache = new WeakMap();
 const htmlCache = new WeakMap();
 const styleCache = new WeakMap();
 
+const INNER_HTML_GUARDED_IDS = new Set([
+  'scale-card',
+  'milestone-list',
+  'upgrade-list',
+  'module-orbit',
+  'factory-field',
+  'tendril-layer',
+]);
+
+let guardsInstalled = false;
+
 export function setText(nodeOrId, value) {
   const node = resolveNode(nodeOrId);
   if (!node) return false;
@@ -54,11 +65,55 @@ export function setClassToggle(nodeOrId, className, enabled) {
   return true;
 }
 
+export function installDomWriteGuards() {
+  if (guardsInstalled) return;
+  guardsInstalled = true;
+  installInnerHtmlGuard();
+  installStyleSetPropertyGuard();
+}
+
+function installInnerHtmlGuard() {
+  const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  if (!descriptor?.set || !descriptor?.get || !descriptor.configurable) return;
+  Object.defineProperty(Element.prototype, 'innerHTML', {
+    configurable: true,
+    enumerable: descriptor.enumerable,
+    get() {
+      return descriptor.get.call(this);
+    },
+    set(value) {
+      const next = String(value ?? '');
+      if (this.id && INNER_HTML_GUARDED_IDS.has(this.id)) {
+        const prev = htmlCache.get(this);
+        if (prev === next && descriptor.get.call(this) === next) return;
+        htmlCache.set(this, next);
+      }
+      descriptor.set.call(this, next);
+    },
+  });
+}
+
+function installStyleSetPropertyGuard() {
+  const original = CSSStyleDeclaration.prototype.setProperty;
+  if (!original || original.__nitroGuarded) return;
+  function guardedSetProperty(propertyName, value = '', priority = '') {
+    const next = String(value ?? '');
+    const current = this.getPropertyValue(propertyName);
+    const currentPriority = this.getPropertyPriority(propertyName);
+    if (current === next && currentPriority === String(priority ?? '')) return undefined;
+    return original.call(this, propertyName, next, priority);
+  }
+  guardedSetProperty.__nitroGuarded = true;
+  CSSStyleDeclaration.prototype.setProperty = guardedSetProperty;
+}
+
 function resolveNode(nodeOrId) {
   if (!nodeOrId) return null;
   if (typeof nodeOrId === 'string') return document.getElementById(nodeOrId);
   return nodeOrId;
 }
+
+installDomWriteGuards();
 
 window.NitroRenderCache = {
   setText,
@@ -66,4 +121,5 @@ window.NitroRenderCache = {
   setStyle,
   setTransformScaleX,
   setClassToggle,
+  installDomWriteGuards,
 };
