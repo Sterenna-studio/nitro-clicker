@@ -1,4 +1,4 @@
-import { VERSION, createDefaultState, hydrateState, recalcDerivedStats } from './clicker-state.js';
+import { VERSION, createDefaultState, hydrateState, recalcDerivedStats, prestigeRequirement } from './clicker-state.js';
 
 const SAVE_PREFIX = 'nitro-clicker.save.';
 const DEV_ENABLED_KEY = 'nitro-clicker.dev.enabled';
@@ -37,7 +37,7 @@ function writeSave(state) {
 function log(type, title, detail = '') {
   const list = readLog();
   list.unshift({ type, title, detail, at: Date.now() });
-  localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, 60)));
+  localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, 80)));
   renderLog();
 }
 
@@ -65,16 +65,22 @@ function mount() {
       <aside class="dev-panel" id="dev-panel">
         <button class="dev-panel-toggle" id="dev-panel-toggle" type="button">⚙ DEBUG</button>
         <div class="dev-panel-body">
-          <strong>DEBUG TOOLS</strong>
-          <small>?debug=0 pour masquer</small>
+          <strong>DEBUG TOOLS · QA</strong>
+          <small>?debug=0 pour masquer · tous les boutons normalisent la save.</small>
+          <button data-dev="fresh">new save</button>
+          <button data-dev="legacy-v1">legacy v1 save</button>
+          <button data-dev="repair">repair save</button>
+          <button data-dev="prestige-ready">prestige ready</button>
           <button data-dev="e1k">+1K énergie</button>
           <button data-dev="e100k">+100K énergie</button>
           <button data-dev="e10m">+10M énergie</button>
+          <button data-dev="e100m">+100M total</button>
+          <button data-dev="e1b">set 1B total</button>
           <button data-dev="f10">+10 fragments</button>
           <button data-dev="p1">+1 prestige</button>
           <button data-dev="p10">set prestige 10</button>
+          <button data-dev="auto10">auto-clicker Lv.10</button>
           <button data-dev="unlock">unlock early</button>
-          <button data-dev="repair">repair save</button>
         </div>
       </aside>` : ''}
   `);
@@ -89,18 +95,50 @@ function mount() {
     if (up && !up.classList.contains('locked')) log('upgrade', 'Achat upgrade', up.querySelector('.upgrade-name')?.textContent?.trim() || up.dataset.upgrade);
     if (event.target.closest?.('#prestige-btn')) log('prestige', 'Tentative prestige');
   }, true);
-  log('system', devEnabled ? 'Session lancée · debug actif' : 'Session lancée');
+  log('system', devEnabled ? 'Session lancée · debug QA actif' : 'Session lancée');
+  renderLog();
 }
 
 function runDev(action) {
-  const s = readSave();
+  const key = saveKey();
+  let s = readSave();
+
+  if (action === 'fresh') {
+    s = createDefaultState('guest');
+    log('debug', 'Nouvelle sauvegarde vierge');
+    return writeSave(s);
+  }
+
+  if (action === 'legacy-v1') {
+    const legacy = {
+      version: 1,
+      userId: 'legacy-qa',
+      energy: 750,
+      totalEnergy: 1250,
+      fragments: 1,
+      totalFragments: 1,
+      prestige: 0,
+      upgrades: { clickAmplifier: 3, autoCore: 2 },
+      milestones: {},
+      updatedAt: Date.now() - 10000,
+    };
+    localStorage.setItem(key, JSON.stringify(legacy));
+    log('debug', 'Legacy v1 injectée');
+    return setTimeout(() => location.reload(), 100);
+  }
+
   if (action === 'e1k') { s.energy += 1000; s.totalEnergy += 1000; }
   if (action === 'e100k') { s.energy += 100000; s.totalEnergy += 100000; }
   if (action === 'e10m') { s.energy += 10000000; s.totalEnergy += 10000000; }
+  if (action === 'e100m') { s.energy += 100000000; s.totalEnergy += 100000000; }
+  if (action === 'e1b') { s.energy = Math.max(s.energy, 1000000000); s.totalEnergy = Math.max(s.totalEnergy, 1000000000); }
   if (action === 'f10') { s.fragments += 10; s.totalFragments += 10; }
   if (action === 'p1') s.prestige += 1;
   if (action === 'p10') s.prestige = Math.max(10, s.prestige);
+  if (action === 'auto10') s.upgrades.autoClicker = Math.max(s.upgrades.autoClicker || 0, 10);
+  if (action === 'prestige-ready') { const req = prestigeRequirement(s); s.energy = Math.max(s.energy, req); s.totalEnergy = Math.max(s.totalEnergy, req); }
   if (action === 'unlock') { s.energy += 10000; s.totalEnergy = Math.max(s.totalEnergy, 10000); s.fragments += 3; s.totalFragments += 3; s.upgrades.prism = Math.max(s.upgrades.prism || 0, 2); }
+
   log('debug', `Action ${action}`);
   writeSave(s);
 }
