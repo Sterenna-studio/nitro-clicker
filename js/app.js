@@ -63,7 +63,6 @@ const FX = {
   },
   click() { this.tone(660 + Math.random() * 120, 'triangle', 0.035, 0.055); },
   zap() { [880, 1240, 660].forEach((f, i) => setTimeout(() => this.tone(f + Math.random() * 80, 'sawtooth', 0.035, 0.045), i * 28)); },
-  ready() { [523, 659, 784].forEach((f, i) => setTimeout(() => this.tone(f, 'sine', 0.055, 0.09), i * 55)); },
   buy() { [392, 523, 659, 1047].forEach((f, i) => setTimeout(() => this.tone(f, 'triangle', 0.065, 0.11), i * 58)); },
   milestone() { [784, 988, 1175].forEach((f, i) => setTimeout(() => this.tone(f, 'sine', 0.055, 0.12), i * 70)); },
   overdrive() { [110, 220, 440, 880, 1760].forEach((f, i) => setTimeout(() => this.tone(f, i < 2 ? 'sawtooth' : 'square', 0.045, 0.09), i * 42)); },
@@ -111,6 +110,7 @@ function renderShell() {
 
     <section class="stats-grid stats-grid-extended">
       <article class="stat-card energy-stat"><div class="stat-label">ÉNERGIE</div><div class="stat-value primary" id="stat-energy">0</div><div class="stat-meter"><span id="meter-energy"></span></div></article>
+      <article class="stat-card"><div class="stat-label">ÉNERGIE TOTALE</div><div class="stat-value total" id="stat-total-energy">0</div><div class="stat-meter total"><span id="meter-total-energy"></span></div></article>
       <article class="stat-card"><div class="stat-label">FRAGMENTS</div><div class="stat-value fragment" id="stat-fragments">0</div><div class="stat-meter fragment"><span id="meter-fragments"></span></div></article>
       <article class="stat-card"><div class="stat-label">PAR CLIC</div><div class="stat-value" id="stat-click">1</div><div class="stat-meter small"><span id="meter-click"></span></div></article>
       <article class="stat-card"><div class="stat-label">AUTO / SEC</div><div class="stat-value" id="stat-passive">0</div><div class="stat-meter small"><span id="meter-passive"></span></div></article>
@@ -160,7 +160,7 @@ function renderShell() {
         <button class="upgrade-btn prestige-card" id="prestige-btn">
           <span class="upgrade-fill" id="prestige-fill"></span>
           <div class="upgrade-head"><span class="upgrade-name">✦ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
-          <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l’échelle et débloque des systèmes.</div>
+          <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
         </button>
 
         <div class="save-row">
@@ -181,7 +181,6 @@ function bindStaticEvents() {
     localStorage.setItem(FX_KEY, String(fxEnabled));
     app.classList.toggle('fx-disabled', !fxEnabled);
     document.getElementById('fx-toggle').textContent = fxEnabled ? '✨ FX ON' : 'FX OFF';
-    if (fxEnabled) FX.ready();
   });
 
   document.querySelectorAll('[data-buy-mult]').forEach(btn => {
@@ -191,7 +190,6 @@ function bindStaticEvents() {
       document.querySelectorAll('[data-buy-mult]').forEach(node => node.classList.toggle('active', Number(node.dataset.buyMult) === buyMultiplier));
       document.getElementById('upgrade-sync-hint').textContent = `SYNC LIVE · ACHAT ×${buyMultiplier}`;
       renderUpgrades();
-      FX.ready();
     });
   });
 
@@ -425,6 +423,7 @@ function renderStats() {
   lastLayerId = layer.id;
 
   document.getElementById('stat-energy').textContent = fmt(state.energy);
+  document.getElementById('stat-total-energy').textContent = fmt(state.totalEnergy);
   document.getElementById('stat-fragments').textContent = fmt(state.fragments);
   document.getElementById('stat-click').textContent = fmt(state.clickPower);
   document.getElementById('stat-passive').textContent = `${Number(state.passiveRate ?? 0).toFixed(2)}`;
@@ -435,6 +434,7 @@ function renderStats() {
 
   const nextCost = getNextAffordableCost();
   setMeter('meter-energy', Math.min(1, state.energy / Math.max(1, nextCost)));
+  setMeter('meter-total-energy', Math.min(1, state.totalEnergy / Math.max(1, prestigeRequirement(state) * 10)));
   setMeter('meter-fragments', Math.min(1, state.fragments / 25));
   setMeter('meter-click', Math.min(1, state.clickPower / 1000));
   setMeter('meter-passive', Math.min(1, state.passiveRate / 2500));
@@ -538,31 +538,41 @@ function bindUpgradeButtons() {
   });
 }
 
-function refreshUpgradesIfNeeded(playReadySound = false) {
+function triggerUnlockShimmer(btn) {
+  if (!btn) return;
+  btn.classList.remove('unlock-shimmer');
+  requestAnimationFrame(() => {
+    btn.classList.add('unlock-shimmer');
+    setTimeout(() => btn.classList.remove('unlock-shimmer'), 750);
+  });
+}
+
+function refreshUpgradesIfNeeded() {
   const previous = lastUpgradeSignature;
   const signature = getUpgradeSignature();
   if (signature === previous) {
     renderUpgradesLive();
     return;
   }
-  const becameReady = playReadySound && previous && signature.split('|').some((part, idx) => {
-    const prev = previous.split('|')[idx] ?? '';
-    const p = prev.split(':');
-    const n = part.split(':');
-    return (p[1] === '0' && n[1] === '1') || (p[3] === '0' && n[3] === '1');
-  });
+
+  const newlyUnlocked = previous ? signature.split('|').some((part, idx) => {
+    const prev = (previous.split('|')[idx] ?? '').split(':');
+    const next = part.split(':');
+    return (prev[1] === '0' && next[1] === '1') || (prev[3] === '0' && next[3] === '1');
+  }) : false;
+
   renderUpgrades();
-  if (becameReady) {
-    FX.ready();
-    const ready = [...document.querySelectorAll('.upgrade-btn.can-buy')].at(-1);
-    if (ready) spawnLightningToElement(ready, 'READY');
+
+  if (newlyUnlocked) {
+    const justUnlocked = [...document.querySelectorAll('.upgrade-btn.can-buy')].at(-1);
+    triggerUnlockShimmer(justUnlocked);
   }
 }
 
 function renderUpgradesLive() {
   const signature = getUpgradeSignature();
   if (signature !== lastUpgradeSignature) {
-    refreshUpgradesIfNeeded(true);
+    refreshUpgradesIfNeeded();
     return;
   }
   for (const upgrade of UPGRADES) {
@@ -591,7 +601,7 @@ function renderScaleCard() {
       <span class="scale-chip">${layer.short}</span>
       <div><strong>${layer.name}</strong><p>${layer.desc}</p></div>
     </div>
-    <div class="scale-card-sub">Multiplicateur d’échelle ×${layer.mult} · prochain dézoom aux prestiges 3 / 10 / 25 / 50</div>
+    <div class="scale-card-sub">Multiplicateur d'échelle ×${layer.mult} · prochain dézoom aux prestiges 3 / 10 / 25 / 50</div>
   `;
 }
 
@@ -662,7 +672,7 @@ function startLoop() {
     lastTick = now;
     if (state.passiveRate > 0) tickPassive(state, delta);
     renderLive();
-    refreshUpgradesIfNeeded(true);
+    refreshUpgradesIfNeeded();
     if (fxEnabled && now - lastEnergyPulse > 1800) {
       lastEnergyPulse = now;
       const panel = document.getElementById('core-panel')?.getBoundingClientRect();
