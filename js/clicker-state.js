@@ -1,4 +1,4 @@
-export const VERSION = 3;
+export const VERSION = 4;
 
 export const BALANCE = {
   prestigeBase: 8500,
@@ -32,6 +32,7 @@ export function createDefaultState(userId = null) {
     totalFragments: 0,
     clickPower: 1,
     passiveRate: 0,
+    autoClickRate: 0,
     prestige: 0,
     totalClicks: 0,
     surcharge: 0,
@@ -43,6 +44,7 @@ export function createDefaultState(userId = null) {
     upgrades: {
       clickAmplifier: 0,
       autoCore: 0,
+      autoClicker: 0,
       resonance: 0,
       surchargeCoil: 0,
       prism: 0,
@@ -71,6 +73,13 @@ export const UPGRADES = [
     desc: '+0.42 énergie / seconde par niveau. Base du jeu idle.',
     unlock: () => true,
     apply(state) { state.passiveRate += 0.42; },
+  },
+  {
+    id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 240, scale: 1.52, currency: 'energy', tier: 1,
+    desc: 'Maintient le noyau actif : +0.16 clic automatique/sec et +0.2/s par niveau.',
+    unlock: state => state.totalEnergy >= 260 || state.prestige >= 1,
+    lockedText: 'Débloqué à 260 énergie totale.',
+    apply(state) { state.autoClickRate += 0.16; state.passiveRate += 0.2; },
   },
   {
     id: 'resonance', name: 'Résonance Star', icon: '✦', baseCost: 360, scale: 1.58, currency: 'energy', tier: 1,
@@ -186,6 +195,7 @@ export function hydrateState(raw, userId = null) {
   merged.totalFragments = Number(merged.totalFragments ?? merged.fragments ?? 0);
   merged.totalClicks = Number(merged.totalClicks ?? 0);
   merged.surcharge = Number(merged.surcharge ?? 0);
+  merged.autoClickRate = Number(merged.autoClickRate ?? 0);
   merged.userId = userId ?? merged.userId;
   recalcDerivedStats(merged);
   return merged;
@@ -195,6 +205,7 @@ export function recalcDerivedStats(state) {
   const layer = getScalingLayer(state);
   state.clickPower = (1 + state.prestige) * layer.mult;
   state.passiveRate = state.prestige * 0.1 * layer.mult;
+  state.autoClickRate = 0;
   state.maxSurcharge = 100;
   state.surchargeGain = 5;
   state.overdriveLevel = 0;
@@ -208,6 +219,7 @@ export function recalcDerivedStats(state) {
 
   state.clickPower *= state.permanentMultiplier;
   state.passiveRate *= state.permanentMultiplier;
+  state.autoClickRate *= state.permanentMultiplier;
   state.surcharge = Math.min(state.surcharge ?? 0, state.maxSurcharge);
 }
 
