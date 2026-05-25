@@ -1,4 +1,4 @@
-export const VERSION = 4;
+export const VERSION = 5;
 
 export const BALANCE = {
   prestigeBase: 8500,
@@ -110,8 +110,8 @@ export const UPGRADES = [
     apply(state) { state.clickPower += 6; state.passiveRate += 7.5; state.maxSurcharge += 5; },
   },
   {
-    id: 'fragmentCatalyst', name: 'Catalyseur de fragments', icon: '💠', baseCost: 4, scale: 1.62, currency: 'fragments', tier: 3,
-    desc: 'Upgrade permanent : +7% multiplicateur global par niveau.',
+    id: 'fragmentCatalyst', name: 'Catalyseur de fragments', icon: '💠', baseCost: 4, scale: 1.62, currency: 'fragments', tier: 3, persistent: true,
+    desc: 'Upgrade permanent : +7% multiplicateur global par niveau. Survit aux resets du noyau.',
     unlock: state => state.fragments >= 1 || state.totalFragments >= 1 || state.prestige >= 1,
     lockedText: 'Débloqué après ton premier Fragment Nitro.',
     apply(state) { state.permanentMultiplier += 0.07; },
@@ -153,6 +153,18 @@ export const MILESTONES = [
 export function getScalingLayer(state) {
   const prestige = state?.prestige ?? 0;
   return [...SCALING_LAYERS].reverse().find(layer => prestige >= layer.prestige) ?? SCALING_LAYERS[0];
+}
+
+export function isPersistentUpgrade(upgrade) {
+  return !!upgrade?.persistent || upgrade?.currency === 'fragments';
+}
+
+export function getPersistentUpgradeLevels(state) {
+  return Object.fromEntries(
+    UPGRADES
+      .filter(isPersistentUpgrade)
+      .map(upgrade => [upgrade.id, Math.max(0, Number(state?.upgrades?.[upgrade.id] ?? 0))]),
+  );
 }
 
 export function isUpgradeUnlocked(state, upgrade) {
@@ -291,7 +303,7 @@ export function buyUpgradeAmount(state, upgradeId, amount = 1) {
   state.upgrades[upgrade.id] = level + qty;
   recalcDerivedStats(state);
   state.updatedAt = Date.now();
-  return { ok: true, cost, amount: qty, level: level + qty, currency };
+  return { ok: true, cost, amount: qty, level: level + qty, currency, persistent: isPersistentUpgrade(upgrade) };
 }
 
 export function checkAndClaimMilestones(state) {
@@ -341,17 +353,19 @@ export function prestigeRequirement(state) {
 export function doPrestige(state) {
   if (!canPrestige(state)) return { ok: false, reason: 'not_ready' };
   const userId = state.userId;
-  const keptFragments = state.fragments;
-  const keptTotalFragments = state.totalFragments;
+  const keptFragments = Math.max(0, Number(state.fragments ?? 0));
+  const keptTotalFragments = Math.max(keptFragments, Number(state.totalFragments ?? keptFragments));
   const keptMilestones = state.milestones;
   const keptTotalClicks = state.totalClicks;
+  const keptPersistentUpgrades = getPersistentUpgradeLevels(state);
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
   const prestigeReward = Math.floor(3 + next.prestige * 1.25 + Math.sqrt(Math.max(0, state.totalEnergy)) / 3000);
   next.fragments = keptFragments + prestigeReward;
   next.totalFragments = keptTotalFragments + prestigeReward;
+  next.upgrades = { ...next.upgrades, ...keptPersistentUpgrades };
   next.milestones = keptMilestones;
   next.totalClicks = keptTotalClicks;
   recalcDerivedStats(next);
-  return { ok: true, state: next };
+  return { ok: true, state: next, keptPersistentUpgrades, prestigeReward };
 }
