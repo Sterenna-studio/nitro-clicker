@@ -3,10 +3,13 @@ import { getProfile, getDisplayNameFromUser } from '/shared/profile.js';
 import {
   UPGRADES,
   applyOfflineProgress,
+  attemptCoreShellBreak,
   buyUpgradeAmount,
   checkAndClaimMilestones,
   clickCore,
   doPrestige,
+  getCoreGrowthLevel,
+  getCoreShellInfo,
   getCurrency,
   getScalingLayer,
   getVisibleMilestones,
@@ -37,6 +40,7 @@ let lastModuleSignature = '';
 let lastFactorySignature = '';
 let lastTendrilSignature = '';
 let lastLayerId = '';
+let lastShellSignature = '';
 let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
@@ -73,6 +77,8 @@ const FX = {
   milestone() { [784, 988, 1175].forEach((f, i) => setTimeout(() => this.tone(f, 'sine', 0.055, 0.12), i * 70)); },
   overdrive() { [110, 220, 440, 880, 1760].forEach((f, i) => setTimeout(() => this.tone(f, i < 2 ? 'sawtooth' : 'square', 0.045, 0.09), i * 42)); },
   prestige() { [262, 392, 523, 784, 1047, 1568].forEach((f, i) => setTimeout(() => this.tone(f, i % 2 ? 'triangle' : 'square', 0.055, 0.13), i * 70)); },
+  crack() { [180, 320, 640, 420].forEach((f, i) => setTimeout(() => this.tone(f, i % 2 ? 'sawtooth' : 'triangle', 0.04, 0.075), i * 38)); },
+  shatter() { [130, 260, 520, 1040, 1560].forEach((f, i) => setTimeout(() => this.tone(f, i < 2 ? 'square' : 'triangle', 0.065, 0.11), i * 45)); },
 };
 
 function fmt(value) {
@@ -121,8 +127,9 @@ function renderShell() {
       <article class="stat-card"><div class="stat-label">PAR CLIC</div><div class="stat-value" id="stat-click">1</div><div class="stat-meter small"><span id="meter-click"></span></div></article>
       <article class="stat-card"><div class="stat-label">AUTO / SEC</div><div class="stat-value" id="stat-passive">0</div><div class="stat-meter small"><span id="meter-passive"></span></div></article>
       <article class="stat-card"><div class="stat-label">SURCHARGE</div><div class="stat-value danger" id="stat-surcharge">0%</div><div class="stat-meter danger"><span id="meter-surcharge"></span></div></article>
-      <article class="stat-card"><div class="stat-label">ÉCHELLE</div><div class="stat-value layer" id="stat-layer">CORE</div><div class="stat-meter layer"><span id="meter-layer"></span></div></article>
+      <article class="stat-card"><div class="stat-label">COQUE</div><div class="stat-value shell" id="stat-shell">0/0</div><div class="stat-meter shell"><span id="meter-shell"></span></div></article>
       <article class="stat-card"><div class="stat-label">PRESTIGE</div><div class="stat-value accent" id="stat-prestige">0</div><div class="stat-meter accent"><span id="meter-prestige"></span></div></article>
+      <article class="stat-card"><div class="stat-label">ÉCHELLE</div><div class="stat-value layer" id="stat-layer">CORE</div><div class="stat-meter layer"><span id="meter-layer"></span></div></article>
       <article class="stat-card"><div class="stat-label">USINES</div><div class="stat-value factory" id="stat-factory">0</div><div class="stat-meter factory"><span id="meter-factory"></span></div></article>
     </section>
 
@@ -133,6 +140,7 @@ function renderShell() {
         <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
         <div class="energy-field" id="energy-field" aria-hidden="true"></div>
         <div class="module-orbit" id="module-orbit" aria-hidden="true"></div>
+        <div class="core-shell-visual" id="core-shell-visual" aria-hidden="true"><span></span><i></i><b></b></div>
         <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro">
           <span class="core-rings"></span>
           <span class="core-glyph">⬡</span>
@@ -161,6 +169,14 @@ function renderShell() {
         <h2 class="panel-title">ÉCHELLE & MILESTONES</h2>
         <div class="scale-card" id="scale-card"></div>
         <div class="milestone-list" id="milestone-list"></div>
+
+        <h2 class="panel-title" style="margin-top:22px">COQUE DU NOYAU</h2>
+        <div class="core-shell-card" id="core-shell-card"></div>
+        <button class="upgrade-btn shell-break-card" id="shell-break-btn" type="button">
+          <span class="upgrade-fill" id="shell-break-fill"></span>
+          <div class="upgrade-head"><span class="upgrade-name">◇ Briser la sphère</span><span class="upgrade-cost" id="shell-break-cost"></span></div>
+          <div class="upgrade-desc" id="shell-break-desc">Stocke des fragments Nitro dans la sphère, puis dépense un fort pic d'énergie pour tenter de la briser.</div>
+        </button>
 
         <h2 class="panel-title" style="margin-top:22px">PRESTIGE</h2>
         <button class="upgrade-btn prestige-card" id="prestige-btn">
@@ -213,11 +229,42 @@ function bindStaticEvents() {
       spawnSystemWave(`OVERDRIVE +${fmt(result.overdriveGain)}`);
       lightningStorm(5);
     }
+    if (result?.fragmentsStored) {
+      pulseShell('store');
+      toast(`Fragment Nitro confiné dans la sphère +${result.fragmentsStored}`);
+    }
     if (result?.fragments) toast(`Fragment Nitro obtenu +${result.fragments}`);
     if (Math.random() > 0.45) zapToRandomModule();
 
     claimMilestonesAndRender();
     scheduleSave();
+  });
+
+  document.getElementById('shell-break-btn').addEventListener('click', () => {
+    const result = attemptCoreShellBreak(state);
+    if (!result.ok) {
+      if (result.reason === 'locked') return toast('Isolation du noyau requise pour créer une sphère.');
+      if (result.reason === 'empty') return toast('Aucun fragment stocké dans la sphère.');
+      if (result.reason === 'not_enough_energy') return toast(`Pic d'énergie insuffisant : ${fmt(result.shell.breakCost)} E requis.`);
+      if (result.reason === 'failed') {
+        FX.crack();
+        pulseShell('crack');
+        spawnSystemWave('FISSURE');
+        lightningStorm(3);
+        renderAll(true);
+        scheduleSave();
+        return toast(`Rupture ratée · fissure ${result.cracks}/${result.shell.requiredHits} · chance ${Math.round(result.chance * 100)}%`);
+      }
+      return;
+    }
+    FX.shatter();
+    pulseShell('break');
+    spawnSystemWave(`SPHÈRE BRISÉE +${result.released}F`);
+    lightningStorm(8);
+    renderAll(true);
+    claimMilestonesAndRender();
+    scheduleSave();
+    toast(`Fragments libérés : +${result.released}F${result.forced ? ' · rupture forcée par fissures' : ''}`);
   });
 
   document.getElementById('save-btn').addEventListener('click', () => {
@@ -296,6 +343,13 @@ function pulseReactor() {
   const core = document.getElementById('click-core');
   core?.classList.remove('pulse-hit');
   requestAnimationFrame(() => core?.classList.add('pulse-hit'));
+}
+
+function pulseShell(mode = 'store') {
+  if (!fxEnabled) return;
+  const panel = document.getElementById('core-panel');
+  panel?.classList.remove('shell-store-hit', 'shell-crack-hit', 'shell-break-hit');
+  requestAnimationFrame(() => panel?.classList.add(mode === 'break' ? 'shell-break-hit' : mode === 'crack' ? 'shell-crack-hit' : 'shell-store-hit'));
 }
 
 function sparkTendrils() {
@@ -399,6 +453,7 @@ function lightningStorm(count = 5) {
 
 function renderAll(force = false) {
   renderStats();
+  renderCoreShell(force);
   renderScaleCard(force);
   renderUpgrades(force);
   renderMilestones(force);
@@ -409,6 +464,7 @@ function renderAll(force = false) {
 
 function renderLive() {
   renderStats();
+  renderCoreShell();
   renderUpgradesLive();
 }
 
@@ -421,9 +477,19 @@ function getNextAffordableCost() {
 
 function renderStats() {
   const layer = getScalingLayer(state);
+  const shell = getCoreShellInfo(state);
+  const growth = getCoreGrowthLevel(state);
   app.dataset.layer = layer.id;
+  app.dataset.coreGrowth = String(growth);
   const corePanel = document.getElementById('core-panel');
-  if (corePanel) corePanel.dataset.layer = layer.id;
+  if (corePanel) {
+    corePanel.dataset.layer = layer.id;
+    corePanel.dataset.shellUnlocked = String(shell.unlocked);
+    corePanel.style.setProperty('--core-growth', String(growth));
+    corePanel.style.setProperty('--core-shell-fill', String(shell.fillRatio));
+    corePanel.style.setProperty('--core-shell-crack', String(shell.crackRatio));
+    corePanel.style.setProperty('--core-shell-reflect', String(Math.min(1, shell.reflect)));
+  }
 
   if (lastLayerId && lastLayerId !== layer.id) spawnScaleShift();
   lastLayerId = layer.id;
@@ -437,6 +503,7 @@ function renderStats() {
   setText('stat-surcharge', `${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%`);
   setText('stat-layer', layer.short);
   setText('stat-factory', fmt(state.factoryRate));
+  setText('stat-shell', shell.unlocked ? `${shell.storedFragments}/${shell.capacity}` : 'LOCK');
 
   const nextCost = getNextAffordableCost();
   setMeter('meter-energy', Math.min(1, state.energy / Math.max(1, nextCost)));
@@ -447,6 +514,7 @@ function renderStats() {
   setMeter('meter-surcharge', Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge)));
   setMeter('meter-layer', Math.min(1, (state.prestige + 1) / 10));
   setMeter('meter-factory', Math.min(1, state.factoryRate / 50));
+  setMeter('meter-shell', shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio * 0.35) : 0);
 
   const req = prestigeRequirement(state);
   const prestigeRatio = Math.min(1, state.totalEnergy / Math.max(1, req));
@@ -464,11 +532,48 @@ function renderStats() {
   }
 
   setHtml('layer-caption', `<strong>${layer.name}</strong><span>${layer.desc}</span>`);
-  setText('core-label', layer.id === 'factory' || layer.id === 'district' || layer.id === 'orbital' ? 'RUN FACTORIES' : 'CLICK CORE');
+  setText('core-label', layer.id === 'factory' || layer.id === 'district' || layer.id === 'orbital' ? 'RUN FACTORIES' : shell.unlocked ? 'CONTAIN CORE' : 'CLICK CORE');
 }
 
 function setMeter(id, ratio) {
   setTransformScaleX(id, ratio);
+}
+
+function renderCoreShell(force = false) {
+  const shell = getCoreShellInfo(state);
+  const signature = `${shell.unlocked}:${shell.capacity}:${shell.hardness}:${shell.storedFragments}:${shell.cracks}:${shell.breakCost}:${shell.breakChance}:${shell.reflect}:${state.energy}`;
+  if (!force && signature === lastShellSignature) return;
+  lastShellSignature = signature;
+
+  const card = document.getElementById('core-shell-card');
+  const btn = document.getElementById('shell-break-btn');
+  if (!card || !btn) return;
+
+  if (!shell.unlocked) {
+    setHtml(card, `<div class="shell-empty"><strong>Sphère non formée</strong><p>Achète <b>Isolation du noyau</b> pour créer une coque qui stocke les fragments Nitro avant extraction.</p></div>`);
+    btn.disabled = true;
+    setClassToggle(btn, 'can-buy', false);
+    setText('shell-break-cost', 'LOCKED');
+    setMeter('shell-break-fill', 0);
+    return;
+  }
+
+  const canTry = shell.storedFragments > 0 && state.energy >= shell.breakCost;
+  setClassToggle(btn, 'can-buy', canTry);
+  btn.disabled = !canTry;
+  setText('shell-break-cost', `${fmt(shell.breakCost)} E`);
+  setText('shell-break-desc', `Chance ${Math.round(shell.breakChance * 100)}% · fissures ${shell.cracks}/${shell.requiredHits} · dureté ${shell.hardness}`);
+  setMeter('shell-break-fill', Math.min(1, state.energy / Math.max(1, shell.breakCost)));
+
+  setHtml(card, `
+    <div class="shell-grid">
+      <div><span>Stockage</span><strong>${shell.storedFragments}/${shell.capacity} F</strong></div>
+      <div><span>Dureté</span><strong>${shell.hardness}</strong></div>
+      <div><span>Réflexion</span><strong>+${Math.round(shell.reflect * 100)}%</strong></div>
+      <div><span>Fissures</span><strong>${shell.cracks}/${shell.requiredHits}</strong></div>
+    </div>
+    <div class="shell-meter"><i style="transform:scaleX(${shell.fillRatio})"></i><b style="transform:scaleX(${shell.crackRatio})"></b></div>
+  `);
 }
 
 function getUpgradeSignature() {
@@ -539,9 +644,10 @@ function bindUpgradeButtons() {
       spawnModule(btn.dataset.upgrade, result.level);
       spawnLightningToElement(event.currentTarget, `×${result.amount}`);
       spawnEnergyBurst(event.clientX, event.clientY, Math.min(26, 8 + result.amount * 2));
+      if (['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'].includes(btn.dataset.upgrade)) pulseShell('store');
       claimMilestonesAndRender();
       scheduleSave();
-      toast(`Upgrade ×${result.amount} acheté · niveau ${result.level}`);
+      toast(`${result.persistent ? 'Upgrade permanent' : 'Upgrade'} ×${result.amount} acheté · niveau ${result.level}`);
     });
   });
 }
