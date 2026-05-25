@@ -17,6 +17,7 @@ import {
   upgradeCost,
 } from './clicker-state.js';
 import { deleteLocalSave, loadSave, saveAll } from './clicker-save.js';
+import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
 
 const app = document.getElementById('app');
 const FX_KEY = 'nitro-clicker.fx.enabled';
@@ -30,6 +31,11 @@ let userId;
 let saveTimer;
 let lastTick = performance.now();
 let lastUpgradeSignature = '';
+let lastScaleSignature = '';
+let lastMilestoneSignature = '';
+let lastModuleSignature = '';
+let lastFactorySignature = '';
+let lastTendrilSignature = '';
 let lastLayerId = '';
 let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
@@ -180,16 +186,16 @@ function bindStaticEvents() {
     fxEnabled = !fxEnabled;
     localStorage.setItem(FX_KEY, String(fxEnabled));
     app.classList.toggle('fx-disabled', !fxEnabled);
-    document.getElementById('fx-toggle').textContent = fxEnabled ? '✨ FX ON' : 'FX OFF';
+    setText('fx-toggle', fxEnabled ? '✨ FX ON' : 'FX OFF');
   });
 
   document.querySelectorAll('[data-buy-mult]').forEach(btn => {
     btn.addEventListener('click', () => {
       buyMultiplier = Number(btn.dataset.buyMult);
       localStorage.setItem(BUY_MULT_KEY, String(buyMultiplier));
-      document.querySelectorAll('[data-buy-mult]').forEach(node => node.classList.toggle('active', Number(node.dataset.buyMult) === buyMultiplier));
-      document.getElementById('upgrade-sync-hint').textContent = `SYNC LIVE · ACHAT ×${buyMultiplier}`;
-      renderUpgrades();
+      document.querySelectorAll('[data-buy-mult]').forEach(node => setClassToggle(node, 'active', Number(node.dataset.buyMult) === buyMultiplier));
+      setText('upgrade-sync-hint', `SYNC LIVE · ACHAT ×${buyMultiplier}`);
+      renderUpgrades(true);
     });
   });
 
@@ -232,7 +238,7 @@ function bindStaticEvents() {
     state = result.state;
     FX.prestige();
     saveAll(userId, state);
-    renderAll();
+    renderAll(true);
     spawnSystemWave('PRESTIGE +1');
     lightningStorm(9);
     if (getScalingLayer(state).id !== beforeLayer) spawnScaleShift();
@@ -253,7 +259,7 @@ function claimMilestonesAndRender() {
       spawnSystemWave(m.label.toUpperCase());
     }
   }
-  renderAll();
+  renderAll(!!claimed.length);
 }
 
 function spawnPop(x, y, text) {
@@ -391,14 +397,14 @@ function lightningStorm(count = 5) {
   targets.forEach((target, i) => setTimeout(() => spawnLightningToElement(target), i * 70));
 }
 
-function renderAll() {
+function renderAll(force = false) {
   renderStats();
-  renderScaleCard();
-  renderUpgrades();
-  renderMilestones();
-  renderModules();
-  renderTendrils();
-  renderFactories();
+  renderScaleCard(force);
+  renderUpgrades(force);
+  renderMilestones(force);
+  renderModules(force);
+  renderTendrils(force);
+  renderFactories(force);
 }
 
 function renderLive() {
@@ -422,15 +428,15 @@ function renderStats() {
   if (lastLayerId && lastLayerId !== layer.id) spawnScaleShift();
   lastLayerId = layer.id;
 
-  document.getElementById('stat-energy').textContent = fmt(state.energy);
-  document.getElementById('stat-total-energy').textContent = fmt(state.totalEnergy);
-  document.getElementById('stat-fragments').textContent = fmt(state.fragments);
-  document.getElementById('stat-click').textContent = fmt(state.clickPower);
-  document.getElementById('stat-passive').textContent = `${Number(state.passiveRate ?? 0).toFixed(2)}`;
-  document.getElementById('stat-prestige').textContent = fmt(state.prestige);
-  document.getElementById('stat-surcharge').textContent = `${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%`;
-  document.getElementById('stat-layer').textContent = layer.short;
-  document.getElementById('stat-factory').textContent = fmt(state.factoryRate);
+  setText('stat-energy', fmt(state.energy));
+  setText('stat-total-energy', fmt(state.totalEnergy));
+  setText('stat-fragments', fmt(state.fragments));
+  setText('stat-click', fmt(state.clickPower));
+  setText('stat-passive', `${Number(state.passiveRate ?? 0).toFixed(2)}`);
+  setText('stat-prestige', fmt(state.prestige));
+  setText('stat-surcharge', `${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%`);
+  setText('stat-layer', layer.short);
+  setText('stat-factory', fmt(state.factoryRate));
 
   const nextCost = getNextAffordableCost();
   setMeter('meter-energy', Math.min(1, state.energy / Math.max(1, nextCost)));
@@ -451,37 +457,39 @@ function renderStats() {
   setMeter('reactor-c', prestigeRatio);
 
   const btn = document.getElementById('prestige-btn');
-  document.getElementById('prestige-cost').textContent = `${fmt(state.totalEnergy)} / ${fmt(req)}`;
-  btn.disabled = state.totalEnergy < req;
-  btn.classList.toggle('can-buy', state.totalEnergy >= req);
+  setText('prestige-cost', `${fmt(state.totalEnergy)} / ${fmt(req)}`);
+  if (btn) {
+    btn.disabled = state.totalEnergy < req;
+    setClassToggle(btn, 'can-buy', state.totalEnergy >= req);
+  }
 
-  const caption = document.getElementById('layer-caption');
-  if (caption) caption.innerHTML = `<strong>${layer.name}</strong><span>${layer.desc}</span>`;
-  const coreLabel = document.getElementById('core-label');
-  if (coreLabel) coreLabel.textContent = layer.id === 'factory' || layer.id === 'district' || layer.id === 'orbital' ? 'RUN FACTORIES' : 'CLICK CORE';
+  setHtml('layer-caption', `<strong>${layer.name}</strong><span>${layer.desc}</span>`);
+  setText('core-label', layer.id === 'factory' || layer.id === 'district' || layer.id === 'orbital' ? 'RUN FACTORIES' : 'CLICK CORE');
 }
 
 function setMeter(id, ratio) {
-  const node = document.getElementById(id);
-  if (node) node.style.transform = `scaleX(${Math.max(0, Math.min(1, ratio))})`;
+  setTransformScaleX(id, ratio);
 }
 
 function getUpgradeSignature() {
   return UPGRADES.map(upgrade => {
     const unlocked = isUpgradeUnlocked(state, upgrade) ? 1 : 0;
     const level = state.upgrades[upgrade.id] ?? 0;
-    const single = upgradeCost(upgrade, level);
-    const bulk = upgradeBulkCost(upgrade, level, buyMultiplier);
     const currency = upgrade.currency ?? 'energy';
-    const held = getCurrency(state, currency);
-    return `${upgrade.id}:${unlocked}:${level}:${held >= single ? 1 : 0}:${held >= bulk ? 1 : 0}:${buyMultiplier}:${currency}`;
+    return `${upgrade.id}:${unlocked}:${level}:${buyMultiplier}:${currency}`;
   }).join('|');
 }
 
-function renderUpgrades() {
+function renderUpgrades(force = false) {
   const root = document.getElementById('upgrade-list');
-  lastUpgradeSignature = getUpgradeSignature();
-  root.innerHTML = UPGRADES.map(upgrade => renderUpgradeButton(upgrade)).join('');
+  if (!root) return;
+  const signature = getUpgradeSignature();
+  if (!force && signature === lastUpgradeSignature && root.children.length) {
+    renderUpgradesLive();
+    return;
+  }
+  lastUpgradeSignature = signature;
+  setHtml(root, UPGRADES.map(upgrade => renderUpgradeButton(upgrade)).join(''));
   bindUpgradeButtons();
 }
 
@@ -558,10 +566,10 @@ function refreshUpgradesIfNeeded() {
   const newlyUnlocked = previous ? signature.split('|').some((part, idx) => {
     const prev = (previous.split('|')[idx] ?? '').split(':');
     const next = part.split(':');
-    return (prev[1] === '0' && next[1] === '1') || (prev[3] === '0' && next[3] === '1');
+    return prev[1] === '0' && next[1] === '1';
   }) : false;
 
-  renderUpgrades();
+  renderUpgrades(true);
 
   if (newlyUnlocked) {
     const justUnlocked = [...document.querySelectorAll('.upgrade-btn.can-buy')].at(-1);
@@ -570,11 +578,6 @@ function refreshUpgradesIfNeeded() {
 }
 
 function renderUpgradesLive() {
-  const signature = getUpgradeSignature();
-  if (signature !== lastUpgradeSignature) {
-    refreshUpgradesIfNeeded();
-    return;
-  }
   for (const upgrade of UPGRADES) {
     if (!isUpgradeUnlocked(state, upgrade)) continue;
     const level = state.upgrades[upgrade.id] ?? 0;
@@ -584,43 +587,51 @@ function renderUpgradesLive() {
     const bulkCost = upgradeBulkCost(upgrade, level, buyMultiplier);
     const btn = document.querySelector(`[data-upgrade="${upgrade.id}"]`);
     if (!btn) continue;
-    btn.classList.toggle('can-buy', held >= singleCost);
-    btn.classList.toggle('can-buy-bulk', held >= bulkCost);
+    setClassToggle(btn, 'can-buy', held >= singleCost);
+    setClassToggle(btn, 'can-buy-bulk', held >= bulkCost);
     btn.disabled = held < bulkCost;
-    const fill = btn.querySelector(`[data-upgrade-fill="${upgrade.id}"]`);
-    if (fill) fill.style.transform = `scaleX(${Math.min(1, held / Math.max(1, bulkCost))})`;
+    setMeterNode(btn.querySelector(`[data-upgrade-fill="${upgrade.id}"]`), Math.min(1, held / Math.max(1, bulkCost)));
+    setText(btn.querySelector(`[data-upgrade-cost="${upgrade.id}"]`), `${fmt(bulkCost)} ${currencyLabel(currency)}`);
+    setText(btn.querySelector(`[data-upgrade-meta="${upgrade.id}"]`), `Achat ×${buyMultiplier} · unité ${fmt(singleCost)} ${currencyLabel(currency)}`);
   }
 }
 
-function renderScaleCard() {
-  const node = document.getElementById('scale-card');
-  if (!node) return;
+function renderScaleCard(force = false) {
   const layer = getScalingLayer(state);
-  node.innerHTML = `
+  const signature = `${layer.id}:${layer.mult}:${state.prestige}`;
+  if (!force && signature === lastScaleSignature) return;
+  lastScaleSignature = signature;
+  setHtml('scale-card', `
     <div class="scale-card-main">
       <span class="scale-chip">${layer.short}</span>
       <div><strong>${layer.name}</strong><p>${layer.desc}</p></div>
     </div>
     <div class="scale-card-sub">Multiplicateur d'échelle ×${layer.mult} · prochain dézoom aux prestiges 3 / 10 / 25 / 50</div>
-  `;
+  `);
 }
 
-function renderMilestones() {
+function renderMilestones(force = false) {
   const root = document.getElementById('milestone-list');
   if (!root) return;
   const items = getVisibleMilestones(state);
-  root.innerHTML = items.map(m => {
+  const signature = items.map(m => `${m.id}:${state.milestones[m.id] ? 1 : 0}`).join('|');
+  if (!force && signature === lastMilestoneSignature) return;
+  lastMilestoneSignature = signature;
+  setHtml(root, items.map(m => {
     const done = !!state.milestones[m.id];
     const reward = [];
     if (m.reward?.energy) reward.push(`+${fmt(m.reward.energy)} E`);
     if (m.reward?.fragments) reward.push(`+${fmt(m.reward.fragments)} F`);
     return `<div class="milestone ${done ? 'done' : ''}"><span>${done ? '✓' : '◇'}</span><div><strong>${m.label}</strong><small>${m.desc}</small></div><em>${reward.join(' · ')}</em></div>`;
-  }).join('') || '<div class="milestone"><span>◇</span><div><strong>Aucun signal</strong><small>Continue à charger le noyau.</small></div></div>';
+  }).join('') || '<div class="milestone"><span>◇</span><div><strong>Aucun signal</strong><small>Continue à charger le noyau.</small></div></div>');
 }
 
-function renderModules() {
+function renderModules(force = false) {
   const orbit = document.getElementById('module-orbit');
   if (!orbit) return;
+  const signature = UPGRADES.map(upgrade => `${upgrade.id}:${state.upgrades[upgrade.id] ?? 0}`).join('|');
+  if (!force && signature === lastModuleSignature) return;
+  lastModuleSignature = signature;
   orbit.innerHTML = '';
   for (const upgrade of UPGRADES) {
     const level = state.upgrades[upgrade.id] ?? 0;
@@ -637,26 +648,36 @@ function renderModules() {
   }
 }
 
-function renderFactories() {
+function renderFactories(force = false) {
   const field = document.getElementById('factory-field');
   if (!field) return;
   const layer = getScalingLayer(state);
   const count = Math.min(28, Math.floor((state.factoryRate ?? 0) + (layer.prestige >= 10 ? 8 : 0)));
-  field.innerHTML = Array.from({ length: count }, (_, i) => `<span class="factory-node" style="--x:${6 + (i * 17) % 88}%;--y:${12 + (i * 29) % 74}%;--d:${(i * -0.17).toFixed(2)}s">${i % 3 === 0 ? '🏭' : i % 3 === 1 ? '⚙' : '⬡'}</span>`).join('');
+  const signature = `${layer.id}:${count}`;
+  if (!force && signature === lastFactorySignature) return;
+  lastFactorySignature = signature;
+  setHtml(field, Array.from({ length: count }, (_, i) => `<span class="factory-node" style="--x:${6 + (i * 17) % 88}%;--y:${12 + (i * 29) % 74}%;--d:${(i * -0.17).toFixed(2)}s">${i % 3 === 0 ? '🏭' : i % 3 === 1 ? '⚙' : '⬡'}</span>`).join(''));
 }
 
-function renderTendrils() {
+function renderTendrils(force = false) {
   const layer = document.getElementById('tendril-layer');
   if (!layer) return;
   const totalLevels = UPGRADES.reduce((sum, upgrade) => sum + (state.upgrades[upgrade.id] ?? 0), 0);
   const count = Math.min(26, 8 + totalLevels + Math.floor(state.prestige / 2));
-  layer.innerHTML = Array.from({ length: count }, (_, i) => {
+  const signature = `${totalLevels}:${state.prestige}:${count}`;
+  if (!force && signature === lastTendrilSignature) return;
+  lastTendrilSignature = signature;
+  setHtml(layer, Array.from({ length: count }, (_, i) => {
     const angle = (360 / count) * i + (i % 2 ? 8 : -8);
     const length = 112 + (i % 5) * 20 + Math.min(100, totalLevels * 3 + state.prestige * 2);
     const width = 8 + (i % 3) * 2;
     const delay = -(i * 0.23).toFixed(2);
     return `<span class="bio-tendril" style="--angle:${angle}deg;--len:${length}px;--w:${width}px;--delay:${delay}s"><i></i></span>`;
-  }).join('');
+  }).join(''));
+}
+
+function setMeterNode(node, ratio) {
+  if (node) setTransformScaleX(node, ratio);
 }
 
 function scheduleSave() {
