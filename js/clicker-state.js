@@ -1,27 +1,27 @@
-export const VERSION = 6;
+export const VERSION = 7;
 
 export const BALANCE = {
-  prestigeBase: 8500,
-  prestigeEarlyScale: 2.18,
-  prestigeLateScale: 2.42,
+  prestigeBase: 6500,
+  prestigeEarlyScale: 2.05,
+  prestigeLateScale: 2.3,
   passiveOfflineCapHours: 8,
-  overdriveBase: 14,
-  overdrivePerLevel: 2.4,
-  overdrivePassiveSeconds: 7,
-  fragmentBaseChance: 0.045,
-  fragmentPrestigeChance: 0.004,
-  fragmentOverdriveChance: 0.008,
-  fragmentChanceCap: 0.28,
-  shellBaseBreakCost: 3600,
-  shellBreakCostScale: 1.62,
+  overdriveBase: 16,
+  overdrivePerLevel: 2.7,
+  overdrivePassiveSeconds: 8,
+  fragmentBaseChance: 0.08,
+  fragmentPrestigeChance: 0.006,
+  fragmentOverdriveChance: 0.014,
+  fragmentChanceCap: 0.45,
+  shellBaseBreakCost: 1250,
+  shellBreakCostScale: 1.34,
 };
 
 export const SCALING_LAYERS = [
   { id: 'core', prestige: 0, name: 'Noyau unique', short: 'CORE', desc: 'Tu stabilises un seul réacteur Nitro vivant.', mult: 1 },
-  { id: 'engine_bay', prestige: 3, name: 'Baie moteur', short: 'BAY', desc: 'Plusieurs modules commencent à tourner autour du noyau.', mult: 1.28 },
-  { id: 'factory', prestige: 10, name: 'Usine de moteurs Nitro', short: 'FACTORY', desc: 'Dézoom : tu ne gères plus un noyau, mais une ligne de moteurs.', mult: 2.05 },
-  { id: 'district', prestige: 25, name: 'District énergétique', short: 'DISTRICT', desc: 'Le réseau alimente un quartier entier du hub Star.', mult: 4.2 },
-  { id: 'orbital', prestige: 50, name: 'Anneau orbital', short: 'ORBITAL', desc: 'Production à échelle orbitale : les usines deviennent un essaim.', mult: 9.5 },
+  { id: 'engine_bay', prestige: 3, name: 'Baie moteur', short: 'BAY', desc: 'Plusieurs modules commencent à tourner autour du noyau.', mult: 1.32 },
+  { id: 'factory', prestige: 10, name: 'Usine de moteurs Nitro', short: 'FACTORY', desc: 'Dézoom : tu ne gères plus un noyau, mais une ligne de moteurs.', mult: 2.15 },
+  { id: 'district', prestige: 25, name: 'District énergétique', short: 'DISTRICT', desc: 'Le réseau alimente un quartier entier du hub Star.', mult: 4.55 },
+  { id: 'orbital', prestige: 50, name: 'Anneau orbital', short: 'ORBITAL', desc: 'Production à échelle orbitale : les usines deviennent un essaim.', mult: 10.2 },
 ];
 
 export function createDefaultState(userId = null) {
@@ -80,128 +80,128 @@ export function createDefaultState(userId = null) {
 
 export const UPGRADES = [
   {
-    id: 'clickAmplifier', name: 'Amplificateur de clic', icon: '⚡', baseCost: 18, scale: 1.34, currency: 'energy', tier: 0,
-    desc: '+1 puissance de clic par niveau. Très rentable en début de run.',
+    id: 'clickAmplifier', name: 'Amplificateur de clic', icon: '⚡', baseCost: 14, scale: 1.30, currency: 'energy', tier: 0,
+    desc: '+1.15 puissance de clic par niveau. Très rentable en début de run.',
     unlock: () => true,
-    apply(state) { state.clickPower += 1; },
+    apply(state) { state.clickPower += 1.15; },
   },
   {
-    id: 'autoCore', name: 'Noyau automatique', icon: '⬡', baseCost: 85, scale: 1.47, currency: 'energy', tier: 0,
-    desc: '+0.42 énergie / seconde par niveau. Base du jeu idle.',
+    id: 'autoCore', name: 'Noyau automatique', icon: '⬡', baseCost: 65, scale: 1.40, currency: 'energy', tier: 0,
+    desc: '+0.55 énergie / seconde par niveau. Base du jeu idle.',
     unlock: () => true,
-    apply(state) { state.passiveRate += 0.42; },
+    apply(state) { state.passiveRate += 0.55; },
   },
   {
-    id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 240, scale: 1.52, currency: 'energy', tier: 1,
-    desc: 'Maintient le noyau actif : +0.16 clic automatique/sec et +0.2/s par niveau.',
-    unlock: state => state.totalEnergy >= 260 || state.prestige >= 1,
-    lockedText: 'Débloqué à 260 énergie totale.',
-    apply(state) { state.autoClickRate += 0.16; state.passiveRate += 0.2; },
+    id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 180, scale: 1.45, currency: 'energy', tier: 1,
+    desc: 'Maintient le noyau actif : +0.20 clic automatique/sec et +0.28/s par niveau.',
+    unlock: state => state.totalEnergy >= 220 || state.prestige >= 1,
+    lockedText: 'Débloqué à 220 énergie totale.',
+    apply(state) { state.autoClickRate += 0.20; state.passiveRate += 0.28; },
   },
   {
-    id: 'resonance', name: 'Résonance Star', icon: '✦', baseCost: 360, scale: 1.58, currency: 'energy', tier: 1,
-    desc: '+3 clic et +0.75/s. Débloque le réacteur vivant.',
-    unlock: state => state.totalEnergy >= 420 || state.prestige >= 1,
-    lockedText: 'Débloqué à 420 énergie totale.',
-    apply(state) { state.clickPower += 3; state.passiveRate += 0.75; },
+    id: 'resonance', name: 'Résonance Star', icon: '✦', baseCost: 300, scale: 1.50, currency: 'energy', tier: 1,
+    desc: '+3.5 clic et +1/s. Débloque le réacteur vivant.',
+    unlock: state => state.totalEnergy >= 360 || state.prestige >= 1,
+    lockedText: 'Débloqué à 360 énergie totale.',
+    apply(state) { state.clickPower += 3.5; state.passiveRate += 1; },
   },
   {
-    id: 'surchargeCoil', name: 'Bobine de surcharge', icon: '🧬', baseCost: 720, scale: 1.52, currency: 'energy', tier: 1,
-    desc: '+12 capacité de surcharge, +1 charge par clic.',
-    unlock: state => state.totalEnergy >= 850 || state.prestige >= 1,
-    lockedText: 'Débloqué à 850 énergie totale.',
-    apply(state) { state.maxSurcharge += 12; state.surchargeGain += 1; state.overdriveLevel += 1; },
+    id: 'surchargeCoil', name: 'Bobine de surcharge', icon: '🧬', baseCost: 620, scale: 1.45, currency: 'energy', tier: 1,
+    desc: '+10 capacité de surcharge, +2 charge par clic. Overdrive plus fréquent.',
+    unlock: state => state.totalEnergy >= 720 || state.prestige >= 1,
+    lockedText: 'Débloqué à 720 énergie totale.',
+    apply(state) { state.maxSurcharge += 10; state.surchargeGain += 2; state.overdriveLevel += 1; },
   },
   {
-    id: 'coreIsolation', name: 'Isolation du noyau', icon: '◉', baseCost: 1180, scale: 1.5, currency: 'energy', tier: 2,
-    desc: 'Crée une sphère de confinement. +1 stockage fragment, +1 dureté, +8 surcharge.',
-    unlock: state => state.totalEnergy >= 1200 || state.prestige >= 1,
-    lockedText: 'Débloqué à 1 200 énergie totale : première coque de confinement.',
-    apply(state) { state.coreShellCapacity += 1; state.coreShellHardness += 1; state.maxSurcharge += 8; },
+    id: 'coreIsolation', name: 'Isolation du noyau', icon: '◉', baseCost: 950, scale: 1.38, currency: 'energy', tier: 2,
+    desc: 'Crée une sphère de confinement. +2 stockage fragment, +1 dureté, +8 surcharge.',
+    unlock: state => state.totalEnergy >= 1000 || state.prestige >= 1,
+    lockedText: 'Débloqué à 1 000 énergie totale : première coque de confinement.',
+    apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 1; state.maxSurcharge += 8; },
   },
   {
-    id: 'reflectiveAlloy', name: 'Alliage réflecteur', icon: '⬣', baseCost: 3100, scale: 1.56, currency: 'energy', tier: 2,
-    desc: 'Matériau miroir : reflète l’énergie dans la sphère. +1 stockage, +1 dureté, +4% rendement.',
-    unlock: state => (state.upgrades?.coreIsolation ?? 0) >= 1 || state.totalEnergy >= 4500 || state.prestige >= 1,
+    id: 'reflectiveAlloy', name: 'Alliage réflecteur', icon: '⬣', baseCost: 2400, scale: 1.42, currency: 'energy', tier: 2,
+    desc: 'Matériau miroir : +1 stockage, +1 dureté, +4.5% rendement, +1.8/s.',
+    unlock: state => (state.upgrades?.coreIsolation ?? 0) >= 1 || state.totalEnergy >= 3600 || state.prestige >= 1,
     lockedText: 'Nécessite Isolation du noyau Lv.1.',
-    apply(state) { state.coreShellCapacity += 1; state.coreShellHardness += 1; state.coreShellReflect += 0.04; state.passiveRate += 1.4; },
+    apply(state) { state.coreShellCapacity += 1; state.coreShellHardness += 1; state.coreShellReflect += 0.045; state.passiveRate += 1.8; },
   },
   {
-    id: 'mirrorGel', name: 'Gel miroir vivant', icon: '◍', baseCost: 9200, scale: 1.61, currency: 'energy', tier: 3,
-    desc: 'Gel biopunk réflectif : +2 stockage, +1 dureté, +8% rendement, fissures plus visibles.',
-    unlock: state => (state.upgrades?.reflectiveAlloy ?? 0) >= 2 || state.totalEnergy >= 16000 || state.prestige >= 2,
-    lockedText: 'Nécessite Alliage réflecteur Lv.2 ou 16 000 énergie totale.',
-    apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 1; state.coreShellReflect += 0.08; state.passiveRate += 4; state.clickPower += 4; },
+    id: 'mirrorGel', name: 'Gel miroir vivant', icon: '◍', baseCost: 6800, scale: 1.48, currency: 'energy', tier: 3,
+    desc: 'Gel biopunk réflectif : +2 stockage, +1 dureté, +7.5% rendement, fissures plus visibles.',
+    unlock: state => (state.upgrades?.reflectiveAlloy ?? 0) >= 2 || state.totalEnergy >= 12000 || state.prestige >= 2,
+    lockedText: 'Nécessite Alliage réflecteur Lv.2 ou 12 000 énergie totale.',
+    apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 1; state.coreShellReflect += 0.075; state.passiveRate += 5; state.clickPower += 5; },
   },
   {
-    id: 'prism', name: 'Prisme Nitro', icon: '◆', baseCost: 1650, scale: 1.67, currency: 'energy', tier: 2,
-    desc: '+9 clic et +2.4/s. Stabilise les flux biopunk.',
-    unlock: state => state.totalEnergy >= 2200 || state.prestige >= 1,
-    lockedText: 'Débloqué à 2 200 énergie totale.',
-    apply(state) { state.clickPower += 9; state.passiveRate += 2.4; },
+    id: 'prism', name: 'Prisme Nitro', icon: '◆', baseCost: 1400, scale: 1.54, currency: 'energy', tier: 2,
+    desc: '+10 clic et +3/s. Stabilise les flux biopunk.',
+    unlock: state => state.totalEnergy >= 1800 || state.prestige >= 1,
+    lockedText: 'Débloqué à 1 800 énergie totale.',
+    apply(state) { state.clickPower += 10; state.passiveRate += 3; },
   },
   {
-    id: 'prismGlass', name: 'Verre prismatique', icon: '◇', baseCost: 26000, scale: 1.64, currency: 'energy', tier: 3,
-    desc: 'Couche cristalline haute réflexion : +2 stockage, +2 dureté, +12% rendement.',
-    unlock: state => (state.upgrades?.mirrorGel ?? 0) >= 1 && (state.upgrades?.prism ?? 0) >= 1 || state.totalEnergy >= 52000 || state.prestige >= 3,
-    lockedText: 'Nécessite Gel miroir + Prisme Nitro, ou 52 000 énergie totale.',
-    apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 2; state.coreShellReflect += 0.12; state.passiveRate += 8; state.clickPower += 7; },
+    id: 'prismGlass', name: 'Verre prismatique', icon: '◇', baseCost: 18000, scale: 1.50, currency: 'energy', tier: 3,
+    desc: 'Couche cristalline : +2 stockage, +1 dureté, +10% rendement.',
+    unlock: state => (state.upgrades?.mirrorGel ?? 0) >= 1 && (state.upgrades?.prism ?? 0) >= 1 || state.totalEnergy >= 38000 || state.prestige >= 3,
+    lockedText: 'Nécessite Gel miroir + Prisme Nitro, ou 38 000 énergie totale.',
+    apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 1; state.coreShellReflect += 0.10; state.passiveRate += 10; state.clickPower += 9; },
   },
   {
-    id: 'bioConduit', name: 'Conduit organique', icon: '🫀', baseCost: 5200, scale: 1.62, currency: 'energy', tier: 2,
-    desc: '+6 clic, +7.5/s, tentacules plus denses.',
-    unlock: state => (state.upgrades?.prism ?? 0) >= 2 || state.totalEnergy >= 7000 || state.prestige >= 2,
-    lockedText: 'Débloqué avec Prisme Nitro Lv.2 ou 7 000 énergie totale.',
-    apply(state) { state.clickPower += 6; state.passiveRate += 7.5; state.maxSurcharge += 5; },
+    id: 'bioConduit', name: 'Conduit organique', icon: '🫀', baseCost: 4300, scale: 1.52, currency: 'energy', tier: 2,
+    desc: '+7 clic, +9.5/s, tentacules plus denses.',
+    unlock: state => (state.upgrades?.prism ?? 0) >= 2 || state.totalEnergy >= 6000 || state.prestige >= 2,
+    lockedText: 'Débloqué avec Prisme Nitro Lv.2 ou 6 000 énergie totale.',
+    apply(state) { state.clickPower += 7; state.passiveRate += 9.5; state.maxSurcharge += 5; },
   },
   {
-    id: 'fractureTuning', name: 'Accord de fracture', icon: '✧', baseCost: 6, scale: 1.72, currency: 'fragments', tier: 3, persistent: true,
+    id: 'fractureTuning', name: 'Accord de fracture', icon: '✧', baseCost: 3, scale: 1.45, currency: 'fragments', tier: 3, persistent: true,
     desc: 'Upgrade permanent : augmente les chances de briser la sphère et réduit les coups requis.',
     unlock: state => state.totalFragments >= 1 || state.prestige >= 1,
     lockedText: 'Nécessite au moins un Fragment Nitro découvert.',
-    apply(state) { state.coreShellBreakBonus += 0.065; state.permanentMultiplier += 0.025; },
+    apply(state) { state.coreShellBreakBonus += 0.085; state.permanentMultiplier += 0.03; },
   },
   {
-    id: 'fragmentCatalyst', name: 'Catalyseur de fragments', icon: '💠', baseCost: 4, scale: 1.62, currency: 'fragments', tier: 3, persistent: true,
-    desc: 'Upgrade permanent : +7% multiplicateur global par niveau. Survit aux resets du noyau.',
+    id: 'fragmentCatalyst', name: 'Catalyseur de fragments', icon: '💠', baseCost: 3, scale: 1.45, currency: 'fragments', tier: 3, persistent: true,
+    desc: 'Upgrade permanent : +6.5% multiplicateur global par niveau. Survit aux resets du noyau.',
     unlock: state => state.fragments >= 1 || state.totalFragments >= 1 || state.prestige >= 1,
     lockedText: 'Débloqué après ton premier Fragment Nitro.',
-    apply(state) { state.permanentMultiplier += 0.07; },
+    apply(state) { state.permanentMultiplier += 0.065; },
   },
   {
-    id: 'nitroFactory', name: 'Usine de moteurs Nitro', icon: '🏭', baseCost: 75000, scale: 1.48, currency: 'energy', tier: 4,
-    desc: 'Dézoom Prestige 10 : +24 clic, +32/s, +1 usine.',
+    id: 'nitroFactory', name: 'Usine de moteurs Nitro', icon: '🏭', baseCost: 62000, scale: 1.42, currency: 'energy', tier: 4,
+    desc: 'Dézoom Prestige 10 : +34 clic, +48/s, +1 usine.',
     unlock: state => state.prestige >= 10,
     lockedText: 'Débloqué au Prestige 10 : changement d’échelle.',
-    apply(state) { state.clickPower += 24; state.passiveRate += 32; state.factoryRate += 1; },
+    apply(state) { state.clickPower += 34; state.passiveRate += 48; state.factoryRate += 1; },
   },
   {
-    id: 'enginePlant', name: 'Chaîne de production moteur', icon: '⚙️', baseCost: 1200000, scale: 1.44, currency: 'energy', tier: 5,
+    id: 'enginePlant', name: 'Chaîne de production moteur', icon: '⚙️', baseCost: 900000, scale: 1.38, currency: 'energy', tier: 5,
     desc: 'Prestige 20 : production industrielle massive.',
     unlock: state => state.prestige >= 20,
     lockedText: 'Débloqué au Prestige 20.',
-    apply(state) { state.clickPower += 110; state.passiveRate += 280; state.factoryRate += 8; },
+    apply(state) { state.clickPower += 140; state.passiveRate += 360; state.factoryRate += 8; },
   },
   {
-    id: 'orbitalHive', name: 'Ruche orbitale Nitro', icon: '🛰️', baseCost: 7500000, scale: 1.56, currency: 'energy', tier: 6,
+    id: 'orbitalHive', name: 'Ruche orbitale Nitro', icon: '🛰️', baseCost: 6200000, scale: 1.48, currency: 'energy', tier: 6,
     desc: 'Prestige 50 : essaim orbital, scaling très haut.',
     unlock: state => state.prestige >= 50,
     lockedText: 'Débloqué au Prestige 50.',
-    apply(state) { state.clickPower += 460; state.passiveRate += 1350; state.factoryRate += 30; state.maxSurcharge += 50; },
+    apply(state) { state.clickPower += 560; state.passiveRate += 1600; state.factoryRate += 34; state.maxSurcharge += 50; },
   },
 ];
 
 export const MILESTONES = [
-  { id: 'energy_100', label: 'Premier allumage', desc: 'Atteindre 100 énergie totale.', test: s => s.totalEnergy >= 100, reward: { energy: 45 } },
-  { id: 'energy_1000', label: 'Réacteur vivant', desc: 'Atteindre 1 000 énergie totale.', test: s => s.totalEnergy >= 1000, reward: { fragments: 1 } },
-  { id: 'clicks_250', label: 'Main nerveuse', desc: 'Faire 250 clics.', test: s => s.totalClicks >= 250, reward: { energy: 600 } },
-  { id: 'passive_10', label: 'Flux stable', desc: 'Atteindre 10 énergie/seconde.', test: s => s.passiveRate >= 10, reward: { fragments: 2 } },
-  { id: 'shell_first_stack', label: 'Fragment confiné', desc: 'Stocker un fragment dans la sphère isolante.', test: s => (s.coreShell?.storedFragments ?? 0) >= 1, reward: { energy: 1200 } },
-  { id: 'shell_first_break', label: 'Brisure Nitro', desc: 'Briser la sphère de confinement.', test: s => (s.coreShell?.lastBreakAt ?? 0) > 0, reward: { fragments: 2 } },
-  { id: 'first_prestige', label: 'Surcharge contrôlée', desc: 'Atteindre le Prestige 1.', test: s => s.prestige >= 1, reward: { fragments: 4 } },
-  { id: 'prestige_3', label: 'Baie moteur', desc: 'Atteindre le Prestige 3.', test: s => s.prestige >= 3, reward: { fragments: 7 } },
-  { id: 'prestige_10', label: 'Dézoom industriel', desc: 'Atteindre le Prestige 10.', test: s => s.prestige >= 10, reward: { fragments: 22, energy: 40000 } },
-  { id: 'prestige_25', label: 'District énergétique', desc: 'Atteindre le Prestige 25.', test: s => s.prestige >= 25, reward: { fragments: 55 } },
+  { id: 'energy_100', label: 'Premier allumage', desc: 'Atteindre 100 énergie totale.', test: s => s.totalEnergy >= 100, reward: { energy: 80 } },
+  { id: 'energy_1000', label: 'Réacteur vivant', desc: 'Atteindre 1 000 énergie totale.', test: s => s.totalEnergy >= 1000, reward: { fragments: 2 } },
+  { id: 'clicks_250', label: 'Main nerveuse', desc: 'Faire 250 clics.', test: s => s.totalClicks >= 250, reward: { energy: 900 } },
+  { id: 'passive_10', label: 'Flux stable', desc: 'Atteindre 10 énergie/seconde.', test: s => s.passiveRate >= 10, reward: { fragments: 3 } },
+  { id: 'shell_first_stack', label: 'Fragment confiné', desc: 'Stocker un fragment dans la sphère isolante.', test: s => (s.coreShell?.storedFragments ?? 0) >= 1, reward: { energy: 2500 } },
+  { id: 'shell_first_break', label: 'Brisure Nitro', desc: 'Briser la sphère de confinement.', test: s => (s.coreShell?.lastBreakAt ?? 0) > 0, reward: { fragments: 3 } },
+  { id: 'first_prestige', label: 'Surcharge contrôlée', desc: 'Atteindre le Prestige 1.', test: s => s.prestige >= 1, reward: { fragments: 5 } },
+  { id: 'prestige_3', label: 'Baie moteur', desc: 'Atteindre le Prestige 3.', test: s => s.prestige >= 3, reward: { fragments: 8 } },
+  { id: 'prestige_10', label: 'Dézoom industriel', desc: 'Atteindre le Prestige 10.', test: s => s.prestige >= 10, reward: { fragments: 26, energy: 70000 } },
+  { id: 'prestige_25', label: 'District énergétique', desc: 'Atteindre le Prestige 25.', test: s => s.prestige >= 25, reward: { fragments: 70 } },
 ];
 
 export function getScalingLayer(state) {
@@ -274,7 +274,7 @@ export function hydrateState(raw, userId = null) {
 export function recalcDerivedStats(state) {
   const layer = getScalingLayer(state);
   state.clickPower = (1 + state.prestige) * layer.mult;
-  state.passiveRate = state.prestige * 0.1 * layer.mult;
+  state.passiveRate = state.prestige * 0.14 * layer.mult;
   state.autoClickRate = 0;
   state.maxSurcharge = 100;
   state.surchargeGain = 5;
@@ -291,7 +291,7 @@ export function recalcDerivedStats(state) {
     for (let i = 0; i < level; i++) upgrade.apply(state);
   }
 
-  const reflectMultiplier = 1 + Math.min(1.2, state.coreShellReflect ?? 0);
+  const reflectMultiplier = 1 + Math.min(1.35, state.coreShellReflect ?? 0);
   state.clickPower *= state.permanentMultiplier * reflectMultiplier;
   state.passiveRate *= state.permanentMultiplier * reflectMultiplier;
   state.autoClickRate *= state.permanentMultiplier;
@@ -330,13 +330,15 @@ export function getCoreShellInfo(state) {
 export function getCoreShellBreakCost(state) {
   const hardness = Math.max(0, Number(state?.coreShellHardness ?? 0));
   const stored = Math.max(0, Number(state?.coreShell?.storedFragments ?? 0));
-  return Math.floor(BALANCE.shellBaseBreakCost * Math.pow(BALANCE.shellBreakCostScale, hardness) * Math.max(1, stored || 1));
+  const hardnessFactor = Math.pow(BALANCE.shellBreakCostScale, Math.max(0, hardness - 1));
+  const storedFactor = 0.8 + Math.max(1, stored || 1) * 0.85;
+  return Math.floor(BALANCE.shellBaseBreakCost * hardnessFactor * storedFactor);
 }
 
 export function getCoreShellRequiredHits(state) {
   const hardness = Math.max(0, Number(state?.coreShellHardness ?? 0));
   const tuning = Math.max(0, Number(state?.upgrades?.fractureTuning ?? 0));
-  return Math.max(1, Math.ceil(1 + hardness * 0.55 - tuning * 0.35));
+  return Math.max(1, Math.ceil(1 + hardness * 0.42 - tuning * 0.45));
 }
 
 export function getCoreShellBreakChance(state) {
@@ -345,8 +347,17 @@ export function getCoreShellBreakChance(state) {
   const cracks = Math.max(0, Number(state?.coreShell?.cracks ?? 0));
   const stored = Math.max(0, Number(state?.coreShell?.storedFragments ?? 0));
   const capacity = Math.max(1, Number(state?.coreShellCapacity ?? 1));
-  const base = 0.17 + tuning * 0.065 + cracks * 0.055 + (stored / capacity) * 0.08 - hardness * 0.018;
-  return Math.max(0.06, Math.min(0.82, base));
+  const base = 0.28 + tuning * 0.08 + cracks * 0.09 + (stored / capacity) * 0.10 - hardness * 0.012 + (state?.coreShellBreakBonus ?? 0);
+  return Math.max(0.12, Math.min(0.90, base));
+}
+
+export function getFragmentDropChance(state) {
+  const shell = getCoreShellInfo(state);
+  const shellBonus = shell.unlocked ? 0.035 + Math.min(0.045, shell.capacity * 0.004) : 0;
+  return Math.min(
+    BALANCE.fragmentBaseChance + state.prestige * BALANCE.fragmentPrestigeChance + state.overdriveLevel * BALANCE.fragmentOverdriveChance + shellBonus,
+    BALANCE.fragmentChanceCap,
+  );
 }
 
 export function storeCoreShellFragments(state, amount = 1) {
@@ -419,11 +430,7 @@ export function clickCore(state) {
     state.surcharge = 0;
     overdriveGain = Math.floor(state.clickPower * (BALANCE.overdriveBase + state.overdriveLevel * BALANCE.overdrivePerLevel) + state.passiveRate * BALANCE.overdrivePassiveSeconds);
     gain += overdriveGain;
-    const fragmentChance = Math.min(
-      BALANCE.fragmentBaseChance + state.prestige * BALANCE.fragmentPrestigeChance + state.overdriveLevel * BALANCE.fragmentOverdriveChance,
-      BALANCE.fragmentChanceCap,
-    );
-    if (Math.random() < fragmentChance) {
+    if (Math.random() < getFragmentDropChance(state)) {
       const stored = storeCoreShellFragments(state, 1);
       fragmentsStored = stored.stored;
       if (stored.overflow > 0) fragments = addFragments(state, stored.overflow);
@@ -492,12 +499,12 @@ export function getVisibleMilestones(state) {
 
 function visibleSoon(state, milestone) {
   if (milestone.id === 'energy_100') return true;
-  if (milestone.id === 'energy_1000') return state.totalEnergy >= 180;
+  if (milestone.id === 'energy_1000') return state.totalEnergy >= 160;
   if (milestone.id === 'clicks_250') return state.totalClicks >= 25;
   if (milestone.id === 'passive_10') return state.passiveRate >= 2;
   if (milestone.id === 'shell_first_stack') return (state.upgrades?.coreIsolation ?? 0) >= 1;
   if (milestone.id === 'shell_first_break') return (state.coreShell?.storedFragments ?? 0) >= 1 || (state.coreShell?.lastBreakAt ?? 0) > 0;
-  if (milestone.id === 'first_prestige') return state.totalEnergy >= 3500 || state.prestige >= 1;
+  if (milestone.id === 'first_prestige') return state.totalEnergy >= 2600 || state.prestige >= 1;
   if (milestone.id === 'prestige_3') return state.prestige >= 1;
   if (milestone.id === 'prestige_10') return state.prestige >= 6;
   if (milestone.id === 'prestige_25') return state.prestige >= 18;
@@ -525,7 +532,7 @@ export function doPrestige(state) {
   const keptPersistentUpgrades = getPersistentUpgradeLevels(state);
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
-  const prestigeReward = Math.floor(3 + next.prestige * 1.25 + Math.sqrt(Math.max(0, state.totalEnergy)) / 3000);
+  const prestigeReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.totalEnergy)) / 2200 + keptTotalFragments * 0.02);
   next.fragments = keptFragments + prestigeReward;
   next.totalFragments = keptTotalFragments + prestigeReward;
   next.upgrades = { ...next.upgrades, ...keptPersistentUpgrades };
