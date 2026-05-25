@@ -8,6 +8,12 @@ const GROUPS = [
     upgrades: ['clickAmplifier', 'autoCore', 'resonance', 'prism', 'bioConduit'],
   },
   {
+    id: 'shell',
+    title: 'COQUE / ISOLATION',
+    subtitle: 'Sphère de confinement, matériaux réflecteurs, stockage et fissures.',
+    upgrades: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'],
+  },
+  {
     id: 'overdrive',
     title: 'OVERDRIVE',
     subtitle: 'Surcharge, explosion énergétique et rendement des pics.',
@@ -22,8 +28,8 @@ const GROUPS = [
   {
     id: 'fragments',
     title: 'BOUTIQUE FRAGMENTS',
-    subtitle: 'Bonus permanents conservés entre les prestiges.',
-    upgrades: ['fragmentCatalyst'],
+    subtitle: 'Bonus permanents conservés entre les prestiges et rupture de coque.',
+    upgrades: ['fragmentCatalyst', 'fractureTuning'],
   },
   {
     id: 'infrastructure',
@@ -54,6 +60,22 @@ const UPGRADE_INFO = {
     tip: 'Augmente la capacité de surcharge et accélère l’accès à l’Overdrive.',
     stat: '+ surcharge / overdrive',
   },
+  coreIsolation: {
+    tip: 'Crée une sphère autour du noyau. Les fragments peuvent y être stockés avant d’être libérés par rupture.',
+    stat: '+ coque + stockage',
+  },
+  reflectiveAlloy: {
+    tip: 'Ajoute une couche miroir qui renvoie l’énergie vers le noyau et augmente la dureté globale.',
+    stat: '+ réflexion + dureté',
+  },
+  mirrorGel: {
+    tip: 'Ajoute un gel biopunk réflectif. La sphère stocke plus de fragments et affiche mieux les fissures.',
+    stat: '+ stockage + rendement',
+  },
+  prismGlass: {
+    tip: 'Couche cristalline avancée : forte réflexion, plus de stockage, mais sphère plus dure à briser.',
+    stat: '+ verre prismatique',
+  },
   prism: {
     tip: 'Stabilise le noyau et apporte un gros gain de puissance global.',
     stat: '+ gros bonus hybride',
@@ -61,6 +83,10 @@ const UPGRADE_INFO = {
   bioConduit: {
     tip: 'Renforce les conduits organiques autour du noyau. Gros gain passif.',
     stat: '+ passif + stabilité',
+  },
+  fractureTuning: {
+    tip: 'Upgrade permanent en fragments : améliore les chances de rupture et réduit les coups nécessaires.',
+    stat: '+ rupture de coque',
   },
   fragmentCatalyst: {
     tip: 'Utilise les fragments Nitro. Le bonus est permanent et survit aux prestiges.',
@@ -244,12 +270,20 @@ function maybeAdvanceGuide(upgradeId) {
   if (guideStep === 1) {
     showGuideCard({
       title: 'Premier upgrade installé',
-      text: 'Les upgrades sont séparés par rôle : noyau, Overdrive, auto-clicker, fragments et infrastructure. Survole ou clique les bulles “i” pour comprendre chaque effet.',
+      text: 'Les upgrades sont séparés par rôle : noyau, coque/isolation, Overdrive, auto-clicker, fragments et infrastructure. Survole ou clique les bulles “i” pour comprendre chaque effet.',
       action: 'Continuer',
     });
   }
 
-  if (upgradeId === 'autoClicker' || guideStep >= 3) {
+  if (upgradeId === 'coreIsolation') {
+    showGuideCard({
+      title: 'Coque de confinement formée',
+      text: 'Les prochains fragments peuvent être stockés dans la sphère. Une fois chargée, tu pourras tenter de la briser avec un pic d’énergie.',
+      action: 'OK',
+    });
+  }
+
+  if (upgradeId === 'autoClicker' || guideStep >= 4) {
     showGuideCard({
       title: 'Automatisation détectée',
       text: 'L’auto-clicker maintient le noyau actif. Plus tard, LEMEGETON pourra prendre le contrôle de cette automatisation.',
