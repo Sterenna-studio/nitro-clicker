@@ -1,6 +1,3 @@
-/* Nitro Clicker local style entrypoint.
-   Keep shared Nitro/Star styles in /css/*.css loaded from the parent static hub. */
-
 @import url('./clicker.css');
 @import url('./progression.css');
 @import url('./biopunk-fx.css');
@@ -17,3 +14,4 @@
 @import url('./notifications.css');
 @import url('./core-shell.css');
 @import url('./current-objective.css');
+@import url('./audio-panel.css');
