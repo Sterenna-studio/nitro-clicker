@@ -6,6 +6,9 @@ import './ui/window-manager.js';
 import './ui/asset-cache.js';
 import './ui/render-cache.js';
 
+// Save/progression policy gates that must run before save hydration.
+import './engine/offline-policy.js';
+
 import './app.js';
 
 // UI extensions
