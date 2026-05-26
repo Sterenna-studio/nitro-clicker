@@ -1,4 +1,4 @@
-export const VERSION = 8;
+export const VERSION = 9;
 
 export const BALANCE = {
   prestigeBase: 6500,
@@ -33,6 +33,7 @@ export function createDefaultState(userId = null) {
     userId,
     energy: 0,
     totalEnergy: 0,
+    lifetimeEnergy: 0,
     fragments: 0,
     totalFragments: 0,
     clickPower: 1,
@@ -240,6 +241,15 @@ export function spendCurrency(state, currency, amount) {
   else state.energy -= amount;
 }
 
+function addEnergy(state, amount) {
+  const gain = Math.max(0, Number(amount) || 0);
+  if (gain <= 0) return 0;
+  state.energy += gain;
+  state.totalEnergy += gain;
+  state.lifetimeEnergy = Math.max(0, Number(state.lifetimeEnergy ?? 0)) + gain;
+  return gain;
+}
+
 export function addFragments(state, amount) {
   const gain = Math.max(0, Math.floor(amount));
   state.fragments += gain;
@@ -259,6 +269,7 @@ export function hydrateState(raw, userId = null) {
   merged.surcharge = Number(merged.surcharge ?? 0);
   merged.autoClickRate = Number(merged.autoClickRate ?? 0);
   merged.autoClickAccumulator = Number(merged.autoClickAccumulator ?? 0);
+  merged.lifetimeEnergy = Math.max(0, Number(merged.lifetimeEnergy ?? raw?.totalLifetimeEnergy ?? raw?.totalEnergy ?? raw?.energy ?? 0));
   merged.coreShell.storedFragments = Math.max(0, Number(merged.coreShell.storedFragments ?? 0));
   merged.coreShell.cracks = Math.max(0, Number(merged.coreShell.cracks ?? 0));
   merged.userId = userId ?? merged.userId;
@@ -400,10 +411,7 @@ export function applyOfflineProgress(state) {
   const now = Date.now();
   const elapsed = Math.max(0, Math.min(BALANCE.passiveOfflineCapHours * 60 * 60, (now - (state.lastTickAt ?? now)) / 1000));
   const gained = Math.floor(elapsed * (state.passiveRate ?? 0));
-  if (gained > 0) {
-    state.energy += gained;
-    state.totalEnergy += gained;
-  }
+  addEnergy(state, gained);
   state.lastTickAt = now;
   state.updatedAt = now;
   return gained;
@@ -434,8 +442,7 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
     }
   }
 
-  state.energy += gain;
-  state.totalEnergy += gain;
+  addEnergy(state, gain);
   state.updatedAt = Date.now();
   return { gain, overdrive, overdriveGain, fragments, fragmentsStored, automatic };
 }
@@ -460,10 +467,7 @@ export function tickAutoClicks(state, deltaSeconds) {
 
 export function tickPassive(state, deltaSeconds) {
   const passiveGain = (state.passiveRate ?? 0) * deltaSeconds;
-  if (passiveGain > 0) {
-    state.energy += passiveGain;
-    state.totalEnergy += passiveGain;
-  }
+  addEnergy(state, passiveGain);
   const auto = tickAutoClicks(state, deltaSeconds);
   state.lastTickAt = Date.now();
   state.updatedAt = Date.now();
@@ -500,10 +504,7 @@ export function checkAndClaimMilestones(state) {
     if (state.milestones[milestone.id]) continue;
     if (!milestone.test(state)) continue;
     state.milestones[milestone.id] = Date.now();
-    if (milestone.reward?.energy) {
-      state.energy += milestone.reward.energy;
-      state.totalEnergy += milestone.reward.energy;
-    }
+    if (milestone.reward?.energy) addEnergy(state, milestone.reward.energy);
     if (milestone.reward?.fragments) addFragments(state, milestone.reward.fragments);
     claimed.push(milestone);
   }
@@ -522,7 +523,7 @@ function visibleSoon(state, milestone) {
   if (milestone.id === 'passive_10') return state.passiveRate >= 2;
   if (milestone.id === 'shell_first_stack') return (state.upgrades?.coreIsolation ?? 0) >= 1;
   if (milestone.id === 'shell_first_break') return (state.coreShell?.storedFragments ?? 0) >= 1 || (state.coreShell?.lastBreakAt ?? 0) > 0;
-  if (milestone.id === 'first_prestige') return state.totalEnergy >= 2600 || state.prestige >= 1;
+  if (milestone.id === 'first_prestige') return state.energy >= prestigeRequirement(state) * 0.4 || state.prestige >= 1;
   if (milestone.id === 'prestige_3') return state.prestige >= 1;
   if (milestone.id === 'prestige_10') return state.prestige >= 6;
   if (milestone.id === 'prestige_25') return state.prestige >= 18;
@@ -530,7 +531,7 @@ function visibleSoon(state, milestone) {
 }
 
 export function canPrestige(state) {
-  return state.totalEnergy >= prestigeRequirement(state);
+  return Number(state.energy ?? 0) >= prestigeRequirement(state);
 }
 
 export function prestigeRequirement(state) {
@@ -547,12 +548,14 @@ export function doPrestige(state) {
   const keptTotalFragments = Math.max(keptFragments, Number(state.totalFragments ?? keptFragments));
   const keptMilestones = state.milestones;
   const keptTotalClicks = state.totalClicks;
+  const keptLifetimeEnergy = Math.max(0, Number(state.lifetimeEnergy ?? state.totalEnergy ?? 0));
   const keptPersistentUpgrades = getPersistentUpgradeLevels(state);
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
-  const prestigeReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.totalEnergy)) / 2200 + keptTotalFragments * 0.02);
+  const prestigeReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.energy)) / 2200 + keptTotalFragments * 0.02);
   next.fragments = keptFragments + prestigeReward;
   next.totalFragments = keptTotalFragments + prestigeReward;
+  next.lifetimeEnergy = keptLifetimeEnergy;
   next.upgrades = { ...next.upgrades, ...keptPersistentUpgrades };
   next.milestones = keptMilestones;
   next.totalClicks = keptTotalClicks;
