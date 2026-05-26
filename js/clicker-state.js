@@ -51,12 +51,7 @@ export function createDefaultState(userId = null) {
     coreShellHardness: 0,
     coreShellReflect: 0,
     coreShellBreakBonus: 0,
-    coreShell: {
-      storedFragments: 0,
-      cracks: 0,
-      lastBreakAt: 0,
-      failedBreaks: 0,
-    },
+    coreShell: { storedFragments: 0, cracks: 0, lastBreakAt: 0, failedBreaks: 0 },
     upgrades: {
       clickAmplifier: 0,
       autoCore: 0,
@@ -218,11 +213,7 @@ export function isPersistentUpgrade(upgrade) {
 }
 
 export function getPersistentUpgradeLevels(state) {
-  return Object.fromEntries(
-    UPGRADES
-      .filter(isPersistentUpgrade)
-      .map(upgrade => [upgrade.id, Math.max(0, Number(state?.upgrades?.[upgrade.id] ?? 0))]),
-  );
+  return Object.fromEntries(UPGRADES.filter(isPersistentUpgrade).map(upgrade => [upgrade.id, Math.max(0, Number(state?.upgrades?.[upgrade.id] ?? 0))]));
 }
 
 export function isUpgradeUnlocked(state, upgrade) {
@@ -359,10 +350,7 @@ export function getCoreShellBreakChance(state) {
 export function getFragmentDropChance(state) {
   const shell = getCoreShellInfo(state);
   const shellBonus = shell.unlocked ? 0.035 + Math.min(0.045, shell.capacity * 0.004) : 0;
-  return Math.min(
-    BALANCE.fragmentBaseChance + state.prestige * BALANCE.fragmentPrestigeChance + state.overdriveLevel * BALANCE.fragmentOverdriveChance + shellBonus,
-    BALANCE.fragmentChanceCap,
-  );
+  return Math.min(BALANCE.fragmentBaseChance + state.prestige * BALANCE.fragmentPrestigeChance + state.overdriveLevel * BALANCE.fragmentOverdriveChance + shellBonus, BALANCE.fragmentChanceCap);
 }
 
 export function storeCoreShellFragments(state, amount = 1) {
@@ -461,11 +449,7 @@ export function tickAutoClicks(state, deltaSeconds) {
 
   const summary = { clicks, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
   for (let i = 0; i < clicks; i++) {
-    const result = applyCoreClick(state, {
-      automatic: true,
-      gainRatio: BALANCE.autoClickGainRatio,
-      surchargeRatio: BALANCE.autoClickSurchargeRatio,
-    });
+    const result = applyCoreClick(state, { automatic: true, gainRatio: BALANCE.autoClickGainRatio, surchargeRatio: BALANCE.autoClickSurchargeRatio });
     summary.gain += result.gain;
     if (result.overdrive) summary.overdrives += 1;
     summary.fragments += result.fragments ?? 0;
@@ -475,12 +459,15 @@ export function tickAutoClicks(state, deltaSeconds) {
 }
 
 export function tickPassive(state, deltaSeconds) {
-  const gain = (state.passiveRate ?? 0) * deltaSeconds;
-  state.energy += gain;
-  state.totalEnergy += gain;
+  const passiveGain = (state.passiveRate ?? 0) * deltaSeconds;
+  if (passiveGain > 0) {
+    state.energy += passiveGain;
+    state.totalEnergy += passiveGain;
+  }
+  const auto = tickAutoClicks(state, deltaSeconds);
   state.lastTickAt = Date.now();
   state.updatedAt = Date.now();
-  return gain;
+  return passiveGain + (auto?.gain ?? 0);
 }
 
 export function buyUpgrade(state, upgradeId) {
