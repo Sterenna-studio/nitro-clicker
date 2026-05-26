@@ -1,126 +1,55 @@
 const GUIDE_KEY = 'nitro-clicker.guide.v1.seen';
+const ACTIVE_SHOP_KEY = 'nitro-clicker.upgrade-shop.active';
 
 const GROUPS = [
-  {
-    id: 'core',
-    title: 'UP DU NOYAU',
-    subtitle: 'Puissance directe, flux stable et modules organiques.',
-    upgrades: ['clickAmplifier', 'autoCore', 'resonance', 'prism', 'bioConduit'],
-  },
-  {
-    id: 'shell',
-    title: 'COQUE / ISOLATION',
-    subtitle: 'Sphère de confinement, matériaux réflecteurs, stockage et fissures.',
-    upgrades: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'],
-  },
-  {
-    id: 'overdrive',
-    title: 'OVERDRIVE',
-    subtitle: 'Surcharge, explosion énergétique et rendement des pics.',
-    upgrades: ['surchargeCoil'],
-  },
-  {
-    id: 'automation',
-    title: 'AUTO-CLICKER',
-    subtitle: 'Maintien automatique du noyau, futur point d’entrée de LEMEGETON.',
-    upgrades: ['autoClicker'],
-  },
-  {
-    id: 'fragments',
-    title: 'BOUTIQUE FRAGMENTS',
-    subtitle: 'Bonus permanents conservés entre les prestiges et rupture de coque.',
-    upgrades: ['fragmentCatalyst', 'fractureTuning'],
-  },
-  {
-    id: 'infrastructure',
-    title: 'INFRASTRUCTURE',
-    subtitle: 'Dézoom : usines, chaînes moteur et réseau orbital.',
-    upgrades: ['nitroFactory', 'enginePlant', 'orbitalHive'],
-  },
+  { id: 'core', title: 'NOYAU', subtitle: 'Clic, flux stable et modules organiques.', upgrades: ['clickAmplifier', 'autoCore', 'resonance', 'prism', 'bioConduit'] },
+  { id: 'shell', title: 'COQUE', subtitle: 'Isolation, matériaux réflecteurs, stockage et fissures.', upgrades: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'] },
+  { id: 'overdrive', title: 'OVERDRIVE', subtitle: 'Surcharge et explosions énergétiques.', upgrades: ['surchargeCoil'] },
+  { id: 'automation', title: 'AUTO', subtitle: 'Clics automatiques, surcharge et LEMEGETON.', upgrades: ['autoClicker'] },
+  { id: 'fragments', title: 'FRAGMENTS', subtitle: 'Bonus permanents et rupture de coque.', upgrades: ['fragmentCatalyst', 'fractureTuning'] },
+  { id: 'infrastructure', title: 'INFRA', subtitle: 'Usines, chaînes moteur et réseau orbital.', upgrades: ['nitroFactory', 'enginePlant', 'orbitalHive'] },
 ];
 
 const UPGRADE_INFO = {
-  clickAmplifier: {
-    tip: 'Augmente la valeur de chaque clic manuel. C’est ton meilleur achat au tout début.',
-    stat: '+ puissance / clic',
-  },
-  autoCore: {
-    tip: 'Génère de l’énergie même sans cliquer. C’est la base de la progression idle.',
-    stat: '+ énergie / seconde',
-  },
-  autoClicker: {
-    tip: 'Simule un maintien automatique sur le noyau. Plus tard, LEMEGETON pourra en prendre le contrôle.',
-    stat: '+ clics automatiques',
-  },
-  resonance: {
-    tip: 'Améliore à la fois le clic et le flux passif. Très bon upgrade hybride.',
-    stat: '+ clic + passif',
-  },
-  surchargeCoil: {
-    tip: 'Augmente la capacité de surcharge et accélère l’accès à l’Overdrive.',
-    stat: '+ surcharge / overdrive',
-  },
-  coreIsolation: {
-    tip: 'Crée une sphère autour du noyau. Les fragments peuvent y être stockés avant d’être libérés par rupture.',
-    stat: '+ coque + stockage',
-  },
-  reflectiveAlloy: {
-    tip: 'Ajoute une couche miroir qui renvoie l’énergie vers le noyau et augmente la dureté globale.',
-    stat: '+ réflexion + dureté',
-  },
-  mirrorGel: {
-    tip: 'Ajoute un gel biopunk réflectif. La sphère stocke plus de fragments et affiche mieux les fissures.',
-    stat: '+ stockage + rendement',
-  },
-  prismGlass: {
-    tip: 'Couche cristalline avancée : forte réflexion, plus de stockage, mais sphère plus dure à briser.',
-    stat: '+ verre prismatique',
-  },
-  prism: {
-    tip: 'Stabilise le noyau et apporte un gros gain de puissance global.',
-    stat: '+ gros bonus hybride',
-  },
-  bioConduit: {
-    tip: 'Renforce les conduits organiques autour du noyau. Gros gain passif.',
-    stat: '+ passif + stabilité',
-  },
-  fractureTuning: {
-    tip: 'Upgrade permanent en fragments : améliore les chances de rupture et réduit les coups nécessaires.',
-    stat: '+ rupture de coque',
-  },
-  fragmentCatalyst: {
-    tip: 'Utilise les fragments Nitro. Le bonus est permanent et survit aux prestiges.',
-    stat: '+ multiplicateur permanent',
-  },
-  nitroFactory: {
-    tip: 'Premier vrai dézoom industriel. Tu ne gères plus seulement un noyau, mais une usine.',
-    stat: '+ usine + production',
-  },
-  enginePlant: {
-    tip: 'Transforme la production en chaîne moteur massive.',
-    stat: '+ production industrielle',
-  },
-  orbitalHive: {
-    tip: 'Fin de palier actuel : le réseau devient orbital et prépare le vaisseau complet.',
-    stat: '+ réseau orbital',
-  },
+  clickAmplifier: { tip: 'Augmente la valeur de chaque clic manuel. Très fort au début.', stat: '+ puissance / clic' },
+  autoCore: { tip: 'Production passive stable. Ne déclenche pas l’Overdrive directement.', stat: '+ énergie / seconde' },
+  autoClicker: { tip: 'Simule des clics automatiques : charge la surcharge et peut déclencher des Overdrives.', stat: '+ clics auto / surcharge' },
+  resonance: { tip: 'Améliore à la fois le clic et le flux passif.', stat: '+ clic + passif' },
+  surchargeCoil: { tip: 'Augmente la capacité de surcharge et accélère l’accès à l’Overdrive.', stat: '+ surcharge / overdrive' },
+  coreIsolation: { tip: 'Crée une sphère autour du noyau. Les fragments peuvent y être stockés avant rupture.', stat: '+ coque + stockage' },
+  reflectiveAlloy: { tip: 'Couche miroir qui renvoie l’énergie vers le noyau et augmente la dureté globale.', stat: '+ réflexion + dureté' },
+  mirrorGel: { tip: 'Gel biopunk réflectif. Plus de stockage et meilleur rendement.', stat: '+ stockage + rendement' },
+  prismGlass: { tip: 'Couche cristalline avancée : forte réflexion, stockage, mais sphère plus dure.', stat: '+ verre prismatique' },
+  prism: { tip: 'Stabilise le noyau et donne un gros gain de puissance global.', stat: '+ gros bonus hybride' },
+  bioConduit: { tip: 'Renforce les conduits organiques autour du noyau. Gros gain passif.', stat: '+ passif + stabilité' },
+  fractureTuning: { tip: 'Permanent : améliore les chances de rupture et réduit les coups nécessaires.', stat: '+ rupture de coque' },
+  fragmentCatalyst: { tip: 'Permanent : multiplicateur global conservé après prestige.', stat: '+ multiplicateur permanent' },
+  nitroFactory: { tip: 'Premier vrai dézoom industriel : tu gères une usine.', stat: '+ usine + production' },
+  enginePlant: { tip: 'Transforme la production en chaîne moteur massive.', stat: '+ production industrielle' },
+  orbitalHive: { tip: 'Réseau orbital pour préparer les paliers très hauts.', stat: '+ réseau orbital' },
 };
 
 let organizing = false;
 let lastLevels = new Map();
 let guideStep = 0;
 let guideActive = false;
+let activeShop = localStorage.getItem(ACTIVE_SHOP_KEY) || 'core';
 
 function mountUpgradeUx() {
   const root = document.getElementById('upgrade-list');
   if (!root || root.dataset.upgradeUxMounted) return;
   root.dataset.upgradeUxMounted = 'true';
-
-  const observer = new MutationObserver(() => organizeUpgradeList());
-  observer.observe(root, { childList: true });
+  new MutationObserver(() => organizeUpgradeList()).observe(root, { childList: true });
   organizeUpgradeList();
 
   document.addEventListener('click', event => {
+    const tab = event.target.closest?.('[data-upgrade-shop-tab]');
+    if (tab) {
+      event.preventDefault();
+      setActiveShop(tab.dataset.upgradeShopTab);
+      return;
+    }
+
     const info = event.target.closest?.('[data-upgrade-info]');
     if (info) {
       event.preventDefault();
@@ -150,27 +79,25 @@ function organizeUpgradeList() {
   const buttonsById = new Map(rawButtons.map(button => [button.dataset.upgrade, button]));
   const fragment = document.createDocumentFragment();
 
+  const tabs = document.createElement('nav');
+  tabs.className = 'upgrade-shop-tabs';
+  tabs.innerHTML = GROUPS.map(group => `<button type="button" class="upgrade-shop-tab ${activeShop === group.id ? 'active' : ''}" data-upgrade-shop-tab="${group.id}">${group.title}</button>`).join('');
+  fragment.appendChild(tabs);
+
   for (const group of GROUPS) {
     const groupButtons = group.upgrades.map(id => buttonsById.get(id)).filter(Boolean);
     if (!groupButtons.length) continue;
-
     const section = document.createElement('section');
-    section.className = `upgrade-group upgrade-group-${group.id}`;
+    section.className = `upgrade-group upgrade-group-${group.id} ${activeShop === group.id ? 'active' : ''}`;
     section.dataset.upgradeGroup = group.id;
-    section.innerHTML = `
-      <header class="upgrade-group-head">
-        <div><strong>${group.title}</strong><small>${group.subtitle}</small></div>
-      </header>
-    `;
+    section.innerHTML = `<header class="upgrade-group-head"><div><strong>${group.title}</strong><small>${group.subtitle}</small></div></header>`;
     const list = document.createElement('div');
     list.className = 'upgrade-group-list';
-
     groupButtons.forEach(button => {
       enhanceUpgradeButton(button);
       list.appendChild(button);
       buttonsById.delete(button.dataset.upgrade);
     });
-
     section.appendChild(list);
     fragment.appendChild(section);
   }
@@ -179,10 +106,16 @@ function organizeUpgradeList() {
     enhanceUpgradeButton(button);
     fragment.appendChild(button);
   }
-
   root.replaceChildren(fragment);
   organizing = false;
   detectUpgradeStatChanges(true);
+}
+
+function setActiveShop(id) {
+  activeShop = GROUPS.some(group => group.id === id) ? id : 'core';
+  localStorage.setItem(ACTIVE_SHOP_KEY, activeShop);
+  document.querySelectorAll('[data-upgrade-shop-tab]').forEach(tab => tab.classList.toggle('active', tab.dataset.upgradeShopTab === activeShop));
+  document.querySelectorAll('[data-upgrade-group]').forEach(group => group.classList.toggle('active', group.dataset.upgradeGroup === activeShop));
 }
 
 function enhanceUpgradeButton(button) {
@@ -190,13 +123,9 @@ function enhanceUpgradeButton(button) {
   if (!id || button.dataset.upgradeUxEnhanced) return;
   button.dataset.upgradeUxEnhanced = 'true';
   button.classList.add(`upgrade-type-${getGroupForUpgrade(id)}`);
-
   const info = UPGRADE_INFO[id];
   const desc = button.querySelector('.upgrade-desc');
-  if (desc && info) {
-    desc.innerHTML = `${desc.textContent}<span class="upgrade-effect-line">${info.stat}</span>`;
-  }
-
+  if (desc && info) desc.innerHTML = `${desc.textContent}<span class="upgrade-effect-line">${info.stat}</span>`;
   const head = button.querySelector('.upgrade-head');
   if (head && info && !button.classList.contains('locked')) {
     const bubble = document.createElement('span');
@@ -210,9 +139,7 @@ function enhanceUpgradeButton(button) {
   }
 }
 
-function getGroupForUpgrade(id) {
-  return GROUPS.find(group => group.upgrades.includes(id))?.id ?? 'misc';
-}
+function getGroupForUpgrade(id) { return GROUPS.find(group => group.upgrades.includes(id))?.id ?? 'misc'; }
 
 function showInfoBubble(anchor, upgradeId) {
   const info = UPGRADE_INFO[upgradeId];
@@ -244,7 +171,6 @@ function triggerStatMutation(button, delta = 1) {
   button.classList.remove('upgrade-stat-mutated');
   void button.offsetWidth;
   button.classList.add('upgrade-stat-mutated');
-
   const tag = document.createElement('span');
   tag.className = 'upgrade-mutation-tag';
   tag.textContent = delta > 1 ? `+${delta} LV` : '+STAT';
@@ -256,53 +182,22 @@ function triggerStatMutation(button, delta = 1) {
 function showInitialGuide() {
   if (localStorage.getItem(GUIDE_KEY) === '1' || guideActive) return;
   guideActive = true;
-  showGuideCard({
-    title: 'Bienvenue dans Nitro Clicker',
-    text: 'Clique le noyau pour produire de l’énergie. Achète ensuite un upgrade du noyau pour accélérer la production.',
-    action: 'Compris',
-  });
+  showGuideCard({ title: 'Bienvenue dans Nitro Clicker', text: 'Clique le noyau, puis utilise les onglets de boutique pour améliorer le noyau, la coque, l’Overdrive et les systèmes permanents.', action: 'Compris' });
 }
 
 function maybeAdvanceGuide(upgradeId) {
   if (localStorage.getItem(GUIDE_KEY) === '1') return;
   guideStep += 1;
-
-  if (guideStep === 1) {
-    showGuideCard({
-      title: 'Premier upgrade installé',
-      text: 'Les upgrades sont séparés par rôle : noyau, coque/isolation, Overdrive, auto-clicker, fragments et infrastructure. Survole ou clique les bulles “i” pour comprendre chaque effet.',
-      action: 'Continuer',
-    });
-  }
-
-  if (upgradeId === 'coreIsolation') {
-    showGuideCard({
-      title: 'Coque de confinement formée',
-      text: 'Les prochains fragments peuvent être stockés dans la sphère. Une fois chargée, tu pourras tenter de la briser avec un pic d’énergie.',
-      action: 'OK',
-    });
-  }
-
-  if (upgradeId === 'autoClicker' || guideStep >= 4) {
-    showGuideCard({
-      title: 'Automatisation détectée',
-      text: 'L’auto-clicker maintient le noyau actif. Plus tard, LEMEGETON pourra prendre le contrôle de cette automatisation.',
-      action: 'OK',
-      done: true,
-    });
-  }
+  if (guideStep === 1) showGuideCard({ title: 'Premier upgrade installé', text: 'Chaque onglet correspond à une logique différente. Le noyau produit, l’auto-clicker déclenche, la coque stocke, les fragments rendent permanent.', action: 'Continuer' });
+  if (upgradeId === 'coreIsolation') showGuideCard({ title: 'Coque de confinement formée', text: 'Les prochains fragments peuvent être stockés dans la sphère. Une fois chargée, tente de la briser avec un pic d’énergie.', action: 'OK' });
+  if (upgradeId === 'autoClicker' || guideStep >= 4) showGuideCard({ title: 'Automatisation détectée', text: 'L’auto-clicker simule des clics : il charge la surcharge et prépare les Overdrives automatisés.', action: 'OK', done: true });
 }
 
 function showGuideCard({ title, text, action = 'OK', done = false }) {
   document.querySelector('.guide-pop')?.remove();
   const node = document.createElement('aside');
   node.className = 'guide-pop';
-  node.innerHTML = `
-    <div class="guide-pop-kicker">ASSISTANT DE BORD</div>
-    <strong>${title}</strong>
-    <p>${text}</p>
-    <button type="button">${action}</button>
-  `;
+  node.innerHTML = `<div class="guide-pop-kicker">ASSISTANT DE BORD</div><strong>${title}</strong><p>${text}</p><button type="button">${action}</button>`;
   document.body.appendChild(node);
   node.querySelector('button').addEventListener('click', () => {
     node.remove();
@@ -315,6 +210,4 @@ const boot = setInterval(() => {
   if (document.getElementById('upgrade-list')?.dataset.upgradeUxMounted) clearInterval(boot);
 }, 250);
 
-window.NitroUpgradeUx = {
-  resetGuide() { localStorage.removeItem(GUIDE_KEY); guideStep = 0; showInitialGuide(); },
-};
+window.NitroUpgradeUx = { resetGuide() { localStorage.removeItem(GUIDE_KEY); guideStep = 0; showInitialGuide(); }, setShop: setActiveShop };
