@@ -1,13 +1,51 @@
-/* Nitro Clicker — grouped upgrades, readable effects and onboarding */
+/* Nitro Clicker — upgrade shop tabs, readable effects and onboarding */
 
 .upgrade-list {
-  gap: 14px;
+  gap: 10px;
+  min-height: 0;
+}
+
+.upgrade-shop-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(0,0,0,.16);
+}
+
+.upgrade-shop-tab {
+  min-height: 32px;
+  border: 1px solid rgba(0,255,204,.13);
+  border-radius: 999px;
+  color: rgba(168,230,255,.72);
+  background: rgba(255,255,255,.035);
+  font-family: var(--font-mono, 'Share Tech Mono', monospace);
+  font-size: 8px;
+  letter-spacing: .11em;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+}
+
+.upgrade-shop-tab:hover {
+  color: #e8faff;
+  border-color: rgba(0,255,204,.28);
+  transform: translateY(-1px);
+}
+
+.upgrade-shop-tab.active {
+  color: #02050a;
+  border-color: rgba(255,255,255,.22);
+  background: linear-gradient(90deg, var(--nc-primary), var(--nc-accent));
+  box-shadow: 0 0 18px rgba(0,255,204,.18);
 }
 
 .upgrade-group {
   position: relative;
-  display: grid;
+  display: none;
   gap: 9px;
+  min-height: 0;
   padding: 10px;
   border: 1px solid rgba(255,255,255,.07);
   border-radius: 18px;
@@ -16,10 +54,27 @@
     rgba(255,255,255,.025);
 }
 
+.upgrade-group.active {
+  display: grid;
+  animation: upgradePanelIn .2s ease-out;
+}
+
+@keyframes upgradePanelIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .upgrade-group-overdrive {
   border-color: rgba(255,71,87,.18);
   background:
     radial-gradient(circle at 8% 0%, rgba(255,71,87,.12), transparent 34%),
+    rgba(255,255,255,.025);
+}
+
+.upgrade-group-shell {
+  border-color: rgba(255,204,0,.20);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255,204,0,.12), transparent 34%),
     rgba(255,255,255,.025);
 }
 
@@ -73,6 +128,7 @@
 .upgrade-group-list {
   display: grid;
   gap: 8px;
+  min-height: 0;
 }
 
 .upgrade-btn {
@@ -276,6 +332,10 @@
 }
 
 @media (max-width: 820px) {
+  .upgrade-shop-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .upgrade-desc {
     font-size: 10px !important;
   }
