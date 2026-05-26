@@ -19,4 +19,3 @@ import './engine/core-controls.js';
 import './fx/overdrive.js';
 import './fx/plasma-feedback.js';
 import './lore/lemegeton-progression.js';
-import './debug/dev-tools.js';
