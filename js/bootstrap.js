@@ -1,6 +1,7 @@
 import './ui/window-manager.js';
 import './ui/asset-cache.js';
 import './ui/render-cache.js';
+import './ui/legacy-debug-cleanup.js';
 import './audio/sound-engine.js';
 import './engine/offline-policy.js';
 
@@ -12,6 +13,7 @@ import './ui/shared-assets.js';
 import './ui/upgrade-ux.js';
 import './ui/current-objective.js';
 import './ui/prestige-current-energy.js';
+import './ui/prestige-button-fix.js';
 import './ui/save-migration-notice.js';
 import './audio/sound-panel.js';
 
