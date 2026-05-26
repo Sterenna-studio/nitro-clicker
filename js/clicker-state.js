@@ -1,4 +1,4 @@
-export const VERSION = 7;
+export const VERSION = 8;
 
 export const BALANCE = {
   prestigeBase: 6500,
@@ -14,6 +14,9 @@ export const BALANCE = {
   fragmentChanceCap: 0.45,
   shellBaseBreakCost: 1250,
   shellBreakCostScale: 1.34,
+  autoClickGainRatio: 0.58,
+  autoClickSurchargeRatio: 0.85,
+  autoClickMaxBurstsPerTick: 12,
 };
 
 export const SCALING_LAYERS = [
@@ -35,6 +38,7 @@ export function createDefaultState(userId = null) {
     clickPower: 1,
     passiveRate: 0,
     autoClickRate: 0,
+    autoClickAccumulator: 0,
     prestige: 0,
     totalClicks: 0,
     surcharge: 0,
@@ -87,16 +91,16 @@ export const UPGRADES = [
   },
   {
     id: 'autoCore', name: 'Noyau automatique', icon: '⬡', baseCost: 65, scale: 1.40, currency: 'energy', tier: 0,
-    desc: '+0.55 énergie / seconde par niveau. Base du jeu idle.',
+    desc: '+0.55 énergie / seconde par niveau. Production passive stable.',
     unlock: () => true,
     apply(state) { state.passiveRate += 0.55; },
   },
   {
     id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 180, scale: 1.45, currency: 'energy', tier: 1,
-    desc: 'Maintient le noyau actif : +0.20 clic automatique/sec et +0.28/s par niveau.',
+    desc: 'Simule des clics automatiques : charge la surcharge, déclenche l’Overdrive, aide LEMEGETON.',
     unlock: state => state.totalEnergy >= 220 || state.prestige >= 1,
     lockedText: 'Débloqué à 220 énergie totale.',
-    apply(state) { state.autoClickRate += 0.20; state.passiveRate += 0.28; },
+    apply(state) { state.autoClickRate += 0.22; state.surchargeGain += 0.18; state.overdriveLevel += 0.25; },
   },
   {
     id: 'resonance', name: 'Résonance Star', icon: '✦', baseCost: 300, scale: 1.50, currency: 'energy', tier: 1,
@@ -263,6 +267,7 @@ export function hydrateState(raw, userId = null) {
   merged.totalClicks = Number(merged.totalClicks ?? 0);
   merged.surcharge = Number(merged.surcharge ?? 0);
   merged.autoClickRate = Number(merged.autoClickRate ?? 0);
+  merged.autoClickAccumulator = Number(merged.autoClickAccumulator ?? 0);
   merged.coreShell.storedFragments = Math.max(0, Number(merged.coreShell.storedFragments ?? 0));
   merged.coreShell.cracks = Math.max(0, Number(merged.coreShell.cracks ?? 0));
   merged.userId = userId ?? merged.userId;
@@ -417,18 +422,22 @@ export function applyOfflineProgress(state) {
 }
 
 export function clickCore(state) {
-  state.totalClicks += 1;
-  let gain = Math.max(1, Math.floor(state.clickPower));
+  return applyCoreClick(state, { automatic: false });
+}
+
+export function applyCoreClick(state, { automatic = false, gainRatio = 1, surchargeRatio = 1 } = {}) {
+  state.totalClicks += automatic ? 0 : 1;
+  let gain = Math.max(1, Math.floor(state.clickPower * gainRatio));
   let overdrive = false;
   let overdriveGain = 0;
   let fragments = 0;
   let fragmentsStored = 0;
 
-  state.surcharge = Math.min(state.maxSurcharge, (state.surcharge ?? 0) + state.surchargeGain);
+  state.surcharge = Math.min(state.maxSurcharge, (state.surcharge ?? 0) + state.surchargeGain * surchargeRatio);
   if (state.surcharge >= state.maxSurcharge) {
     overdrive = true;
     state.surcharge = 0;
-    overdriveGain = Math.floor(state.clickPower * (BALANCE.overdriveBase + state.overdriveLevel * BALANCE.overdrivePerLevel) + state.passiveRate * BALANCE.overdrivePassiveSeconds);
+    overdriveGain = Math.floor(state.clickPower * gainRatio * (BALANCE.overdriveBase + state.overdriveLevel * BALANCE.overdrivePerLevel) + state.passiveRate * BALANCE.overdrivePassiveSeconds);
     gain += overdriveGain;
     if (Math.random() < getFragmentDropChance(state)) {
       const stored = storeCoreShellFragments(state, 1);
@@ -440,7 +449,29 @@ export function clickCore(state) {
   state.energy += gain;
   state.totalEnergy += gain;
   state.updatedAt = Date.now();
-  return { gain, overdrive, overdriveGain, fragments, fragmentsStored };
+  return { gain, overdrive, overdriveGain, fragments, fragmentsStored, automatic };
+}
+
+export function tickAutoClicks(state, deltaSeconds) {
+  if ((state.autoClickRate ?? 0) <= 0 || deltaSeconds <= 0) return { clicks: 0, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
+  state.autoClickAccumulator = Math.max(0, Number(state.autoClickAccumulator ?? 0)) + state.autoClickRate * deltaSeconds;
+  const clicks = Math.min(BALANCE.autoClickMaxBurstsPerTick, Math.floor(state.autoClickAccumulator));
+  if (clicks <= 0) return { clicks: 0, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
+  state.autoClickAccumulator -= clicks;
+
+  const summary = { clicks, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
+  for (let i = 0; i < clicks; i++) {
+    const result = applyCoreClick(state, {
+      automatic: true,
+      gainRatio: BALANCE.autoClickGainRatio,
+      surchargeRatio: BALANCE.autoClickSurchargeRatio,
+    });
+    summary.gain += result.gain;
+    if (result.overdrive) summary.overdrives += 1;
+    summary.fragments += result.fragments ?? 0;
+    summary.fragmentsStored += result.fragmentsStored ?? 0;
+  }
+  return summary;
 }
 
 export function tickPassive(state, deltaSeconds) {
