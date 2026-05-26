@@ -11,15 +11,15 @@ const STAGES = [
     min: 0,
     id: 'dormant',
     label: 'SYSTÈME DORMANT',
-    objective: 'Objectif : produire 100M énergie totale pour remplir la première bonbonne.',
+    objective: 'Objectif : produire 100M énergie cumulée depuis le début du jeu pour remplir la première bonbonne.',
     text: 'Le Gwen Ha Star attend une source Nitro stable.',
   },
   {
     min: 1,
     id: 'charging',
     label: 'BPRD · ACCUMULATION',
-    objective: 'Objectif : remplir les 10 bonbonnes BPRD, 100M énergie totale chacune.',
-    text: 'Les bonbonnes arrière-plan stockent l’énergie du noyau.',
+    objective: 'Objectif : remplir les 10 bonbonnes BPRD, 100M énergie lifetime chacune. Les resets ne vident pas les bonbonnes.',
+    text: 'Les bonbonnes arrière-plan stockent toute l’énergie produite depuis le début du jeu.',
   },
   {
     min: 10,
@@ -96,7 +96,7 @@ function mount() {
       <span id="lemegeton-kicker">BPRD POWER GRID</span>
       <strong id="lemegeton-label">SYSTÈME DORMANT</strong>
       <p id="lemegeton-text">Le Gwen Ha Star attend une source Nitro stable.</p>
-      <small id="lemegeton-objective">Objectif : produire 100M énergie totale.</small>
+      <small id="lemegeton-objective">Objectif : produire 100M énergie lifetime.</small>
       <div class="lemegeton-progress"><b id="lemegeton-progress-fill"></b></div>
       <small id="lemegeton-progress-text">0 / 10 bonbonnes · prochaine 0%</small>
     </section>
@@ -126,17 +126,17 @@ function readState() {
 
 function update() {
   const state = readState();
-  const totalEnergy = Number(state.totalEnergy ?? 0);
+  const lifetimeEnergy = Number(state.lifetimeEnergy ?? state.totalLifetimeEnergy ?? state.totalEnergy ?? 0);
   const prestige = Number(state.prestige ?? 0);
   const autoLevel = Number(state.upgrades?.autoClicker ?? 0);
-  const filled = Math.min(TANK_COUNT, Math.floor(totalEnergy / TANK_STEP));
-  const nextProgress = filled >= TANK_COUNT ? 1 : Math.min(1, (totalEnergy % TANK_STEP) / TANK_STEP);
+  const filled = Math.min(TANK_COUNT, Math.floor(lifetimeEnergy / TANK_STEP));
+  const nextProgress = filled >= TANK_COUNT ? 1 : Math.min(1, (lifetimeEnergy % TANK_STEP) / TANK_STEP);
 
   document.querySelectorAll('.energy-tank').forEach((tank, i) => {
     const fill = tank.querySelector('.energy-tank-fill');
     const ratio = i < filled ? 1 : i === filled ? nextProgress : 0;
     tank.classList.toggle('filled', ratio >= 1);
-    tank.classList.toggle('revealed', i <= filled || totalEnergy >= i * TANK_STEP * 0.7);
+    tank.classList.toggle('revealed', i <= filled || lifetimeEnergy >= i * TANK_STEP * 0.7);
     if (fill) fill.style.transform = `scaleY(${ratio})`;
   });
 
@@ -161,8 +161,8 @@ function update() {
   if (label) label.textContent = stage.label;
   if (text) text.textContent = stage.text;
   if (objective) objective.textContent = stage.objective;
-  if (progressFill) progressFill.style.transform = `scaleX(${Math.min(1, totalEnergy / (TANK_STEP * TANK_COUNT))})`;
-  if (progressText) progressText.textContent = `${filled} / ${TANK_COUNT} bonbonnes · prochaine ${Math.floor(nextProgress * 100)}% · ${formatEnergy(totalEnergy)} total`;
+  if (progressFill) progressFill.style.transform = `scaleX(${Math.min(1, lifetimeEnergy / (TANK_STEP * TANK_COUNT))})`;
+  if (progressText) progressText.textContent = `${filled} / ${TANK_COUNT} bonbonnes · prochaine ${Math.floor(nextProgress * 100)}% · ${formatEnergy(lifetimeEnergy)} lifetime`;
 
   if (stage.id !== lastStage) {
     lastStage = stage.id;
