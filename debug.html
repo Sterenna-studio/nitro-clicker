@@ -6,180 +6,7 @@
   <title>Nitro Clicker — Debug Rescue</title>
   <link rel="icon" href="/shared/logos/star_logo/star_logo_color_set/star_logo_white_silver.png" type="image/png" />
   <style>
-    :root {
-      color-scheme: dark;
-      --bg: #02050a;
-      --panel: rgba(8, 18, 30, .88);
-      --line: rgba(0,255,204,.18);
-      --text: #e8faff;
-      --muted: rgba(168,230,255,.68);
-      --cyan: #00ffcc;
-      --gold: #ffcc00;
-      --red: #ff4757;
-      --violet: #b88cff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 12% 10%, rgba(0,255,204,.12), transparent 34%),
-        radial-gradient(circle at 88% 0%, rgba(255,204,0,.10), transparent 30%),
-        linear-gradient(145deg, #02050a, #06101d 60%, #02050a);
-      overflow-x: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      opacity: .25;
-      background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(255,255,255,.035) 6px 7px);
-      mix-blend-mode: screen;
-    }
-    .shell {
-      width: min(1180px, calc(100vw - 24px));
-      margin: 0 auto;
-      padding: 22px 0 30px;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 16px;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: rgba(255,255,255,.035);
-      box-shadow: 0 0 36px rgba(0,255,204,.08);
-    }
-    h1 {
-      margin: 0 0 6px;
-      font-size: clamp(1.7rem, 4vw, 3.5rem);
-      letter-spacing: .05em;
-      line-height: .9;
-    }
-    h1 span { color: var(--cyan); }
-    p { color: var(--muted); line-height: 1.5; }
-    .actions, .grid, .quick-grid { display: grid; gap: 10px; }
-    .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: min(360px, 100%); }
-    .grid { grid-template-columns: 1.1fr .9fr; align-items: start; }
-    .quick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      background: var(--panel);
-      padding: 14px;
-      box-shadow: 0 24px 80px rgba(0,0,0,.28);
-      backdrop-filter: blur(12px);
-    }
-    .panel h2 {
-      margin: 0 0 10px;
-      font-size: 1rem;
-      letter-spacing: .14em;
-      color: var(--gold);
-      text-transform: uppercase;
-    }
-    .save-list { display: grid; gap: 8px; }
-    .save-card {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: center;
-      padding: 10px;
-      border: 1px solid rgba(255,255,255,.09);
-      border-radius: 16px;
-      background: rgba(255,255,255,.035);
-      cursor: pointer;
-    }
-    .save-card.active {
-      border-color: rgba(0,255,204,.55);
-      box-shadow: inset 0 0 22px rgba(0,255,204,.07);
-    }
-    .save-card strong { display: block; font-size: .92rem; overflow-wrap: anywhere; }
-    .save-card small { color: var(--muted); }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      padding: 6px 8px;
-      font-size: .72rem;
-      color: #02050a;
-      background: linear-gradient(90deg, var(--cyan), var(--gold));
-      font-weight: 800;
-    }
-    button, .link-btn {
-      border: 1px solid rgba(0,255,204,.26);
-      border-radius: 999px;
-      padding: 10px 12px;
-      color: var(--text);
-      background: rgba(255,255,255,.055);
-      cursor: pointer;
-      text-decoration: none;
-      text-align: center;
-      font: inherit;
-      font-size: .88rem;
-    }
-    button:hover, .link-btn:hover { border-color: var(--cyan); background: rgba(0,255,204,.08); }
-    button.primary, .link-btn.primary { color: #02050a; background: linear-gradient(90deg, var(--cyan), var(--gold)); border-color: transparent; font-weight: 800; }
-    button.danger { border-color: rgba(255,71,87,.36); color: #ffb8c0; background: rgba(255,71,87,.08); }
-    button.warn { border-color: rgba(255,204,0,.36); color: #ffe38b; background: rgba(255,204,0,.08); }
-    textarea {
-      width: 100%;
-      min-height: 340px;
-      resize: vertical;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.12);
-      color: #dff;
-      background: rgba(0,0,0,.38);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: .82rem;
-      line-height: 1.4;
-    }
-    input[type="file"] { width: 100%; color: var(--muted); }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .stat {
-      padding: 10px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.18);
-    }
-    .stat span { display: block; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; }
-    .stat strong { display: block; margin-top: 4px; font-size: 1rem; overflow-wrap: anywhere; }
-    .log {
-      max-height: 180px;
-      overflow: auto;
-      padding: 10px;
-      border-radius: 14px;
-      background: rgba(0,0,0,.24);
-      color: var(--muted);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: .78rem;
-      line-height: 1.5;
-    }
-    .notice {
-      margin: 0 0 12px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,204,0,.22);
-      background: rgba(255,204,0,.055);
-      color: rgba(255,244,200,.9);
-      font-size: .9rem;
-    }
-    @media (max-width: 900px) {
-      header, .grid { grid-template-columns: 1fr; display: grid; }
-      .actions, .quick-grid, .stats { grid-template-columns: 1fr; }
-    }
+    :root{color-scheme:dark;--bg:#02050a;--panel:rgba(8,18,30,.88);--line:rgba(0,255,204,.18);--text:#e8faff;--muted:rgba(168,230,255,.68);--cyan:#00ffcc;--gold:#ffcc00;--red:#ff4757;--violet:#b88cff}*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at 12% 10%,rgba(0,255,204,.12),transparent 34%),radial-gradient(circle at 88% 0%,rgba(255,204,0,.10),transparent 30%),linear-gradient(145deg,#02050a,#06101d 60%,#02050a);overflow-x:hidden}body:before{content:'';position:fixed;inset:0;pointer-events:none;opacity:.25;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(255,255,255,.035) 6px 7px);mix-blend-mode:screen}.shell{width:min(1180px,calc(100vw - 24px));margin:0 auto;padding:22px 0 30px}header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;padding:16px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.035);box-shadow:0 0 36px rgba(0,255,204,.08)}h1{margin:0 0 6px;font-size:clamp(1.7rem,4vw,3.5rem);letter-spacing:.05em;line-height:.9}h1 span{color:var(--cyan)}p{color:var(--muted);line-height:1.5}.actions,.grid,.quick-grid{display:grid;gap:10px}.actions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:min(420px,100%)}.grid{grid-template-columns:1.1fr .9fr;align-items:start}.quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.panel{border:1px solid var(--line);border-radius:22px;background:var(--panel);padding:14px;box-shadow:0 24px 80px rgba(0,0,0,.28);backdrop-filter:blur(12px)}.panel h2{margin:0 0 10px;font-size:1rem;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}.save-list{display:grid;gap:8px}.save-card{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(255,255,255,.035);cursor:pointer}.save-card.active{border-color:rgba(0,255,204,.55);box-shadow:inset 0 0 22px rgba(0,255,204,.07)}.save-card strong{display:block;font-size:.92rem;overflow-wrap:anywhere}.save-card small{color:var(--muted)}.pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 8px;font-size:.72rem;color:#02050a;background:linear-gradient(90deg,var(--cyan),var(--gold));font-weight:800}button,.link-btn{border:1px solid rgba(0,255,204,.26);border-radius:999px;padding:10px 12px;color:var(--text);background:rgba(255,255,255,.055);cursor:pointer;text-decoration:none;text-align:center;font:inherit;font-size:.88rem}button:hover,.link-btn:hover{border-color:var(--cyan);background:rgba(0,255,204,.08)}button.primary,.link-btn.primary{color:#02050a;background:linear-gradient(90deg,var(--cyan),var(--gold));border-color:transparent;font-weight:800}button.danger{border-color:rgba(255,71,87,.36);color:#ffb8c0;background:rgba(255,71,87,.08)}button.warn{border-color:rgba(255,204,0,.36);color:#ffe38b;background:rgba(255,204,0,.08)}button.rescue{grid-column:1/-1;color:#02050a;background:linear-gradient(90deg,#00ffcc,#ffcc00,#b88cff);border-color:transparent;font-weight:900;box-shadow:0 0 28px rgba(0,255,204,.18)}textarea{width:100%;min-height:340px;resize:vertical;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.12);color:#dff;background:rgba(0,0,0,.38);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.4}input[type=file]{width:100%;color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}.stat{padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.18)}.stat span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.12em}.stat strong{display:block;margin-top:4px;font-size:1rem;overflow-wrap:anywhere}.log{max-height:220px;overflow:auto;padding:10px;border-radius:14px;background:rgba(0,0,0,.24);color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.5}.notice{margin:0 0 12px;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,204,0,.22);background:rgba(255,204,0,.055);color:rgba(255,244,200,.9);font-size:.9rem}.notice strong{color:var(--gold)}@media(max-width:900px){header,.grid{grid-template-columns:1fr;display:grid}.actions,.quick-grid,.stats{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -187,18 +14,19 @@
     <header>
       <div>
         <h1>NITRO <span>DEBUG</span></h1>
-        <p>Page de secours indépendante du jeu. Elle sert à réparer, exporter, migrer ou reset une sauvegarde même si l’app principale est bloquée sur une ancienne version.</p>
+        <p>Page de secours indépendante du jeu. Elle répare la save, purge les caches, force le navigateur à reprendre les derniers fichiers du clicker, puis relance le jeu.</p>
       </div>
       <nav class="actions">
-        <a class="link-btn primary" href="./">Retour au jeu</a>
-        <button id="reload-btn" type="button">Recharger cette page</button>
+        <button id="full-rescue-btn" type="button" class="rescue">RECHARGER TOUT LE CLICKER + LANCER</button>
+        <a class="link-btn primary" href="./?rescue=manual">Retour au jeu</a>
+        <button id="reload-btn" type="button">Recharger debug</button>
         <button id="hard-refresh-btn" type="button" class="warn">Nettoyer caches UI</button>
         <button id="export-all-btn" type="button">Exporter tout</button>
       </nav>
     </header>
 
     <section class="notice">
-      Conseil : commence par <b>Exporter tout</b>, puis utilise <b>Réparer / migrer</b>. Le bouton destructif est seulement <b>Supprimer cette save</b>.
+      <strong>Parcours conseillé pour les joueurs bloqués :</strong> 1) Exporter tout · 2) Réparer / migrer · 3) <b>Recharger tout le clicker + lancer</b>. Ce dernier bouton force le cache-busting des fichiers JS/CSS et ouvre le jeu avec une URL neuve.
     </section>
 
     <section class="grid">
@@ -243,211 +71,40 @@
     const SAVE_PREFIX = 'nitro-clicker.save.';
     const CURRENT_VERSION = 9;
     const UI_KEYS_TO_CLEAR = [
-      'nitro-clicker.dev.enabled',
-      'nitro-clicker.upgrade-shop.active',
-      'nitro-clicker.guide.v1.seen',
-      'nitro-clicker.sound.settings.v1',
-      'nitro-clicker.save.migration.notice',
-      'nitro-clicker.offlineFarm.blockedNotice',
-      'nitro-clicker.log'
+      'nitro-clicker.dev.enabled','nitro-clicker.upgrade-shop.active','nitro-clicker.guide.v1.seen','nitro-clicker.sound.settings.v1','nitro-clicker.save.migration.notice','nitro-clicker.offlineFarm.blockedNotice','nitro-clicker.log','nitro-clicker.render-cache','nitro-clicker.fx.enabled'
     ];
-
+    const CLICKER_ASSETS = [
+      './','./index.html','./css/nitro.css','./css/clicker.css','./css/progression.css','./css/biopunk-fx.css','./css/panels.css','./css/responsive.css','./css/svg-icons.css','./css/overdrive-fx.css','./css/shared-assets.css','./css/core-3d.css','./css/plasma-feedback.css','./css/lemegeton-progression.css','./css/upgrade-ux.css','./css/topbar-offline.css','./css/notifications.css','./css/core-shell.css','./css/current-objective.css','./css/audio-panel.css','./css/save-migration.css','./js/bootstrap.js','./js/app.js','./js/clicker-state.js','./js/clicker-save.js','./js/ui/render-cache.js','./js/ui/upgrade-ux.js','./js/ui/current-objective.js','./js/ui/prestige-current-energy.js','./js/ui/save-migration-notice.js','./js/audio/sound-engine.js','./js/audio/sound-panel.js','./js/audio/sound-catalog.js','./js/engine/offline-policy.js','./js/engine/core-controls.js','./js/fx/overdrive.js','./js/fx/plasma-feedback.js','./js/lore/lemegeton-progression.js','./js/debug/dev-tools.js'
+    ];
     let selectedKey = null;
-
     const $ = id => document.getElementById(id);
-    const log = msg => {
-      const node = $('log');
-      const line = `[${new Date().toLocaleTimeString('fr-FR')}] ${msg}`;
-      node.textContent = `${line}\n${node.textContent}`;
-    };
-
-    function fmt(value) {
-      const n = Math.floor(Number(value ?? 0));
-      if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-      if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-      if (n >= 100_000) return `${(n / 1_000).toFixed(1)}K`;
-      return n.toLocaleString('fr-FR');
-    }
-
-    function saveKeys() {
-      return Object.keys(localStorage).filter(k => k.startsWith(SAVE_PREFIX)).sort();
-    }
-
-    function safeRead(key) {
-      try { return JSON.parse(localStorage.getItem(key) || '{}'); }
-      catch { return { broken: true, raw: localStorage.getItem(key) || '' }; }
-    }
-
-    function write(key, save) {
-      save.updatedAt = Date.now();
-      localStorage.setItem(key, JSON.stringify(save));
-      selectedKey = key;
-      render();
-    }
-
-    function ensureSave() {
-      if (selectedKey && localStorage.getItem(selectedKey)) return selectedKey;
-      const keys = saveKeys();
-      if (keys.length) return selectedKey = keys[0];
-      selectedKey = `${SAVE_PREFIX}guest`;
-      write(selectedKey, defaultSave('guest'));
-      return selectedKey;
-    }
-
-    function defaultSave(userId = 'guest') {
-      return {
-        version: CURRENT_VERSION,
-        userId,
-        energy: 0,
-        totalEnergy: 0,
-        lifetimeEnergy: 0,
-        fragments: 0,
-        totalFragments: 0,
-        prestige: 0,
-        totalClicks: 0,
-        upgrades: {},
-        milestones: {},
-        coreShell: { storedFragments: 0, cracks: 0, lastBreakAt: 0, failedBreaks: 0 },
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
-    }
-
-    function repairSave(raw) {
-      const save = { ...defaultSave(raw.userId || selectedKey?.replace(SAVE_PREFIX, '') || 'guest'), ...(raw || {}) };
-      save.version = CURRENT_VERSION;
-      save.energy = Math.max(0, Number(save.energy ?? 0));
-      save.totalEnergy = Math.max(0, Number(save.totalEnergy ?? save.energy ?? 0));
-      save.lifetimeEnergy = Math.max(0, Number(save.lifetimeEnergy ?? save.totalLifetimeEnergy ?? save.totalEnergy ?? save.energy ?? 0));
-      save.fragments = Math.max(0, Number(save.fragments ?? 0));
-      save.totalFragments = Math.max(save.fragments, Number(save.totalFragments ?? save.fragments ?? 0));
-      save.prestige = Math.max(0, Number(save.prestige ?? 0));
-      save.totalClicks = Math.max(0, Number(save.totalClicks ?? 0));
-      save.upgrades = { ...(save.upgrades || {}) };
-      save.milestones = { ...(save.milestones || {}) };
-      save.coreShell = { storedFragments: 0, cracks: 0, lastBreakAt: 0, failedBreaks: 0, ...(save.coreShell || {}) };
-      save.autoClickAccumulator = Math.max(0, Number(save.autoClickAccumulator ?? 0));
-      save.migration = {
-        ...(save.migration || {}),
-        adaptedByDebugPage: true,
-        adaptedAt: Date.now(),
-        originalVersion: save.migration?.originalVersion ?? raw.version ?? 'legacy',
-        lastApplied: `debug-v${CURRENT_VERSION}`
-      };
-      return save;
-    }
-
-    function prestigeRequirement(prestige = 0) {
-      const p = Math.max(0, Number(prestige || 0));
-      const base = 6500;
-      if (p <= 10) return Math.floor(base * Math.pow(2.05, p));
-      const p10 = base * Math.pow(2.05, 10);
-      return Math.floor(p10 * Math.pow(2.3, p - 10));
-    }
-
-    function compensate(save) {
-      const score = Math.log10(Math.max(10, save.lifetimeEnergy || save.totalEnergy || save.energy || 0)) + save.prestige * 1.4 + Object.values(save.upgrades || {}).reduce((a,b) => a + Number(b || 0), 0) * .12;
-      const fragments = Math.max(3, Math.min(80, Math.floor(score + 4)));
-      const energy = Math.max(2500, Math.min(5_000_000, Math.floor((save.energy || 0) * .12 + fragments * 1200)));
-      save.energy += energy;
-      save.totalEnergy += energy;
-      save.lifetimeEnergy += energy;
-      save.fragments += fragments;
-      save.totalFragments += fragments;
-      save.migration = { ...(save.migration || {}), debugCompensationAt: Date.now(), debugCompensation: { energy, fragments } };
-      return { energy, fragments };
-    }
-
-    function render() {
-      const keys = saveKeys();
-      if (!keys.length) ensureSave();
-      if (!selectedKey || !localStorage.getItem(selectedKey)) selectedKey = saveKeys()[0];
-      const list = $('save-list');
-      list.innerHTML = saveKeys().map(key => {
-        const s = safeRead(key);
-        return `<article class="save-card ${key === selectedKey ? 'active' : ''}" data-key="${key}">
-          <div><strong>${key}</strong><small>v${s.version ?? 'legacy'} · ${new Date(s.updatedAt || Date.now()).toLocaleString('fr-FR')}</small></div>
-          <span class="pill">${fmt(s.energy)} E</span>
-        </article>`;
-      }).join('') || '<p>Aucune save détectée.</p>';
-      document.querySelectorAll('[data-key]').forEach(card => card.addEventListener('click', () => { selectedKey = card.dataset.key; render(); }));
-
-      const save = safeRead(selectedKey);
-      $('json-editor').value = JSON.stringify(save, null, 2);
-      $('stats').innerHTML = [
-        ['Version', save.version ?? 'legacy'],
-        ['Énergie instantanée', fmt(save.energy)],
-        ['Énergie run', fmt(save.totalEnergy)],
-        ['Énergie lifetime / bonbonnes', `${fmt(save.lifetimeEnergy ?? save.totalEnergy)} / ${Math.floor(Number(save.lifetimeEnergy ?? save.totalEnergy ?? 0) / 100_000_000)}/10`],
-        ['Fragments', `${fmt(save.fragments)} / total ${fmt(save.totalFragments)}`],
-        ['Prestige', save.prestige ?? 0],
-        ['Seuil prestige actuel', fmt(prestigeRequirement(save.prestige))],
-        ['Upgrades', Object.keys(save.upgrades || {}).length]
-      ].map(([k,v]) => `<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('');
-    }
-
-    function current() { return safeRead(ensureSave()); }
-
-    document.addEventListener('click', event => {
-      const action = event.target.dataset.action;
-      if (!action) return;
-      const key = ensureSave();
-      let save = repairSave(current());
-      if (action === 'repair') { write(key, save); log('Save réparée / migrée.'); return; }
-      if (action === 'compensate') { const c = compensate(save); write(key, save); log(`Compensation appliquée : +${fmt(c.energy)} E, +${fmt(c.fragments)} F.`); return; }
-      if (action === 'prestige-ready') { const req = prestigeRequirement(save.prestige); save.energy = Math.max(save.energy, req); save.totalEnergy = Math.max(save.totalEnergy, save.energy); save.lifetimeEnergy = Math.max(save.lifetimeEnergy, save.totalEnergy); write(key, save); log('Énergie instantanée alignée sur le seuil prestige.'); return; }
-      if (action === 'add-100k') { save.energy += 100000; save.totalEnergy += 100000; save.lifetimeEnergy += 100000; write(key, save); log('+100K énergie.'); return; }
-      if (action === 'add-100m') { save.energy += 100000000; save.totalEnergy += 100000000; save.lifetimeEnergy += 100000000; write(key, save); log('+100M lifetime / bonbonne.'); return; }
-      if (action === 'add-fragments') { save.fragments += 10; save.totalFragments += 10; write(key, save); log('+10 fragments.'); return; }
-      if (action === 'unlock-early') { save.energy += 15000; save.totalEnergy = Math.max(save.totalEnergy, 15000); save.lifetimeEnergy = Math.max(save.lifetimeEnergy, save.totalEnergy); save.fragments += 5; save.totalFragments += 5; save.upgrades.prism = Math.max(save.upgrades.prism || 0, 2); save.upgrades.coreIsolation = Math.max(save.upgrades.coreIsolation || 0, 1); write(key, save); log('Déblocage early appliqué.'); return; }
-      if (action === 'set-p10') { save.prestige = Math.max(10, save.prestige || 0); write(key, save); log('Prestige 10 appliqué.'); return; }
-      if (action === 'fix-lifetime') { save.lifetimeEnergy = Math.max(Number(save.lifetimeEnergy || 0), Number(save.totalEnergy || 0), Number(save.energy || 0)); write(key, save); log('LifetimeEnergy corrigé pour bonbonnes persistantes.'); return; }
-    });
-
-    $('reload-btn').addEventListener('click', () => location.reload());
-    $('hard-refresh-btn').addEventListener('click', async () => {
-      UI_KEYS_TO_CLEAR.forEach(k => localStorage.removeItem(k));
-      sessionStorage.clear();
-      if ('caches' in window) {
-        const names = await caches.keys();
-        await Promise.all(names.map(name => caches.delete(name)));
-      }
-      log('Caches UI / flags locaux nettoyés. La save est conservée.');
-      render();
-    });
-    $('export-all-btn').addEventListener('click', () => downloadJson('nitro-clicker-localstorage-export.json', Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)]))));
-    $('copy-json-btn').addEventListener('click', async () => { await navigator.clipboard.writeText($('json-editor').value); log('JSON copié.'); });
-    $('download-save-btn').addEventListener('click', () => downloadJson('nitro-clicker-save.json', current()));
-    $('apply-json-btn').addEventListener('click', () => {
-      try { write(ensureSave(), repairSave(JSON.parse($('json-editor').value))); log('JSON édité appliqué.'); }
-      catch (e) { log(`JSON invalide : ${e.message}`); }
-    });
-    $('delete-save-btn').addEventListener('click', () => {
-      if (!confirm('Supprimer cette sauvegarde locale ? Pense à exporter avant.')) return;
-      localStorage.removeItem(ensureSave()); selectedKey = null; render(); log('Save supprimée.');
-    });
-    $('import-file').addEventListener('change', async event => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      try {
-        const parsed = JSON.parse(await file.text());
-        const key = ensureSave();
-        write(key, repairSave(parsed));
-        log(`Import appliqué depuis ${file.name}.`);
-      } catch (e) { log(`Import impossible : ${e.message}`); }
-    });
-
-    function downloadJson(filename, data) {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-      log(`Téléchargement : ${filename}`);
-    }
-
-    render();
-    log('Debug Rescue prêt.');
+    const log = msg => { const node = $('log'); const line = `[${new Date().toLocaleTimeString('fr-FR')}] ${msg}`; node.textContent = `${line}\n${node.textContent}`; };
+    function fmt(value){const n=Math.floor(Number(value??0));if(n>=1e9)return`${(n/1e9).toFixed(2)}B`;if(n>=1e6)return`${(n/1e6).toFixed(2)}M`;if(n>=1e5)return`${(n/1e3).toFixed(1)}K`;return n.toLocaleString('fr-FR')}
+    function saveKeys(){return Object.keys(localStorage).filter(k=>k.startsWith(SAVE_PREFIX)).sort()}
+    function safeRead(key){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return{broken:true,raw:localStorage.getItem(key)||''}}}
+    function write(key,save){save.updatedAt=Date.now();localStorage.setItem(key,JSON.stringify(save));selectedKey=key;render()}
+    function ensureSave(){if(selectedKey&&localStorage.getItem(selectedKey))return selectedKey;const keys=saveKeys();if(keys.length)return selectedKey=keys[0];selectedKey=`${SAVE_PREFIX}guest`;write(selectedKey,defaultSave('guest'));return selectedKey}
+    function defaultSave(userId='guest'){return{version:CURRENT_VERSION,userId,energy:0,totalEnergy:0,lifetimeEnergy:0,fragments:0,totalFragments:0,prestige:0,totalClicks:0,upgrades:{},milestones:{},coreShell:{storedFragments:0,cracks:0,lastBreakAt:0,failedBreaks:0},createdAt:Date.now(),updatedAt:Date.now()}}
+    function repairSave(raw){const save={...defaultSave(raw.userId||selectedKey?.replace(SAVE_PREFIX,'')||'guest'),...(raw||{})};save.version=CURRENT_VERSION;save.energy=Math.max(0,Number(save.energy??0));save.totalEnergy=Math.max(0,Number(save.totalEnergy??save.energy??0));save.lifetimeEnergy=Math.max(0,Number(save.lifetimeEnergy??save.totalLifetimeEnergy??save.totalEnergy??save.energy??0));save.fragments=Math.max(0,Number(save.fragments??0));save.totalFragments=Math.max(save.fragments,Number(save.totalFragments??save.fragments??0));save.prestige=Math.max(0,Number(save.prestige??0));save.totalClicks=Math.max(0,Number(save.totalClicks??0));save.upgrades={...(save.upgrades||{})};save.milestones={...(save.milestones||{})};save.coreShell={storedFragments:0,cracks:0,lastBreakAt:0,failedBreaks:0,...(save.coreShell||{})};save.autoClickAccumulator=Math.max(0,Number(save.autoClickAccumulator??0));save.migration={...(save.migration||{}),adaptedByDebugPage:true,adaptedAt:Date.now(),originalVersion:save.migration?.originalVersion??raw.version??'legacy',lastApplied:`debug-v${CURRENT_VERSION}`};return save}
+    function prestigeRequirement(prestige=0){const p=Math.max(0,Number(prestige||0));const base=6500;if(p<=10)return Math.floor(base*Math.pow(2.05,p));const p10=base*Math.pow(2.05,10);return Math.floor(p10*Math.pow(2.3,p-10))}
+    function compensate(save){const score=Math.log10(Math.max(10,save.lifetimeEnergy||save.totalEnergy||save.energy||0))+save.prestige*1.4+Object.values(save.upgrades||{}).reduce((a,b)=>a+Number(b||0),0)*.12;const fragments=Math.max(3,Math.min(80,Math.floor(score+4)));const energy=Math.max(2500,Math.min(5_000_000,Math.floor((save.energy||0)*.12+fragments*1200)));save.energy+=energy;save.totalEnergy+=energy;save.lifetimeEnergy+=energy;save.fragments+=fragments;save.totalFragments+=fragments;save.migration={...(save.migration||{}),debugCompensationAt:Date.now(),debugCompensation:{energy,fragments}};return{energy,fragments}}
+    function render(){const keys=saveKeys();if(!keys.length)ensureSave();if(!selectedKey||!localStorage.getItem(selectedKey))selectedKey=saveKeys()[0];const list=$('save-list');list.innerHTML=saveKeys().map(key=>{const s=safeRead(key);return`<article class="save-card ${key===selectedKey?'active':''}" data-key="${key}"><div><strong>${key}</strong><small>v${s.version??'legacy'} · ${new Date(s.updatedAt||Date.now()).toLocaleString('fr-FR')}</small></div><span class="pill">${fmt(s.energy)} E</span></article>`}).join('')||'<p>Aucune save détectée.</p>';document.querySelectorAll('[data-key]').forEach(card=>card.addEventListener('click',()=>{selectedKey=card.dataset.key;render()}));const save=safeRead(selectedKey);$('json-editor').value=JSON.stringify(save,null,2);$('stats').innerHTML=[['Version',save.version??'legacy'],['Énergie instantanée',fmt(save.energy)],['Énergie run',fmt(save.totalEnergy)],['Énergie lifetime / bonbonnes',`${fmt(save.lifetimeEnergy??save.totalEnergy)} / ${Math.floor(Number(save.lifetimeEnergy??save.totalEnergy??0)/100_000_000)}/10`],['Fragments',`${fmt(save.fragments)} / total ${fmt(save.totalFragments)}`],['Prestige',save.prestige??0],['Seuil prestige actuel',fmt(prestigeRequirement(save.prestige))],['Upgrades',Object.keys(save.upgrades||{}).length]].map(([k,v])=>`<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('')}
+    function current(){return safeRead(ensureSave())}
+    async function clearBrowserCaches(){UI_KEYS_TO_CLEAR.forEach(k=>localStorage.removeItem(k));sessionStorage.clear();if('caches'in window){const names=await caches.keys();await Promise.all(names.map(name=>caches.delete(name)));log(`${names.length} cache(s) CacheStorage supprimé(s).`)}if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(reg=>reg.unregister()));if(regs.length)log(`${regs.length} service worker(s) désinscrit(s).`)}}
+    async function warmFreshAssets(){const stamp=Date.now();let ok=0,fail=0;for(const asset of CLICKER_ASSETS){try{const url=new URL(asset,location.href);url.searchParams.set('debugReload',stamp);const res=await fetch(url.toString(),{cache:'reload',credentials:'same-origin'});if(res.ok)ok++;else fail++}catch{fail++}}log(`Fichiers clicker rechargés réseau : ${ok} OK, ${fail} échec(s).`)}
+    async function fullRescueAndLaunch(){const key=ensureSave();const save=repairSave(current());write(key,save);log('Save réparée avant relance.');await clearBrowserCaches();await warmFreshAssets();localStorage.setItem('nitro-clicker.forceFreshBoot',String(Date.now()));const target=new URL('./',location.href);target.searchParams.set('rescue',Date.now());target.searchParams.set('debug','1');log('Ouverture du jeu avec cache-buster...');setTimeout(()=>location.replace(target.toString()),450)}
+    document.addEventListener('click',event=>{const action=event.target.dataset.action;if(!action)return;const key=ensureSave();let save=repairSave(current());if(action==='repair'){write(key,save);log('Save réparée / migrée.');return}if(action==='compensate'){const c=compensate(save);write(key,save);log(`Compensation appliquée : +${fmt(c.energy)} E, +${fmt(c.fragments)} F.`);return}if(action==='prestige-ready'){const req=prestigeRequirement(save.prestige);save.energy=Math.max(save.energy,req);save.totalEnergy=Math.max(save.totalEnergy,save.energy);save.lifetimeEnergy=Math.max(save.lifetimeEnergy,save.totalEnergy);write(key,save);log('Énergie instantanée alignée sur le seuil prestige.');return}if(action==='add-100k'){save.energy+=100000;save.totalEnergy+=100000;save.lifetimeEnergy+=100000;write(key,save);log('+100K énergie.');return}if(action==='add-100m'){save.energy+=100000000;save.totalEnergy+=100000000;save.lifetimeEnergy+=100000000;write(key,save);log('+100M lifetime / bonbonne.');return}if(action==='add-fragments'){save.fragments+=10;save.totalFragments+=10;write(key,save);log('+10 fragments.');return}if(action==='unlock-early'){save.energy+=15000;save.totalEnergy=Math.max(save.totalEnergy,15000);save.lifetimeEnergy=Math.max(save.lifetimeEnergy,save.totalEnergy);save.fragments+=5;save.totalFragments+=5;save.upgrades.prism=Math.max(save.upgrades.prism||0,2);save.upgrades.coreIsolation=Math.max(save.upgrades.coreIsolation||0,1);write(key,save);log('Déblocage early appliqué.');return}if(action==='set-p10'){save.prestige=Math.max(10,save.prestige||0);write(key,save);log('Prestige 10 appliqué.');return}if(action==='fix-lifetime'){save.lifetimeEnergy=Math.max(Number(save.lifetimeEnergy||0),Number(save.totalEnergy||0),Number(save.energy||0));write(key,save);log('LifetimeEnergy corrigé pour bonbonnes persistantes.')}});
+    $('full-rescue-btn').addEventListener('click',fullRescueAndLaunch);
+    $('reload-btn').addEventListener('click',()=>location.reload());
+    $('hard-refresh-btn').addEventListener('click',async()=>{await clearBrowserCaches();log('Caches UI / flags locaux nettoyés. La save est conservée.');render()});
+    $('export-all-btn').addEventListener('click',()=>downloadJson('nitro-clicker-localstorage-export.json',Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)]))));
+    $('copy-json-btn').addEventListener('click',async()=>{await navigator.clipboard.writeText($('json-editor').value);log('JSON copié.')});
+    $('download-save-btn').addEventListener('click',()=>downloadJson('nitro-clicker-save.json',current()));
+    $('apply-json-btn').addEventListener('click',()=>{try{write(ensureSave(),repairSave(JSON.parse($('json-editor').value)));log('JSON édité appliqué.')}catch(e){log(`JSON invalide : ${e.message}`)}});
+    $('delete-save-btn').addEventListener('click',()=>{if(!confirm('Supprimer cette sauvegarde locale ? Pense à exporter avant.'))return;localStorage.removeItem(ensureSave());selectedKey=null;render();log('Save supprimée.')});
+    $('import-file').addEventListener('change',async event=>{const file=event.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const key=ensureSave();write(key,repairSave(parsed));log(`Import appliqué depuis ${file.name}.`)}catch(e){log(`Import impossible : ${e.message}`)}});
+    function downloadJson(filename,data){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);log(`Téléchargement : ${filename}`)}
+    render();log('Debug Rescue prêt.');
   </script>
 </body>
 </html>
