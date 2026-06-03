@@ -144,6 +144,65 @@ function renderPanelBody() {
   else body.innerHTML = renderPausePanel();
 }
 
+/* ──────────────────────────────────────────────────────────────
+   PRESTIGE WARNING BLOCK
+   Calcule le niveau de surcharge et génère le HTML+CSS du bloc.
+   overcharge = 0  → seuil tout juste atteint (prêt à prestige)
+   overcharge = 1  → 100% au-delà du seuil (surcharge maximale)
+────────────────────────────────────────────────────────────── */
+function renderPrestigeWarningBlock() {
+  const s = readSnapshot();
+  const state = normalizeSave(s) ?? createDefaultState('guest');
+  const req = prestigeRequirement(state);
+  const totalEnergy = state.totalEnergy ?? 0;
+  const rawProgress = Math.min(totalEnergy / Math.max(1, req), 2); // cap à 200%
+  const isReady = rawProgress >= 1;
+  // overcharge : 0 si exactement au seuil, monte jusqu'à ~1 si 200% du seuil
+  const overcharge = isReady ? Math.min((rawProgress - 1), 1) : 0;
+  const pct = Math.round(rawProgress * 100);
+  const isOverloaded = isReady && overcharge > 0.05;
+
+  // Fragments estimés au prochain prestige
+  const nextFragments = Math.max(1, Math.floor(Math.sqrt(totalEnergy / 1000)));
+
+  return `
+    <div
+      class="prestige-warn-block"
+      data-ready="${isReady}"
+      data-overloaded="${isOverloaded}"
+      style="--overcharge:${overcharge.toFixed(3)}"
+    >
+      <div class="prestige-warn-info">
+        <div class="prestige-warn-info-left">
+          <span class="prestige-warn-label">${isReady ? (isOverloaded ? '⚠ SURCHARGE ACTIVE — RÉINITIALISEZ' : '✦ SEUIL ATTEINT — PRESTIGE DISPONIBLE') : '◇ PROCHAIN PRESTIGE'}</span>
+          <span class="prestige-warn-reward">
+            +<em>${nextFragments}</em> fragment${nextFragments > 1 ? 's' : ''} Nitro
+          </span>
+        </div>
+        <div class="prestige-warn-meter-wrap">
+          <div class="prestige-warn-meter">
+            <div class="prestige-warn-meter-fill" style="transform:scaleX(${Math.min(rawProgress, 1).toFixed(3)})"></div>
+          </div>
+          <span class="prestige-warn-pct">${fmt(totalEnergy)} / ${fmt(req)} · ${pct}%</span>
+        </div>
+      </div>
+      <button
+        class="prestige-warn-btn"
+        type="button"
+        ${isReady ? '' : 'disabled'}
+        onclick="if(confirm('Lancer le prestige ? Ton énergie et tes upgrades seront réinitialisés. Tu gagneras des fragments Nitro permanents.')){document.getElementById('reset-btn')?.click();}"
+        aria-label="Lancer le prestige et réinitialiser le run"
+      >
+        <span class="prestige-warn-btn-icon">${isOverloaded ? '🔴' : (isReady ? '✦' : '◇')}</span>
+        <span class="prestige-warn-btn-label">
+          <span class="prestige-warn-btn-title">${isReady ? 'LANCER LE PRESTIGE' : 'PRESTIGE VERROUILLÉ'}</span>
+          <span class="prestige-warn-btn-sub">${isOverloaded ? 'Surcharge critique — le noyau demande un reset' : (isReady ? 'Reset run · gain fragments permanent' : `Seuil : ${fmt(req)} énergie totale`)}</span>
+        </span>
+        <span class="prestige-warn-badge">SURCHARGE</span>
+      </button>
+    </div>`;
+}
+
 function renderPausePanel() {
   const s = readSnapshot();
   const goal = getCurrentGoal(s);
@@ -156,6 +215,7 @@ function renderPausePanel() {
       <button class="nc-action" type="button" onclick="document.querySelector('[data-panel-tab=save]')?.click()">📦 Export / Import</button>
       <button class="nc-action danger" type="button" onclick="document.getElementById('reset-btn')?.click()">⚠ Reset local</button>
     </div>
+    ${renderPrestigeWarningBlock()}
     <div class="nc-mini-grid">
       ${metric('Énergie', liveText('stat-energy', fmt(s.energy)))}
       ${metric('Fragments', liveText('stat-fragments', fmt(s.fragments)))}
@@ -175,17 +235,17 @@ function renderStatsPanel() {
       ${metric('Puissance clic', liveText('stat-click', fmt(s.clickPower)))}${metric('Auto / sec', liveText('stat-passive', Number(s.passiveRate ?? 0).toFixed(2)))}${metric('Clics totaux', fmt(s.totalClicks))}${metric('Upgrades achetés', fmt(upgradesTotal))}
       ${metric('Milestones', `${milestonesDone}/${MILESTONES.length}`)}${metric('Prestige', liveText('stat-prestige', fmt(s.prestige)))}${metric('Échelle', layer.name)}${metric('Usines', liveText('stat-factory', fmt(s.factoryRate)))}
     </div>
-    <h3 class="nc-subtitle">Niveaux d’upgrades</h3>
+    <h3 class="nc-subtitle">Niveaux d'upgrades</h3>
     <div class="nc-upgrade-stats">${UPGRADES.map(up => `<div><span>${up.icon} ${up.name}</span><strong>Lv.${s.upgrades?.[up.id] ?? 0}</strong></div>`).join('')}</div>`;
 }
 
 function renderGuidePanel() {
   return `<div class="nc-guide-grid">
-    ${guideCard('⬡', 'Cliquer le noyau', 'Chaque clic produit de l’énergie. Plus tu achètes d’amplificateurs, plus chaque clic devient puissant.')}
+    ${guideCard('⬡', 'Cliquer le noyau', 'Chaque clic produit de l\'énergie. Plus tu achètes d\'amplificateurs, plus chaque clic devient puissant.')}
     ${guideCard('🧬', 'Surcharge', 'La jauge de surcharge se remplit avec les clics. À 100%, elle déclenche un Overdrive avec un gros gain et une chance de fragment.')}
     ${guideCard('💠', 'Fragments Nitro', 'Ressource permanente. Elle survit au prestige et sert aux upgrades plus rares comme le Catalyseur de fragments.')}
     ${guideCard('✦', 'Prestige', 'Quand ton énergie totale atteint le seuil, tu peux reset ton run pour gagner des fragments et augmenter ton scaling.')}
-    ${guideCard('🏭', 'Dézoom', 'À certains prestiges, le jeu change d’échelle : noyau unique, baie moteur, usine, district puis anneau orbital.')}
+    ${guideCard('🏭', 'Dézoom', 'À certains prestiges, le jeu change d\'échelle : noyau unique, baie moteur, usine, district puis anneau orbital.')}
     ${guideCard('◇', 'Objectif actuel', 'Le panneau visible en jeu indique toujours le prochain unlock, milestone ou prestige à viser.')}
   </div>`;
 }
@@ -287,7 +347,7 @@ function getCurrentGoal(s = readSnapshot()) {
   const milestone = MILESTONES.find(m => !state.milestones?.[m.id]);
   if (milestone) return { kind: 'MILESTONE', label: milestone.label, desc: milestone.desc, progress: guessMilestoneProgress(state, milestone), progressLabel: `${Math.floor(guessMilestoneProgress(state, milestone) * 100)}%` };
   const req = prestigeRequirement(state);
-  return { kind: 'PRESTIGE', label: 'Surcharge contrôlée', desc: 'Atteins le seuil d’énergie totale pour relancer le run avec plus de fragments et un meilleur scaling.', progress: Math.min(1, (state.totalEnergy ?? 0) / Math.max(1, req)), progressLabel: `${fmt(state.totalEnergy)} / ${fmt(req)} énergie totale` };
+  return { kind: 'PRESTIGE', label: 'Surcharge contrôlée', desc: 'Atteins le seuil d\'énergie totale pour relancer le run avec plus de fragments et un meilleur scaling.', progress: Math.min(1, (state.totalEnergy ?? 0) / Math.max(1, req)), progressLabel: `${fmt(state.totalEnergy)} / ${fmt(req)} énergie totale` };
 }
 
 function guessUnlockProgress(state, up) {
