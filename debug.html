@@ -3,108 +3,994 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nitro Clicker — Debug Rescue</title>
-  <link rel="icon" href="/shared/logos/star_logo/star_logo_color_set/star_logo_white_silver.png" type="image/png" />
+  <title>Nitro Clicker — Debug Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{color-scheme:dark;--bg:#02050a;--panel:rgba(8,18,30,.88);--line:rgba(0,255,204,.18);--text:#e8faff;--muted:rgba(168,230,255,.68);--cyan:#00ffcc;--gold:#ffcc00;--red:#ff4757;--violet:#b88cff}*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at 12% 10%,rgba(0,255,204,.12),transparent 34%),radial-gradient(circle at 88% 0%,rgba(255,204,0,.10),transparent 30%),linear-gradient(145deg,#02050a,#06101d 60%,#02050a);overflow-x:hidden}body:before{content:'';position:fixed;inset:0;pointer-events:none;opacity:.25;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(255,255,255,.035) 6px 7px);mix-blend-mode:screen}.shell{width:min(1180px,calc(100vw - 24px));margin:0 auto;padding:22px 0 30px}header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;padding:16px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.035);box-shadow:0 0 36px rgba(0,255,204,.08)}h1{margin:0 0 6px;font-size:clamp(1.7rem,4vw,3.5rem);letter-spacing:.05em;line-height:.9}h1 span{color:var(--cyan)}p{color:var(--muted);line-height:1.5}.actions,.grid,.quick-grid{display:grid;gap:10px}.actions{grid-template-columns:repeat(2,minmax(0,1fr));min-width:min(420px,100%)}.grid{grid-template-columns:1.1fr .9fr;align-items:start}.quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.panel{border:1px solid var(--line);border-radius:22px;background:var(--panel);padding:14px;box-shadow:0 24px 80px rgba(0,0,0,.28);backdrop-filter:blur(12px)}.panel h2{margin:0 0 10px;font-size:1rem;letter-spacing:.14em;color:var(--gold);text-transform:uppercase}.save-list{display:grid;gap:8px}.save-card{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:rgba(255,255,255,.035);cursor:pointer}.save-card.active{border-color:rgba(0,255,204,.55);box-shadow:inset 0 0 22px rgba(0,255,204,.07)}.save-card strong{display:block;font-size:.92rem;overflow-wrap:anywhere}.save-card small{color:var(--muted)}.pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 8px;font-size:.72rem;color:#02050a;background:linear-gradient(90deg,var(--cyan),var(--gold));font-weight:800}button,.link-btn{border:1px solid rgba(0,255,204,.26);border-radius:999px;padding:10px 12px;color:var(--text);background:rgba(255,255,255,.055);cursor:pointer;text-decoration:none;text-align:center;font:inherit;font-size:.88rem}button:hover,.link-btn:hover{border-color:var(--cyan);background:rgba(0,255,204,.08)}button.primary,.link-btn.primary{color:#02050a;background:linear-gradient(90deg,var(--cyan),var(--gold));border-color:transparent;font-weight:800}button.danger{border-color:rgba(255,71,87,.36);color:#ffb8c0;background:rgba(255,71,87,.08)}button.warn{border-color:rgba(255,204,0,.36);color:#ffe38b;background:rgba(255,204,0,.08)}button.rescue{grid-column:1/-1;color:#02050a;background:linear-gradient(90deg,#00ffcc,#ffcc00,#b88cff);border-color:transparent;font-weight:900;box-shadow:0 0 28px rgba(0,255,204,.18)}textarea{width:100%;min-height:340px;resize:vertical;padding:12px;border-radius:16px;border:1px solid rgba(255,255,255,.12);color:#dff;background:rgba(0,0,0,.38);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.82rem;line-height:1.4}input[type=file]{width:100%;color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px}.stat{padding:10px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.18)}.stat span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.12em}.stat strong{display:block;margin-top:4px;font-size:1rem;overflow-wrap:anywhere}.log{max-height:220px;overflow:auto;padding:10px;border-radius:14px;background:rgba(0,0,0,.24);color:var(--muted);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.78rem;line-height:1.5}.notice{margin:0 0 12px;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,204,0,.22);background:rgba(255,204,0,.055);color:rgba(255,244,200,.9);font-size:.9rem}.notice strong{color:var(--gold)}@media(max-width:900px){header,.grid{grid-template-columns:1fr;display:grid}.actions,.quick-grid,.stats{grid-template-columns:1fr}}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #090b0e;
+      --surface:   #0e1117;
+      --surface2:  #141920;
+      --border:    rgba(0,255,204,.13);
+      --border2:   rgba(0,255,204,.22);
+      --text:      #c8dff0;
+      --muted:     rgba(168,210,255,.5);
+      --accent:    #00ffcc;
+      --red:       #ff4757;
+      --gold:      #ffd32a;
+      --mono:      'Share Tech Mono', monospace;
+      --display:   'Exo 2', sans-serif;
+      --radius:    10px;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ── */
+    .shell {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    header h1 {
+      font-family: var(--display);
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      color: var(--accent);
+    }
+
+    header small {
+      font-size: 9px;
+      letter-spacing: .18em;
+      color: var(--muted);
+    }
+
+    .header-actions { display: flex; gap: 8px; }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 0;
+      height: calc(100vh - 49px);
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      background: var(--surface);
+    }
+
+    .sidebar-section { border-bottom: 1px solid var(--border); }
+
+    .sidebar-title {
+      padding: 8px 14px;
+      font-size: 8px;
+      letter-spacing: .2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      background: rgba(0,0,0,.2);
+    }
+
+    .nav-btn {
+      display: block;
+      width: 100%;
+      padding: 9px 14px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: .10em;
+      color: var(--text);
+      background: none;
+      border: none;
+      border-left: 2px solid transparent;
+      cursor: pointer;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .nav-btn:hover  { background: rgba(0,255,204,.05); border-left-color: rgba(0,255,204,.3); }
+    .nav-btn.active { background: rgba(0,255,204,.08); border-left-color: var(--accent); color: var(--accent); }
+
+    /* ── Content ── */
+    .content {
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Section heading ── */
+    .section-head {
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      color: #e8faff;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+
+    /* ── Cards & panels ── */
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+    /* ── Fields ── */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    label {
+      font-size: 9px;
+      letter-spacing: .15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      background: rgba(0,0,0,.35);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 9px;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      width: 100%;
+      transition: border-color .15s;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0,255,204,.12);
+    }
+
+    /* ── Upgrade grid ── */
+    .upgrade-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .upgrade-card {
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .upgrade-icon { font-size: 18px; flex: 0 0 auto; }
+
+    .upgrade-info { flex: 1; min-width: 0; }
+    .upgrade-info strong {
+      display: block;
+      font-family: var(--display);
+      font-size: 10px;
+      font-weight: 700;
+      color: #e8faff;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .upgrade-info small {
+      display: block;
+      font-size: 8.5px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .upgrade-info .badge {
+      display: inline-block;
+      margin-top: 3px;
+      padding: 1px 5px;
+      border-radius: 999px;
+      font-size: 7px;
+      letter-spacing: .12em;
+      background: rgba(255,204,0,.14);
+      color: var(--gold);
+      border: 1px solid rgba(255,204,0,.25);
+    }
+
+    .upgrade-lvl {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .upgrade-lvl input {
+      width: 54px;
+      text-align: center;
+      padding: 4px 6px;
+    }
+
+    /* ── Milestone grid ── */
+    .milestone-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .milestone-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .milestone-row .ms-icon {
+      font-size: 16px;
+      flex: 0 0 auto;
+    }
+
+    .milestone-row .ms-info { flex: 1; min-width: 0; }
+    .milestone-row .ms-info strong {
+      display: block;
+      font-size: 11px;
+      color: #e8faff;
+    }
+    .milestone-row .ms-info small {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .toggle-btn {
+      flex: 0 0 auto;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .12em;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .toggle-btn.on  { border-color: var(--accent); color: #02050a; background: var(--accent); }
+    .toggle-btn.off { border-color: rgba(255,255,255,.2); color: var(--muted); background: transparent; }
+    .toggle-btn.on:hover  { background: #00ccaa; }
+    .toggle-btn.off:hover { background: rgba(255,255,255,.08); color: var(--text); }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1px solid;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .12em;
+      cursor: pointer;
+      transition: filter .15s, transform .1s;
+    }
+    .btn:hover  { filter: brightness(1.15); }
+    .btn:active { transform: scale(.97); }
+
+    .btn-primary  { background: var(--accent);      color: #02050a;  border-color: var(--accent); }
+    .btn-danger   { background: var(--red);         color: #fff;     border-color: var(--red); }
+    .btn-gold     { background: var(--gold);        color: #02050a;  border-color: var(--gold); }
+    .btn-ghost    { background: transparent;        color: var(--text); border-color: rgba(255,255,255,.18); }
+    .btn-ghost:hover { background: rgba(255,255,255,.07); }
+
+    /* ── JSON viewer ── */
+    textarea.json-box {
+      width: 100%;
+      min-height: 280px;
+      background: rgba(0,0,0,.4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: rgba(168,255,200,.85);
+      font-family: var(--mono);
+      font-size: 11px;
+      resize: vertical;
+      white-space: pre;
+      tab-size: 2;
+    }
+    textarea.json-box:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--accent);
+      background: rgba(5,15,20,.96);
+      color: var(--accent);
+      font-size: 11px;
+      letter-spacing: .10em;
+      box-shadow: 0 0 22px rgba(0,255,204,.18);
+      transform: translateY(8px);
+      opacity: 0;
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.err  { border-color: var(--red); color: var(--red); box-shadow: 0 0 22px rgba(255,71,87,.18); }
+
+    /* ── Stats bar ── */
+    .stat-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    .stat-tile {
+      padding: 10px 12px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .stat-tile label { display: block; font-size: 8px; margin-bottom: 3px; }
+    .stat-tile strong { font-size: 15px; color: var(--accent); font-family: var(--display); }
+
+    /* ── Layer badges ── */
+    .layer-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .layer-badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.15);
+      font-size: 9px;
+      letter-spacing: .12em;
+      color: var(--muted);
+    }
+    .layer-badge.active { border-color: var(--accent); color: var(--accent); background: rgba(0,255,204,.08); }
+
+    /* ── Hidden tabs ── */
+    .tab-content { display: none; }
+    .tab-content.active { display: contents; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .main-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      .sidebar { flex-direction: row; overflow-x: auto; overflow-y: hidden; border-right: none; border-bottom: 1px solid var(--border); height: auto; }
+      .sidebar-section { border-bottom: none; border-right: 1px solid var(--border); }
+      .sidebar-title { display: none; }
+      .nav-btn { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+      .nav-btn.active { border-left-color: transparent; border-bottom-color: var(--accent); }
+    }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <header>
-      <div>
-        <h1>NITRO <span>DEBUG</span></h1>
-        <p>Page de secours indépendante du jeu. Elle répare la save, purge les caches, force le navigateur à reprendre les derniers fichiers du clicker, puis relance le jeu.</p>
+<div class="shell">
+  <header>
+    <div>
+      <h1>⬡ NITRO DEBUG CONSOLE</h1>
+      <small id="hd-version">VERSION — · SAVE : aucune</small>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="btn-save-apply">💾 APPLIQUER &amp; SAUVER</button>
+      <button class="btn btn-ghost"   id="btn-reload">↺ RECHARGER SAVE</button>
+      <a href="./" class="btn btn-ghost">▶ JOUER</a>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Éditeur</div>
+        <button class="nav-btn active" data-tab="stats">📊 Stats &amp; ressources</button>
+        <button class="nav-btn"        data-tab="upgrades">⚡ Upgrades</button>
+        <button class="nav-btn"        data-tab="milestones">🏆 Milestones</button>
+        <button class="nav-btn"        data-tab="shell">◉ Core Shell</button>
       </div>
-      <nav class="actions">
-        <button id="full-rescue-btn" type="button" class="rescue">RECHARGER TOUT LE CLICKER + LANCER</button>
-        <a class="link-btn primary" href="./?rescue=manual">Retour au jeu</a>
-        <button id="reload-btn" type="button">Recharger debug</button>
-        <button id="hard-refresh-btn" type="button" class="warn">Nettoyer caches UI</button>
-        <button id="export-all-btn" type="button">Exporter tout</button>
-      </nav>
-    </header>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Save</div>
+        <button class="nav-btn" data-tab="json">{ } JSON brut</button>
+        <button class="nav-btn" data-tab="import">📥 Import / Export</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Actions</div>
+        <button class="nav-btn" data-tab="actions">⚙ Actions rapides</button>
+      </div>
+    </nav>
 
-    <section class="notice">
-      <strong>Parcours conseillé pour les joueurs bloqués :</strong> 1) Exporter tout · 2) Réparer / migrer · 3) <b>Recharger tout le clicker + lancer</b>. Ce dernier bouton force le cache-busting des fichiers JS/CSS et ouvre le jeu avec une URL neuve.
-    </section>
+    <!-- Content -->
+    <main class="content" id="content">
+      <!-- Chargement -->
+      <p style="color:var(--muted);letter-spacing:.12em">Chargement de la save...</p>
+    </main>
+  </div>
+</div>
 
-    <section class="grid">
-      <aside class="panel">
-        <h2>Sauvegardes détectées</h2>
-        <div id="save-list" class="save-list"></div>
+<div id="toast"></div>
 
-        <h2 style="margin-top:16px">Actions rapides</h2>
-        <div class="quick-grid">
-          <button data-action="repair" class="primary">Réparer / migrer</button>
-          <button data-action="compensate" class="warn">Compensation</button>
-          <button data-action="prestige-ready">Prestige ready</button>
-          <button data-action="add-100k">+100K énergie</button>
-          <button data-action="add-100m">+100M lifetime</button>
-          <button data-action="add-fragments">+10 fragments</button>
-          <button data-action="unlock-early">Unlock early</button>
-          <button data-action="set-p10">Prestige 10</button>
-          <button data-action="fix-lifetime">Fix bonbonnes</button>
+<script type="module">
+import {
+  VERSION, UPGRADES, MILESTONES, SCALING_LAYERS,
+  createDefaultState, hydrateState,
+  recalcDerivedStats, prestigeRequirement,
+  getScalingLayer,
+} from './js/clicker-state.js';
+
+const PREFIX = 'nitro-clicker.save.';
+
+// ── Save helpers ─────────────────────────────────────────────
+function getSaveKey() {
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(PREFIX));
+  let best = null, bestKey = null;
+  for (const k of keys) {
+    try {
+      const d = JSON.parse(localStorage.getItem(k));
+      if (!best || (d?.updatedAt ?? 0) > (best?.updatedAt ?? 0)) { best = d; bestKey = k; }
+    } catch {}
+  }
+  return bestKey ?? `${PREFIX}guest`;
+}
+
+function loadSave() {
+  const key = getSaveKey();
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) ?? 'null');
+    return hydrateState(raw ?? createDefaultState('guest'), raw?.userId ?? 'guest');
+  } catch { return createDefaultState('guest'); }
+}
+
+function writeSave(state) {
+  const key = getSaveKey();
+  state.updatedAt = Date.now();
+  state.version   = VERSION;
+  localStorage.setItem(key, JSON.stringify(state));
+}
+
+function fmt(n) {
+  const v = Math.floor(Number(n ?? 0));
+  if (v >= 1e9) return (v/1e9).toFixed(2)+'B';
+  if (v >= 1e6) return (v/1e6).toFixed(2)+'M';
+  if (v >= 1e5) return (v/1e3).toFixed(1)+'K';
+  return v.toLocaleString('fr-FR');
+}
+
+// ── State ────────────────────────────────────────────────────
+let S = loadSave();
+let activeTab = 'stats';
+
+// ── Toast ────────────────────────────────────────────────────
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.className = '', 2400);
+}
+
+// ── Header ───────────────────────────────────────────────────
+function updateHeader() {
+  const req = prestigeRequirement(S);
+  const layer = getScalingLayer(S);
+  document.getElementById('hd-version').textContent =
+    `VERSION ${VERSION} · Prestige ${S.prestige} · ${layer.short} · Prochaine req : ${fmt(req)}`;
+}
+
+// ── Render tabs ──────────────────────────────────────────────
+function render() {
+  updateHeader();
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+
+  if (activeTab === 'stats')      renderStats(content);
+  else if (activeTab === 'upgrades')  renderUpgrades(content);
+  else if (activeTab === 'milestones') renderMilestones(content);
+  else if (activeTab === 'shell')     renderShell(content);
+  else if (activeTab === 'json')      renderJson(content);
+  else if (activeTab === 'import')    renderImport(content);
+  else if (activeTab === 'actions')   renderActions(content);
+}
+
+// ── Tab: Stats ───────────────────────────────────────────────
+function renderStats(root) {
+  const layer = getScalingLayer(S);
+  const req   = prestigeRequirement(S);
+
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">STATS &amp; RESSOURCES</div>
+
+    <div class="stat-bar">
+      <div class="stat-tile"><label>ÉNERGIE</label><strong>${fmt(S.energy)}</strong></div>
+      <div class="stat-tile"><label>ÉNERGIE TOTALE</label><strong>${fmt(S.totalEnergy)}</strong></div>
+      <div class="stat-tile"><label>ÉNERGIE LIFETIME</label><strong>${fmt(S.lifetimeEnergy)}</strong></div>
+      <div class="stat-tile"><label>FRAGMENTS</label><strong>${fmt(S.fragments)}</strong></div>
+      <div class="stat-tile"><label>FRAGMENTS TOTAUX</label><strong>${fmt(S.totalFragments)}</strong></div>
+      <div class="stat-tile"><label>PRESTIGE</label><strong>${S.prestige}</strong></div>
+      <div class="stat-tile"><label>CLICS TOTAUX</label><strong>${fmt(S.totalClicks)}</strong></div>
+      <div class="stat-tile"><label>PUISSANCE CLIC</label><strong>${S.clickPower.toFixed(2)}</strong></div>
+      <div class="stat-tile"><label>PASSIF / SEC</label><strong>${S.passiveRate.toFixed(2)}</strong></div>
+      <div class="stat-tile"><label>SURCHARGE</label><strong>${S.surcharge.toFixed(1)} / ${S.maxSurcharge}</strong></div>
+      <div class="stat-tile"><label>MULT. PERMANENT</label><strong>${S.permanentMultiplier.toFixed(4)}</strong></div>
+      <div class="stat-tile"><label>PROCHAINE REQ.</label><strong>${fmt(req)}</strong></div>
+    </div>
+
+    <div class="section-head" style="margin-top:8px">ÉDITER LES RESSOURCES</div>
+    <div class="card">
+      <div class="grid3">
+        <div class="field"><label>Énergie</label><input type="number" id="f-energy" value="${Math.floor(S.energy)}" min="0"></div>
+        <div class="field"><label>Énergie totale</label><input type="number" id="f-totalEnergy" value="${Math.floor(S.totalEnergy)}" min="0"></div>
+        <div class="field"><label>Énergie lifetime</label><input type="number" id="f-lifetimeEnergy" value="${Math.floor(S.lifetimeEnergy)}" min="0"></div>
+        <div class="field"><label>Fragments</label><input type="number" id="f-fragments" value="${Math.floor(S.fragments)}" min="0"></div>
+        <div class="field"><label>Fragments totaux</label><input type="number" id="f-totalFragments" value="${Math.floor(S.totalFragments)}" min="0"></div>
+        <div class="field"><label>Prestige</label><input type="number" id="f-prestige" value="${S.prestige}" min="0"></div>
+        <div class="field"><label>Clics totaux</label><input type="number" id="f-totalClicks" value="${Math.floor(S.totalClicks)}" min="0"></div>
+        <div class="field"><label>Surcharge actuelle</label><input type="number" id="f-surcharge" value="${S.surcharge.toFixed(1)}" min="0"></div>
+        <div class="field"><label>Mult. permanent</label><input type="number" id="f-permanentMult" value="${S.permanentMultiplier.toFixed(4)}" step="0.001" min="0"></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-primary" id="btn-apply-stats">✓ Appliquer stats</button>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:4px">ÉCHELLE DE PRESTIGE</div>
+    <div class="card">
+      <div class="layer-list" id="layer-list"></div>
+    </div>
+  `);
+
+  // Layers
+  const ll = document.getElementById('layer-list');
+  SCALING_LAYERS.forEach(l => {
+    const active = layer.id === l.id;
+    ll.insertAdjacentHTML('beforeend',
+      `<span class="layer-badge${active ? ' active' : ''}">${l.short} · P${l.prestige} · ×${l.mult} ${active ? '← actuel' : ''}</span>`);
+  });
+
+  document.getElementById('btn-apply-stats').addEventListener('click', () => {
+    S.energy           = Math.max(0, Number(document.getElementById('f-energy').value) || 0);
+    S.totalEnergy      = Math.max(0, Number(document.getElementById('f-totalEnergy').value) || 0);
+    S.lifetimeEnergy   = Math.max(0, Number(document.getElementById('f-lifetimeEnergy').value) || 0);
+    S.fragments        = Math.max(0, Number(document.getElementById('f-fragments').value) || 0);
+    S.totalFragments   = Math.max(0, Number(document.getElementById('f-totalFragments').value) || 0);
+    S.prestige         = Math.max(0, Math.floor(Number(document.getElementById('f-prestige').value) || 0));
+    S.totalClicks      = Math.max(0, Math.floor(Number(document.getElementById('f-totalClicks').value) || 0));
+    S.surcharge        = Math.max(0, Number(document.getElementById('f-surcharge').value) || 0);
+    S.permanentMultiplier = Math.max(1, Number(document.getElementById('f-permanentMult').value) || 1);
+    recalcDerivedStats(S);
+    render();
+    toast('Stats mises à jour ✓');
+  });
+}
+
+// ── Tab: Upgrades ────────────────────────────────────────────
+function renderUpgrades(root) {
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">UPGRADES</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+      <button class="btn btn-ghost" id="btn-up-maxall">⬆ Max tout</button>
+      <button class="btn btn-ghost" id="btn-up-zero">✕ Tout à zéro</button>
+      <button class="btn btn-primary" id="btn-up-apply">✓ Appliquer upgrades</button>
+    </div>
+    <div class="upgrade-grid" id="upgrade-grid"></div>
+  `);
+
+  const grid = document.getElementById('upgrade-grid');
+  UPGRADES.forEach(up => {
+    const lvl = S.upgrades?.[up.id] ?? 0;
+    const persistent = up.currency === 'fragments' || up.persistent;
+    grid.insertAdjacentHTML('beforeend', `
+      <div class="upgrade-card">
+        <span class="upgrade-icon">${up.icon}</span>
+        <div class="upgrade-info">
+          <strong>${up.name}</strong>
+          <small>Tier ${up.tier} · ${up.currency === 'fragments' ? 'Fragments' : 'Énergie'}</small>
+          ${persistent ? '<span class="badge">PERSISTANT</span>' : ''}
         </div>
-
-        <h2 style="margin-top:16px">Import / restauration</h2>
-        <input id="import-file" type="file" accept="application/json,.json" />
-        <div class="quick-grid" style="margin-top:10px">
-          <button id="copy-json-btn" type="button">Copier JSON</button>
-          <button id="download-save-btn" type="button">Télécharger save</button>
-          <button id="apply-json-btn" type="button" class="primary">Appliquer JSON édité</button>
-          <button id="delete-save-btn" type="button" class="danger">Supprimer cette save</button>
+        <div class="upgrade-lvl">
+          <label style="font-size:8px;letter-spacing:.12em;color:var(--muted)">LV.</label>
+          <input type="number" class="up-input" data-id="${up.id}" value="${lvl}" min="0" max="9999">
         </div>
-      </aside>
+      </div>
+    `);
+  });
 
-      <section class="panel">
-        <h2>Save sélectionnée</h2>
-        <div class="stats" id="stats"></div>
-        <textarea id="json-editor" spellcheck="false"></textarea>
-        <h2 style="margin-top:14px">Journal</h2>
-        <div id="log" class="log"></div>
-      </section>
-    </section>
-  </main>
+  document.getElementById('btn-up-maxall').addEventListener('click', () => {
+    document.querySelectorAll('.up-input').forEach(inp => inp.value = 50);
+  });
+  document.getElementById('btn-up-zero').addEventListener('click', () => {
+    document.querySelectorAll('.up-input').forEach(inp => inp.value = 0);
+  });
+  document.getElementById('btn-up-apply').addEventListener('click', () => {
+    document.querySelectorAll('.up-input').forEach(inp => {
+      S.upgrades[inp.dataset.id] = Math.max(0, Math.floor(Number(inp.value) || 0));
+    });
+    recalcDerivedStats(S);
+    render();
+    toast('Upgrades appliqués ✓');
+  });
+}
 
-  <script>
-    const SAVE_PREFIX = 'nitro-clicker.save.';
-    const CURRENT_VERSION = 9;
-    const UI_KEYS_TO_CLEAR = [
-      'nitro-clicker.dev.enabled','nitro-clicker.upgrade-shop.active','nitro-clicker.guide.v1.seen','nitro-clicker.sound.settings.v1','nitro-clicker.save.migration.notice','nitro-clicker.offlineFarm.blockedNotice','nitro-clicker.log','nitro-clicker.render-cache','nitro-clicker.fx.enabled'
-    ];
-    const CLICKER_ASSETS = [
-      './','./index.html','./css/nitro.css','./css/clicker.css','./css/progression.css','./css/biopunk-fx.css','./css/panels.css','./css/responsive.css','./css/svg-icons.css','./css/overdrive-fx.css','./css/shared-assets.css','./css/core-3d.css','./css/plasma-feedback.css','./css/lemegeton-progression.css','./css/upgrade-ux.css','./css/topbar-offline.css','./css/notifications.css','./css/core-shell.css','./css/current-objective.css','./css/audio-panel.css','./css/save-migration.css','./js/bootstrap.js','./js/app.js','./js/clicker-state.js','./js/clicker-save.js','./js/ui/render-cache.js','./js/ui/upgrade-ux.js','./js/ui/current-objective.js','./js/ui/prestige-current-energy.js','./js/ui/save-migration-notice.js','./js/audio/sound-engine.js','./js/audio/sound-panel.js','./js/audio/sound-catalog.js','./js/engine/offline-policy.js','./js/engine/core-controls.js','./js/fx/overdrive.js','./js/fx/plasma-feedback.js','./js/lore/lemegeton-progression.js','./js/debug/dev-tools.js'
-    ];
-    let selectedKey = null;
-    const $ = id => document.getElementById(id);
-    const log = msg => { const node = $('log'); const line = `[${new Date().toLocaleTimeString('fr-FR')}] ${msg}`; node.textContent = `${line}\n${node.textContent}`; };
-    function fmt(value){const n=Math.floor(Number(value??0));if(n>=1e9)return`${(n/1e9).toFixed(2)}B`;if(n>=1e6)return`${(n/1e6).toFixed(2)}M`;if(n>=1e5)return`${(n/1e3).toFixed(1)}K`;return n.toLocaleString('fr-FR')}
-    function saveKeys(){return Object.keys(localStorage).filter(k=>k.startsWith(SAVE_PREFIX)).sort()}
-    function safeRead(key){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return{broken:true,raw:localStorage.getItem(key)||''}}}
-    function write(key,save){save.updatedAt=Date.now();localStorage.setItem(key,JSON.stringify(save));selectedKey=key;render()}
-    function ensureSave(){if(selectedKey&&localStorage.getItem(selectedKey))return selectedKey;const keys=saveKeys();if(keys.length)return selectedKey=keys[0];selectedKey=`${SAVE_PREFIX}guest`;write(selectedKey,defaultSave('guest'));return selectedKey}
-    function defaultSave(userId='guest'){return{version:CURRENT_VERSION,userId,energy:0,totalEnergy:0,lifetimeEnergy:0,fragments:0,totalFragments:0,prestige:0,totalClicks:0,upgrades:{},milestones:{},coreShell:{storedFragments:0,cracks:0,lastBreakAt:0,failedBreaks:0},createdAt:Date.now(),updatedAt:Date.now()}}
-    function repairSave(raw){const save={...defaultSave(raw.userId||selectedKey?.replace(SAVE_PREFIX,'')||'guest'),...(raw||{})};save.version=CURRENT_VERSION;save.energy=Math.max(0,Number(save.energy??0));save.totalEnergy=Math.max(0,Number(save.totalEnergy??save.energy??0));save.lifetimeEnergy=Math.max(0,Number(save.lifetimeEnergy??save.totalLifetimeEnergy??save.totalEnergy??save.energy??0));save.fragments=Math.max(0,Number(save.fragments??0));save.totalFragments=Math.max(save.fragments,Number(save.totalFragments??save.fragments??0));save.prestige=Math.max(0,Number(save.prestige??0));save.totalClicks=Math.max(0,Number(save.totalClicks??0));save.upgrades={...(save.upgrades||{})};save.milestones={...(save.milestones||{})};save.coreShell={storedFragments:0,cracks:0,lastBreakAt:0,failedBreaks:0,...(save.coreShell||{})};save.autoClickAccumulator=Math.max(0,Number(save.autoClickAccumulator??0));save.migration={...(save.migration||{}),adaptedByDebugPage:true,adaptedAt:Date.now(),originalVersion:save.migration?.originalVersion??raw.version??'legacy',lastApplied:`debug-v${CURRENT_VERSION}`};return save}
-    function prestigeRequirement(prestige=0){const p=Math.max(0,Number(prestige||0));const base=6500;if(p<=10)return Math.floor(base*Math.pow(2.05,p));const p10=base*Math.pow(2.05,10);return Math.floor(p10*Math.pow(2.3,p-10))}
-    function compensate(save){const score=Math.log10(Math.max(10,save.lifetimeEnergy||save.totalEnergy||save.energy||0))+save.prestige*1.4+Object.values(save.upgrades||{}).reduce((a,b)=>a+Number(b||0),0)*.12;const fragments=Math.max(3,Math.min(80,Math.floor(score+4)));const energy=Math.max(2500,Math.min(5_000_000,Math.floor((save.energy||0)*.12+fragments*1200)));save.energy+=energy;save.totalEnergy+=energy;save.lifetimeEnergy+=energy;save.fragments+=fragments;save.totalFragments+=fragments;save.migration={...(save.migration||{}),debugCompensationAt:Date.now(),debugCompensation:{energy,fragments}};return{energy,fragments}}
-    function render(){const keys=saveKeys();if(!keys.length)ensureSave();if(!selectedKey||!localStorage.getItem(selectedKey))selectedKey=saveKeys()[0];const list=$('save-list');list.innerHTML=saveKeys().map(key=>{const s=safeRead(key);return`<article class="save-card ${key===selectedKey?'active':''}" data-key="${key}"><div><strong>${key}</strong><small>v${s.version??'legacy'} · ${new Date(s.updatedAt||Date.now()).toLocaleString('fr-FR')}</small></div><span class="pill">${fmt(s.energy)} E</span></article>`}).join('')||'<p>Aucune save détectée.</p>';document.querySelectorAll('[data-key]').forEach(card=>card.addEventListener('click',()=>{selectedKey=card.dataset.key;render()}));const save=safeRead(selectedKey);$('json-editor').value=JSON.stringify(save,null,2);$('stats').innerHTML=[['Version',save.version??'legacy'],['Énergie instantanée',fmt(save.energy)],['Énergie run',fmt(save.totalEnergy)],['Énergie lifetime / bonbonnes',`${fmt(save.lifetimeEnergy??save.totalEnergy)} / ${Math.floor(Number(save.lifetimeEnergy??save.totalEnergy??0)/100_000_000)}/10`],['Fragments',`${fmt(save.fragments)} / total ${fmt(save.totalFragments)}`],['Prestige',save.prestige??0],['Seuil prestige actuel',fmt(prestigeRequirement(save.prestige))],['Upgrades',Object.keys(save.upgrades||{}).length]].map(([k,v])=>`<div class="stat"><span>${k}</span><strong>${v}</strong></div>`).join('')}
-    function current(){return safeRead(ensureSave())}
-    async function clearBrowserCaches(){UI_KEYS_TO_CLEAR.forEach(k=>localStorage.removeItem(k));sessionStorage.clear();if('caches'in window){const names=await caches.keys();await Promise.all(names.map(name=>caches.delete(name)));log(`${names.length} cache(s) CacheStorage supprimé(s).`)}if('serviceWorker'in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(reg=>reg.unregister()));if(regs.length)log(`${regs.length} service worker(s) désinscrit(s).`)}}
-    async function warmFreshAssets(){const stamp=Date.now();let ok=0,fail=0;for(const asset of CLICKER_ASSETS){try{const url=new URL(asset,location.href);url.searchParams.set('debugReload',stamp);const res=await fetch(url.toString(),{cache:'reload',credentials:'same-origin'});if(res.ok)ok++;else fail++}catch{fail++}}log(`Fichiers clicker rechargés réseau : ${ok} OK, ${fail} échec(s).`)}
-    async function fullRescueAndLaunch(){const key=ensureSave();const save=repairSave(current());write(key,save);log('Save réparée avant relance.');await clearBrowserCaches();await warmFreshAssets();localStorage.setItem('nitro-clicker.forceFreshBoot',String(Date.now()));const target=new URL('./',location.href);target.searchParams.set('rescue',Date.now());target.searchParams.set('debug','1');log('Ouverture du jeu avec cache-buster...');setTimeout(()=>location.replace(target.toString()),450)}
-    document.addEventListener('click',event=>{const action=event.target.dataset.action;if(!action)return;const key=ensureSave();let save=repairSave(current());if(action==='repair'){write(key,save);log('Save réparée / migrée.');return}if(action==='compensate'){const c=compensate(save);write(key,save);log(`Compensation appliquée : +${fmt(c.energy)} E, +${fmt(c.fragments)} F.`);return}if(action==='prestige-ready'){const req=prestigeRequirement(save.prestige);save.energy=Math.max(save.energy,req);save.totalEnergy=Math.max(save.totalEnergy,save.energy);save.lifetimeEnergy=Math.max(save.lifetimeEnergy,save.totalEnergy);write(key,save);log('Énergie instantanée alignée sur le seuil prestige.');return}if(action==='add-100k'){save.energy+=100000;save.totalEnergy+=100000;save.lifetimeEnergy+=100000;write(key,save);log('+100K énergie.');return}if(action==='add-100m'){save.energy+=100000000;save.totalEnergy+=100000000;save.lifetimeEnergy+=100000000;write(key,save);log('+100M lifetime / bonbonne.');return}if(action==='add-fragments'){save.fragments+=10;save.totalFragments+=10;write(key,save);log('+10 fragments.');return}if(action==='unlock-early'){save.energy+=15000;save.totalEnergy=Math.max(save.totalEnergy,15000);save.lifetimeEnergy=Math.max(save.lifetimeEnergy,save.totalEnergy);save.fragments+=5;save.totalFragments+=5;save.upgrades.prism=Math.max(save.upgrades.prism||0,2);save.upgrades.coreIsolation=Math.max(save.upgrades.coreIsolation||0,1);write(key,save);log('Déblocage early appliqué.');return}if(action==='set-p10'){save.prestige=Math.max(10,save.prestige||0);write(key,save);log('Prestige 10 appliqué.');return}if(action==='fix-lifetime'){save.lifetimeEnergy=Math.max(Number(save.lifetimeEnergy||0),Number(save.totalEnergy||0),Number(save.energy||0));write(key,save);log('LifetimeEnergy corrigé pour bonbonnes persistantes.')}});
-    $('full-rescue-btn').addEventListener('click',fullRescueAndLaunch);
-    $('reload-btn').addEventListener('click',()=>location.reload());
-    $('hard-refresh-btn').addEventListener('click',async()=>{await clearBrowserCaches();log('Caches UI / flags locaux nettoyés. La save est conservée.');render()});
-    $('export-all-btn').addEventListener('click',()=>downloadJson('nitro-clicker-localstorage-export.json',Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)]))));
-    $('copy-json-btn').addEventListener('click',async()=>{await navigator.clipboard.writeText($('json-editor').value);log('JSON copié.')});
-    $('download-save-btn').addEventListener('click',()=>downloadJson('nitro-clicker-save.json',current()));
-    $('apply-json-btn').addEventListener('click',()=>{try{write(ensureSave(),repairSave(JSON.parse($('json-editor').value)));log('JSON édité appliqué.')}catch(e){log(`JSON invalide : ${e.message}`)}});
-    $('delete-save-btn').addEventListener('click',()=>{if(!confirm('Supprimer cette sauvegarde locale ? Pense à exporter avant.'))return;localStorage.removeItem(ensureSave());selectedKey=null;render();log('Save supprimée.')});
-    $('import-file').addEventListener('change',async event=>{const file=event.target.files?.[0];if(!file)return;try{const parsed=JSON.parse(await file.text());const key=ensureSave();write(key,repairSave(parsed));log(`Import appliqué depuis ${file.name}.`)}catch(e){log(`Import impossible : ${e.message}`)}});
-    function downloadJson(filename,data){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);log(`Téléchargement : ${filename}`)}
-    render();log('Debug Rescue prêt.');
-  </script>
+// ── Tab: Milestones ──────────────────────────────────────────
+function renderMilestones(root) {
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">MILESTONES</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+      <button class="btn btn-ghost" id="btn-ms-all">✓ Tout valider</button>
+      <button class="btn btn-ghost" id="btn-ms-none">✕ Tout effacer</button>
+    </div>
+    <div class="milestone-list" id="ms-list"></div>
+  `);
+
+  const list = document.getElementById('ms-list');
+  const ICONS = { energy_100:'⚡', energy_1000:'🔋', clicks_250:'🖱', passive_10:'📡',
+                  shell_first_stack:'◉', shell_first_break:'💥', first_prestige:'✦',
+                  prestige_3:'🌀', prestige_10:'🏭', prestige_25:'🌐' };
+
+  MILESTONES.forEach(m => {
+    const done = !!S.milestones?.[m.id];
+    list.insertAdjacentHTML('beforeend', `
+      <div class="milestone-row">
+        <span class="ms-icon">${ICONS[m.id] ?? '◇'}</span>
+        <div class="ms-info">
+          <strong>${m.label}</strong>
+          <small>${m.desc}</small>
+        </div>
+        <button class="toggle-btn ${done ? 'on' : 'off'}" data-ms="${m.id}">
+          ${done ? 'VALIDÉ' : 'NON FAIT'}
+        </button>
+      </div>
+    `);
+  });
+
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('.toggle-btn');
+    if (!btn) return;
+    const id = btn.dataset.ms;
+    if (S.milestones?.[id]) {
+      delete S.milestones[id];
+      btn.className = 'toggle-btn off';
+      btn.textContent = 'NON FAIT';
+    } else {
+      S.milestones[id] = Date.now();
+      btn.className = 'toggle-btn on';
+      btn.textContent = 'VALIDÉ';
+    }
+  });
+
+  document.getElementById('btn-ms-all').addEventListener('click', () => {
+    MILESTONES.forEach(m => { S.milestones[m.id] = S.milestones[m.id] || Date.now(); });
+    render();
+  });
+  document.getElementById('btn-ms-none').addEventListener('click', () => {
+    S.milestones = {};
+    render();
+  });
+}
+
+// ── Tab: Shell ───────────────────────────────────────────────
+function renderShell(root) {
+  const cs = S.coreShell ?? {};
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">CORE SHELL</div>
+    <div class="card">
+      <div class="grid3">
+        <div class="field"><label>Fragments stockés</label><input type="number" id="sh-stored" value="${Math.floor(cs.storedFragments ?? 0)}" min="0"></div>
+        <div class="field"><label>Fissures (cracks)</label><input type="number" id="sh-cracks" value="${Math.floor(cs.cracks ?? 0)}" min="0"></div>
+        <div class="field"><label>Failed breaks</label><input type="number" id="sh-failedBreaks" value="${Math.floor(cs.failedBreaks ?? 0)}" min="0"></div>
+        <div class="field"><label>Shell Capacity (état)</label><input type="number" id="sh-capacity" value="${Math.floor(S.coreShellCapacity ?? 0)}" min="0"></div>
+        <div class="field"><label>Shell Hardness (état)</label><input type="number" id="sh-hardness" value="${Math.floor(S.coreShellHardness ?? 0)}" min="0"></div>
+        <div class="field"><label>Shell Reflect (état)</label><input type="number" id="sh-reflect" value="${(S.coreShellReflect ?? 0).toFixed(4)}" step="0.01" min="0"></div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-primary" id="btn-sh-apply">✓ Appliquer Shell</button>
+        <button class="btn btn-ghost" style="margin-left:8px" id="btn-sh-reset">✕ Reset Shell</button>
+      </div>
+    </div>
+  `);
+
+  document.getElementById('btn-sh-apply').addEventListener('click', () => {
+    S.coreShell.storedFragments = Math.max(0, Math.floor(Number(document.getElementById('sh-stored').value) || 0));
+    S.coreShell.cracks          = Math.max(0, Math.floor(Number(document.getElementById('sh-cracks').value) || 0));
+    S.coreShell.failedBreaks    = Math.max(0, Math.floor(Number(document.getElementById('sh-failedBreaks').value) || 0));
+    S.coreShellCapacity         = Math.max(0, Math.floor(Number(document.getElementById('sh-capacity').value) || 0));
+    S.coreShellHardness         = Math.max(0, Math.floor(Number(document.getElementById('sh-hardness').value) || 0));
+    S.coreShellReflect          = Math.max(0, Number(document.getElementById('sh-reflect').value) || 0);
+    toast('Core Shell mis à jour ✓');
+    render();
+  });
+  document.getElementById('btn-sh-reset').addEventListener('click', () => {
+    S.coreShell = { storedFragments: 0, cracks: 0, lastBreakAt: 0, failedBreaks: 0 };
+    toast('Core Shell réinitialisé');
+    render();
+  });
+}
+
+// ── Tab: JSON ────────────────────────────────────────────────
+function renderJson(root) {
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">JSON BRUT</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="btn btn-primary" id="btn-json-import">⬆ Importer ce JSON</button>
+      <button class="btn btn-ghost"   id="btn-json-copy">⎘ Copier</button>
+      <button class="btn btn-ghost"   id="btn-json-format">{ } Formater</button>
+    </div>
+    <textarea class="json-box" id="json-box" spellcheck="false">${JSON.stringify(sanitizeForExport(S), null, 2)}</textarea>
+  `);
+
+  document.getElementById('btn-json-format').addEventListener('click', () => {
+    const ta = document.getElementById('json-box');
+    try { ta.value = JSON.stringify(JSON.parse(ta.value), null, 2); }
+    catch { toast('JSON invalide', true); }
+  });
+  document.getElementById('btn-json-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(document.getElementById('json-box').value)
+      .then(() => toast('Copié ✓'))
+      .catch(() => toast('Échec copie', true));
+  });
+  document.getElementById('btn-json-import').addEventListener('click', () => {
+    try {
+      const raw = JSON.parse(document.getElementById('json-box').value);
+      S = hydrateState(raw, raw?.userId ?? 'guest');
+      render();
+      toast('JSON importé ✓');
+    } catch { toast('JSON invalide', true); }
+  });
+}
+
+// ── Tab: Import/Export ───────────────────────────────────────
+function renderImport(root) {
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">IMPORT / EXPORT</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <div class="section-head" style="font-size:11px;margin-bottom:8px">EXPORTER</div>
+        <button class="btn btn-primary" id="btn-export">📤 Télécharger JSON</button>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border)">
+      <div>
+        <div class="section-head" style="font-size:11px;margin-bottom:8px">IMPORTER UN FICHIER</div>
+        <input type="file" id="file-import" accept=".json,application/json" style="display:none">
+        <button class="btn btn-ghost" id="btn-file-pick">📂 Choisir fichier JSON</button>
+        <span id="file-name" style="margin-left:10px;font-size:10px;color:var(--muted)"></span>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--border)">
+      <div>
+        <div class="section-head" style="font-size:11px;margin-bottom:8px">COLLER UN JSON</div>
+        <textarea class="json-box" id="paste-box" placeholder="Colle ici une save JSON..." style="min-height:140px"></textarea>
+        <button class="btn btn-primary" style="margin-top:8px" id="btn-paste-import">⬆ Importer depuis le texte</button>
+      </div>
+    </div>
+  `);
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const payload = { app:'nitro-clicker', exportVersion:1, exportedAt:new Date().toISOString(), save: sanitizeForExport(S) };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nitro-debug-save-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('btn-file-pick').addEventListener('click', () =>
+    document.getElementById('file-import').click()
+  );
+  document.getElementById('file-import').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    document.getElementById('file-name').textContent = file.name;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const raw = parsed?.save ?? parsed;
+      S = hydrateState(raw, raw?.userId ?? 'guest');
+      render();
+      toast('Fichier importé ✓');
+    } catch { toast('Fichier invalide', true); }
+  });
+
+  document.getElementById('btn-paste-import').addEventListener('click', () => {
+    const text = document.getElementById('paste-box').value.trim();
+    if (!text) return toast('Rien à importer', true);
+    try {
+      const parsed = JSON.parse(text);
+      const raw = parsed?.save ?? parsed;
+      S = hydrateState(raw, raw?.userId ?? 'guest');
+      render();
+      toast('JSON importé ✓');
+    } catch { toast('JSON invalide', true); }
+  });
+}
+
+// ── Tab: Actions rapides ─────────────────────────────────────
+function renderActions(root) {
+  const req = prestigeRequirement(S);
+  root.insertAdjacentHTML('beforeend', `
+    <div class="section-head">ACTIONS RAPIDES</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-primary" id="act-fill-energy">
+          ⚡ Remplir énergie (req prestige)
+        </button>
+        <button class="btn btn-primary" id="act-add-frag10">
+          +10 fragments
+        </button>
+        <button class="btn btn-primary" id="act-add-frag100">
+          +100 fragments
+        </button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border)">
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-gold" id="act-prestige1">
+          ✦ Forcer Prestige +1
+        </button>
+        <button class="btn btn-gold" id="act-prestige5">
+          ✦ Forcer Prestige +5
+        </button>
+        <button class="btn btn-gold" id="act-prestige10">
+          ✦ Forcer Prestige +10
+        </button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border)">
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-ghost" id="act-unlock-all">
+          🔓 Débloquer tous les upgrades (Lv.1)
+        </button>
+        <button class="btn btn-ghost" id="act-ms-all">
+          🏆 Valider tous les milestones
+        </button>
+        <button class="btn btn-ghost" id="act-recalc">
+          ↺ Recalc stats dérivées
+        </button>
+      </div>
+
+      <hr style="border:none;border-top:1px solid var(--border)">
+
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn btn-danger" id="act-reset-run">
+          ⚠ Reset run (garder prestige &amp; fragments)
+        </button>
+        <button class="btn btn-danger" id="act-wipe">
+          💀 WIPE COMPLET (nouvelle partie)
+        </button>
+      </div>
+    </div>
+  `);
+
+  document.getElementById('act-fill-energy').addEventListener('click', () => {
+    const r = prestigeRequirement(S);
+    S.energy = Math.max(S.energy, r * 1.1);
+    S.totalEnergy = Math.max(S.totalEnergy, S.energy);
+    recalcDerivedStats(S);
+    render();
+    toast(`Énergie : ${fmt(S.energy)} ✓`);
+  });
+
+  document.getElementById('act-add-frag10').addEventListener('click', () => {
+    S.fragments += 10; S.totalFragments += 10; render(); toast('+10 fragments ✓');
+  });
+  document.getElementById('act-add-frag100').addEventListener('click', () => {
+    S.fragments += 100; S.totalFragments += 100; render(); toast('+100 fragments ✓');
+  });
+
+  const addPrestige = n => () => {
+    S.prestige += n;
+    recalcDerivedStats(S);
+    render();
+    toast(`Prestige → ${S.prestige} ✓`);
+  };
+  document.getElementById('act-prestige1').addEventListener('click',  addPrestige(1));
+  document.getElementById('act-prestige5').addEventListener('click',  addPrestige(5));
+  document.getElementById('act-prestige10').addEventListener('click', addPrestige(10));
+
+  document.getElementById('act-unlock-all').addEventListener('click', () => {
+    UPGRADES.forEach(u => { if (!S.upgrades[u.id]) S.upgrades[u.id] = 1; });
+    recalcDerivedStats(S);
+    render();
+    toast('Upgrades débloqués ✓');
+  });
+  document.getElementById('act-ms-all').addEventListener('click', () => {
+    MILESTONES.forEach(m => { S.milestones[m.id] = S.milestones[m.id] || Date.now(); });
+    render();
+    toast('Milestones validés ✓');
+  });
+  document.getElementById('act-recalc').addEventListener('click', () => {
+    recalcDerivedStats(S);
+    render();
+    toast('Recalc ok ✓');
+  });
+
+  document.getElementById('act-reset-run').addEventListener('click', () => {
+    const frag = S.fragments, totalFrag = S.totalFragments;
+    const prestige = S.prestige, milestones = S.milestones;
+    const totalClicks = S.totalClicks, lifetimeEnergy = S.lifetimeEnergy;
+    const persistentUpgrades = {};
+    UPGRADES.filter(u => u.currency === 'fragments' || u.persistent)
+      .forEach(u => { persistentUpgrades[u.id] = S.upgrades[u.id] ?? 0; });
+    S = createDefaultState(S.userId);
+    S.fragments = frag; S.totalFragments = totalFrag;
+    S.prestige = prestige; S.milestones = milestones;
+    S.totalClicks = totalClicks; S.lifetimeEnergy = lifetimeEnergy;
+    S.upgrades = { ...S.upgrades, ...persistentUpgrades };
+    recalcDerivedStats(S);
+    render();
+    toast('Run réinitialisé ✓');
+  });
+  document.getElementById('act-wipe').addEventListener('click', () => {
+    if (!confirm('Wipe COMPLET — toutes les données seront effacées. Continuer ?')) return;
+    S = createDefaultState('guest');
+    recalcDerivedStats(S);
+    render();
+    toast('Wipe complet ✓');
+  });
+}
+
+// ── Sanitize ─────────────────────────────────────────────────
+function sanitizeForExport(state) {
+  const clean = { ...state };
+  delete clean.__key;
+  clean.version   = VERSION;
+  clean.updatedAt = Date.now();
+  return clean;
+}
+
+// ── Global apply & reload ────────────────────────────────────
+document.getElementById('btn-save-apply').addEventListener('click', () => {
+  writeSave(S);
+  toast('Save écrite ✓');
+});
+document.getElementById('btn-reload').addEventListener('click', () => {
+  S = loadSave();
+  render();
+  toast('Save rechargée ✓');
+});
+
+// ── Nav ──────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeTab = btn.dataset.tab;
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+// ── Boot ─────────────────────────────────────────────────────
+render();
+</script>
 </body>
 </html>
