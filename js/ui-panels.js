@@ -16,6 +16,14 @@ let mounted = false;
 let activePanel = 'pause';
 let fileInput;
 
+// ── FIX PERF : état live partagé ─────────────────────────────────────────────
+// Au lieu de relire localStorage x2/s dans updateCurrentGoalPanel, on expose
+// un cache mis à jour par setLiveState() appelé depuis app.js à chaque tick.
+let _liveStateCache = null;
+export function setLiveState(state) { _liveStateCache = state; }
+function getLiveState() { return _liveStateCache; }
+// ─────────────────────────────────────────────────────────────────────────────
+
 function fmt(value) {
   const n = Math.floor(Number(value ?? 0));
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
@@ -44,9 +52,16 @@ function readSnapshot() {
   return best ? { ...best, __key: bestKey } : {};
 }
 
+// ── FIX DEBUG : liveText log en dev si l'ID est absent ───────────────────────
 function liveText(id, fallback = '0') {
-  return document.getElementById(id)?.textContent?.trim() || fallback;
+  const el = document.getElementById(id);
+  if (!el && typeof process === 'undefined') {
+    // Avertissement non-bloquant uniquement hors production
+    console.warn(`[ui-panels] liveText: élément #${id} introuvable, fallback utilisé.`);
+  }
+  return el?.textContent?.trim() || fallback;
 }
+// ─────────────────────────────────────────────────────────────────────────────
 
 function mountAuxPanels() {
   if (mounted) return;
@@ -165,6 +180,13 @@ function renderPrestigeWarningBlock() {
   // Fragments estimés au prochain prestige
   const nextFragments = Math.max(1, Math.floor(Math.sqrt(totalEnergy / 1000)));
 
+  // ── FIX UX : le bouton prestige délègue au #prestige-btn natif ─────────────
+  // On évite confirm() (bloquant, incohérent) et l'accès fragile à #reset-btn.
+  // Le #prestige-btn dans app.js gère déjà la logique complète (doPrestige,
+  // feedback, save, renderAll). On lui envoie juste un clic programmatique.
+  const onPrestigeClick = `(function(){const btn=document.getElementById('prestige-btn');if(btn&&!btn.disabled){btn.click();}else{const o=document.getElementById('nc-overlay');if(o){o.classList.remove('open');document.body.classList.remove('nc-paused');}}document.getElementById('nc-overlay')?.classList.remove('open');document.body.classList.remove('nc-paused');})()`;
+  // ─────────────────────────────────────────────────────────────────────────────
+
   return `
     <div
       class="prestige-warn-block"
@@ -190,7 +212,7 @@ function renderPrestigeWarningBlock() {
         class="prestige-warn-btn"
         type="button"
         ${isReady ? '' : 'disabled'}
-        onclick="if(confirm('Lancer le prestige ? Ton énergie et tes upgrades seront réinitialisés. Tu gagneras des fragments Nitro permanents.')){document.getElementById('reset-btn')?.click();}"
+        onclick="${isReady ? onPrestigeClick : ''}"
         aria-label="Lancer le prestige et réinitialiser le run"
       >
         <span class="prestige-warn-btn-icon">${isOverloaded ? '🔴' : (isReady ? '✦' : '◇')}</span>
@@ -340,8 +362,12 @@ function normalizeSave(raw) {
   } catch { return null; }
 }
 
-function getCurrentGoal(s = readSnapshot()) {
-  const state = normalizeSave(s) ?? createDefaultState('guest');
+function getCurrentGoal(s) {
+  // ── FIX PERF : priorité au live state en mémoire ─────────────────────────
+  // Si le live state est disponible (injecté via setLiveState depuis app.js),
+  // on l'utilise directement sans passer par readSnapshot() / normalizeSave().
+  const state = getLiveState() ?? normalizeSave(s ?? readSnapshot()) ?? createDefaultState('guest');
+  // ─────────────────────────────────────────────────────────────────────────
   const lockedUpgrade = UPGRADES.find(up => !isUpgradeUnlocked(state, up));
   if (lockedUpgrade) return { kind: 'UNLOCK', label: lockedUpgrade.name, desc: lockedUpgrade.lockedText ?? 'Progresse pour débloquer ce module.', progress: guessUnlockProgress(state, lockedUpgrade), progressLabel: 'Déblocage progressif' };
   const milestone = MILESTONES.find(m => !state.milestones?.[m.id]);
@@ -350,28 +376,55 @@ function getCurrentGoal(s = readSnapshot()) {
   return { kind: 'PRESTIGE', label: 'Surcharge contrôlée', desc: 'Atteins le seuil d\'énergie totale pour relancer le run avec plus de fragments et un meilleur scaling.', progress: Math.min(1, (state.totalEnergy ?? 0) / Math.max(1, req)), progressLabel: `${fmt(state.totalEnergy)} / ${fmt(req)} énergie totale` };
 }
 
+// ── FIX FRAGILE : regex robuste pour guessUnlockProgress ─────────────────────
+// Le lockedText peut contenir des espaces normaux, insécables (\u00a0), ou des
+// milliers formatés avec virgule. On normalise avant de parser le nombre.
 function guessUnlockProgress(state, up) {
   const text = up.lockedText ?? '';
-  const energyMatch = text.match(/([0-9 ]+) énergie/);
-  if (energyMatch) return Math.min(1, (state.totalEnergy ?? 0) / Math.max(1, Number(energyMatch[1].replace(/ /g, ''))));
-  const prestigeMatch = text.match(/Prestige ([0-9]+)/i);
+  // Normalise les séparateurs de milliers (espaces, insécables, virgules)
+  const normalized = text.replace(/[\u00a0\u202f,]/g, '').replace(/ /g, '');
+  const energyMatch = normalized.match(/([0-9]+)énergie/i)
+    ?? text.replace(/[\u00a0\u202f]/g, ' ').match(/([0-9][\d\s]*)\sénergie/i);
+  if (energyMatch) return Math.min(1, (state.totalEnergy ?? 0) / Math.max(1, Number(energyMatch[1].replace(/\s/g, ''))));
+  const prestigeMatch = text.match(/Prestige\s+([0-9]+)/i);
   if (prestigeMatch) return Math.min(1, (state.prestige ?? 0) / Math.max(1, Number(prestigeMatch[1])));
   if (up.id === 'bioConduit') return Math.min(1, (state.upgrades?.prism ?? 0) / 2);
   if (up.id === 'fragmentCatalyst') return Math.min(1, (state.totalFragments ?? 0) / 1);
   return 0.15;
 }
+// ─────────────────────────────────────────────────────────────────────────────
 
+// ── FIX BUG : guessMilestoneProgress — cas manquants ─────────────────────────
+// shell_first_stack et shell_first_break n'avaient aucun cas → toujours 0.
+// On ajoute également energy_10000 et clicks_1000 par cohérence défensive.
 function guessMilestoneProgress(state, m) {
   if (m.id === 'energy_100') return Math.min(1, (state.totalEnergy ?? 0) / 100);
   if (m.id === 'energy_1000') return Math.min(1, (state.totalEnergy ?? 0) / 1000);
+  if (m.id === 'energy_10000') return Math.min(1, (state.totalEnergy ?? 0) / 10000);
   if (m.id === 'clicks_250') return Math.min(1, (state.totalClicks ?? 0) / 250);
+  if (m.id === 'clicks_1000') return Math.min(1, (state.totalClicks ?? 0) / 1000);
   if (m.id === 'passive_10') return Math.min(1, (state.passiveRate ?? 0) / 10);
   if (m.id === 'first_prestige') return Math.min(1, (state.prestige ?? 0) / 1);
   if (m.id === 'prestige_3') return Math.min(1, (state.prestige ?? 0) / 3);
   if (m.id === 'prestige_10') return Math.min(1, (state.prestige ?? 0) / 10);
   if (m.id === 'prestige_25') return Math.min(1, (state.prestige ?? 0) / 25);
+  // ── Nouveaux cas shell ──
+  if (m.id === 'shell_first_stack') {
+    const shell = state.coreShell;
+    if (!shell) return 0;
+    // Progression : fragments stockés / capacité (ou 1 fragment suffit)
+    return Math.min(1, (shell.storedFragments ?? 0) / Math.max(1, shell.capacity ?? 1));
+  }
+  if (m.id === 'shell_first_break') {
+    // Ce milestone est complété au premier bris réussi de la sphère.
+    // Progression estimée via le ratio de fissures accumulées.
+    const shell = state.coreShell;
+    if (!shell || !shell.unlocked) return 0;
+    return Math.min(1, (shell.cracks ?? 0) / Math.max(1, shell.requiredHits ?? 3));
+  }
   return 0;
 }
+// ─────────────────────────────────────────────────────────────────────────────
 
 function renderGoalBlock(goal) {
   return `<div class="nc-current-goal in-panel"><div class="nc-current-goal-top"><span>${goal.kind}</span><strong>${goal.label}</strong></div><p>${goal.desc}</p><div class="nc-current-goal-meter"><i style="transform:scaleX(${goal.progress})"></i></div><small>${goal.progressLabel}</small></div>`;
