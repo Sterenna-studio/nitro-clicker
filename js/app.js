@@ -447,7 +447,7 @@ function zapToRandomModule() {
 }
 
 function lightningStorm(count = 5) {
-  const targets = [...document.querySelectorAll('.upgrade-btn:not(.locked), .spawned-module, .factory-node')].sort(() => Math.random() - 0.5).slice(0, count);
+  const targets = [...document.querySelectorAll('.upgrade-btn:not(.locked), .shell-break-card, .prestige-card, .spawned-module, .factory-node')].sort(() => Math.random() - 0.5).slice(0, count);
   targets.forEach((target, i) => setTimeout(() => spawnLightningToElement(target), i * 70));
 }
 
@@ -823,7 +823,7 @@ async function init() {
   userId = auth.user.id;
   profile = await getProfile(userId);
   state = loadSave(userId);
-  const offlineGain = applyOfflineProgress(state);
+  const { gained: offlineGain = 0 } = applyOfflineProgress(state);
 
   renderShell();
   startLoop();
