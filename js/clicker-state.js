@@ -14,6 +14,10 @@ export const BALANCE = {
   fragmentChanceCap: 0.45,
   shellBaseBreakCost: 1250,
   shellBreakCostScale: 1.34,
+  // Bonus de chance de fragment lié à la coque (déclenchement Overdrive uniquement)
+  shellFragmentBonusBase: 0.035,
+  shellFragmentBonusMax: 0.045,
+  shellFragmentBonusPerCapacity: 0.004,
   autoClickGainRatio: 0.58,
   autoClickSurchargeRatio: 0.85,
   autoClickMaxBurstsPerTick: 12,
@@ -273,6 +277,7 @@ export function hydrateState(raw, userId = null) {
   merged.coreShell.storedFragments = Math.max(0, Number(merged.coreShell.storedFragments ?? 0));
   merged.coreShell.cracks = Math.max(0, Number(merged.coreShell.cracks ?? 0));
   merged.userId = userId ?? merged.userId;
+  // ORDER MATTERS: recalcDerivedStats doit précéder le clamp storedFragments
   recalcDerivedStats(merged);
   // FIX #3 : clamp avec trace de l'overflow pour éviter perte silencieuse sur vieux saves
   const shellCapacity = getCoreShellInfo(merged).capacity;
@@ -346,9 +351,11 @@ export function getCoreShellInfo(state) {
 
 export function getCoreShellBreakCost(state) {
   const hardness = Math.max(0, Number(state?.coreShellHardness ?? 0));
+  // FIX: Math.max(0, stored) au lieu de Math.max(1, stored || 1)
+  // stored=0 et stored=1 avaient le même coût — désormais le coût croît bien dès stored=1
   const stored = Math.max(0, Number(state?.coreShell?.storedFragments ?? 0));
   const hardnessFactor = Math.pow(BALANCE.shellBreakCostScale, Math.max(0, hardness - 1));
-  const storedFactor = 0.8 + Math.max(1, stored || 1) * 0.85;
+  const storedFactor = 0.8 + Math.max(0, stored) * 0.85;
   return Math.floor(BALANCE.shellBaseBreakCost * hardnessFactor * storedFactor);
 }
 
@@ -368,11 +375,23 @@ export function getCoreShellBreakChance(state) {
   return Math.max(0.12, Math.min(0.90, base));
 }
 
-export function getFragmentDropChance(state) {
+// Chance de drop de fragment à l'Overdrive uniquement (pas par clic normal)
+export function getFragmentDropChanceOnOverdrive(state) {
   const shell = getCoreShellInfo(state);
-  const shellBonus = shell.unlocked ? 0.035 + Math.min(0.045, shell.capacity * 0.004) : 0;
-  return Math.min(BALANCE.fragmentBaseChance + state.prestige * BALANCE.fragmentPrestigeChance + state.overdriveLevel * BALANCE.fragmentOverdriveChance + shellBonus, BALANCE.fragmentChanceCap);
+  const shellBonus = shell.unlocked
+    ? BALANCE.shellFragmentBonusBase + Math.min(BALANCE.shellFragmentBonusMax, shell.capacity * BALANCE.shellFragmentBonusPerCapacity)
+    : 0;
+  return Math.min(
+    BALANCE.fragmentBaseChance
+      + state.prestige * BALANCE.fragmentPrestigeChance
+      + state.overdriveLevel * BALANCE.fragmentOverdriveChance
+      + shellBonus,
+    BALANCE.fragmentChanceCap,
+  );
 }
+
+// Alias rétrocompat — à supprimer lors d'un futur nettoyage
+export const getFragmentDropChance = getFragmentDropChanceOnOverdrive;
 
 export function storeCoreShellFragments(state, amount = 1) {
   const shell = getCoreShellInfo(state);
@@ -447,7 +466,7 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
     state.surcharge = 0;
     overdriveGain = Math.floor(state.clickPower * gainRatio * (BALANCE.overdriveBase + state.overdriveLevel * BALANCE.overdrivePerLevel) + state.passiveRate * BALANCE.overdrivePassiveSeconds);
     gain += overdriveGain;
-    if (Math.random() < getFragmentDropChance(state)) {
+    if (Math.random() < getFragmentDropChanceOnOverdrive(state)) {
       const stored = storeCoreShellFragments(state, 1);
       fragmentsStored = stored.stored;
       if (stored.overflow > 0) fragments = addFragments(state, stored.overflow);
@@ -569,7 +588,8 @@ export function doPrestige(state) {
   const keptPersistentUpgrades = getPersistentUpgradeLevels(state);
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
-  const prestigeReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.energy)) / 2200 + keptTotalFragments * 0.02);
+  // Bonus prestige basé sur totalEnergy (progression globale) et non energy courante
+  const prestigeReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.totalEnergy)) / 2200 + keptTotalFragments * 0.02);
   next.fragments = keptFragments + prestigeReward;
   next.totalFragments = keptTotalFragments + prestigeReward;
   next.lifetimeEnergy = keptLifetimeEnergy;
