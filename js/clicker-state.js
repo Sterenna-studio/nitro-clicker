@@ -93,7 +93,7 @@ export const UPGRADES = [
   },
   {
     id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 180, scale: 1.45, currency: 'energy', tier: 1,
-    desc: 'Simule des clics automatiques : charge la surcharge, déclenche l’Overdrive, aide LEMEGETON.',
+    desc: 'Simule des clics automatiques : charge la surcharge, déclenche l\'Overdrive, aide LEMEGETON.',
     unlock: state => state.totalEnergy >= 220 || state.prestige >= 1,
     lockedText: 'Débloqué à 220 énergie totale.',
     apply(state) { state.autoClickRate += 0.22; state.surchargeGain += 0.18; state.overdriveLevel += 0.25; },
@@ -172,7 +172,7 @@ export const UPGRADES = [
     id: 'nitroFactory', name: 'Usine de moteurs Nitro', icon: '🏭', baseCost: 62000, scale: 1.42, currency: 'energy', tier: 4,
     desc: 'Dézoom Prestige 10 : +34 clic, +48/s, +1 usine.',
     unlock: state => state.prestige >= 10,
-    lockedText: 'Débloqué au Prestige 10 : changement d’échelle.',
+    lockedText: 'Débloqué au Prestige 10 : changement d\'échelle.',
     apply(state) { state.clickPower += 34; state.passiveRate += 48; state.factoryRate += 1; },
   },
   {
@@ -274,7 +274,15 @@ export function hydrateState(raw, userId = null) {
   merged.coreShell.cracks = Math.max(0, Number(merged.coreShell.cracks ?? 0));
   merged.userId = userId ?? merged.userId;
   recalcDerivedStats(merged);
-  merged.coreShell.storedFragments = Math.min(merged.coreShell.storedFragments, getCoreShellInfo(merged).capacity);
+  // FIX #3 : clamp avec trace de l'overflow pour éviter perte silencieuse sur vieux saves
+  const shellCapacity = getCoreShellInfo(merged).capacity;
+  const shellOverflow = Math.max(0, merged.coreShell.storedFragments - shellCapacity);
+  if (shellOverflow > 0) {
+    merged.coreShell.storedFragments = shellCapacity;
+    // Les fragments en excès sont rendus au joueur plutôt que perdus
+    merged.fragments += shellOverflow;
+    merged.totalFragments += shellOverflow;
+  }
   return merged;
 }
 
@@ -302,6 +310,8 @@ export function recalcDerivedStats(state) {
   state.clickPower *= state.permanentMultiplier * reflectMultiplier;
   state.passiveRate *= state.permanentMultiplier * reflectMultiplier;
   state.autoClickRate *= state.permanentMultiplier;
+  // FIX #5 : factoryRate doit aussi bénéficier du multiplicateur permanent
+  state.factoryRate *= state.permanentMultiplier;
   state.surcharge = Math.min(state.surcharge ?? 0, state.maxSurcharge);
 }
 
@@ -409,12 +419,14 @@ export function attemptCoreShellBreak(state) {
 
 export function applyOfflineProgress(state) {
   const now = Date.now();
-  const elapsed = Math.max(0, Math.min(BALANCE.passiveOfflineCapHours * 60 * 60, (now - (state.lastTickAt ?? now)) / 1000));
+  const rawElapsed = Math.max(0, (now - (state.lastTickAt ?? now)) / 1000);
+  const elapsed = Math.min(BALANCE.passiveOfflineCapHours * 60 * 60, rawElapsed);
   const gained = Math.floor(elapsed * (state.passiveRate ?? 0));
   addEnergy(state, gained);
   state.lastTickAt = now;
   state.updatedAt = now;
-  return gained;
+  // FIX #6 : on retourne aussi le temps réel écoulé et si le cap a été atteint
+  return { gained, elapsed, cappedAt: rawElapsed > elapsed ? BALANCE.passiveOfflineCapHours : null };
 }
 
 export function clickCore(state) {
@@ -488,7 +500,11 @@ export function buyUpgradeAmount(state, upgradeId, amount = 1) {
   const cost = upgradeBulkCost(upgrade, level, qty);
   const currency = upgrade.currency ?? 'energy';
 
-  if (getCurrency(state, currency) < cost) return { ok: false, reason: 'not_enough_energy', cost, amount: qty, currency };
+  // FIX #4 : raison distincte selon la currency pour ne pas confondre énergie et fragments
+  if (getCurrency(state, currency) < cost) {
+    const reason = currency === 'fragments' ? 'not_enough_fragments' : 'not_enough_energy';
+    return { ok: false, reason, cost, amount: qty, currency };
+  }
 
   spendCurrency(state, currency, cost);
   state.upgrades[upgrade.id] = level + qty;
@@ -523,7 +539,7 @@ function visibleSoon(state, milestone) {
   if (milestone.id === 'passive_10') return state.passiveRate >= 2;
   if (milestone.id === 'shell_first_stack') return (state.upgrades?.coreIsolation ?? 0) >= 1;
   if (milestone.id === 'shell_first_break') return (state.coreShell?.storedFragments ?? 0) >= 1 || (state.coreShell?.lastBreakAt ?? 0) > 0;
-  if (milestone.id === 'first_prestige') return state.energy >= prestigeRequirement(state) * 0.4 || state.prestige >= 1;
+  if (milestone.id === 'first_prestige') return state.totalEnergy >= prestigeRequirement(state) * 0.4 || state.prestige >= 1;
   if (milestone.id === 'prestige_3') return state.prestige >= 1;
   if (milestone.id === 'prestige_10') return state.prestige >= 6;
   if (milestone.id === 'prestige_25') return state.prestige >= 18;
@@ -531,7 +547,8 @@ function visibleSoon(state, milestone) {
 }
 
 export function canPrestige(state) {
-  return Number(state.energy ?? 0) >= prestigeRequirement(state);
+  // FIX #1/#2 : le prestige se débloque sur totalEnergy (cohérent avec l'UI)
+  return Number(state.totalEnergy ?? 0) >= prestigeRequirement(state);
 }
 
 export function prestigeRequirement(state) {
