@@ -179,7 +179,7 @@ function renderShell() {
         </button>
 
         <h2 class="panel-title" style="margin-top:22px">PRESTIGE</h2>
-        <button class="upgrade-btn prestige-card" id="prestige-btn">
+        <button class="prestige-card" id="prestige-btn">
           <span class="upgrade-fill" id="prestige-fill"></span>
           <div class="upgrade-head"><span class="upgrade-name">✦ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
           <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
