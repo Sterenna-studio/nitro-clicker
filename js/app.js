@@ -167,29 +167,34 @@ function renderShell() {
       </aside>
 
       <aside class="panel meta-panel">
-        <h2 class="panel-title">ÉCHELLE & MILESTONES</h2>
-        <div class="scale-card" id="scale-card"></div>
-        <div class="milestone-list" id="milestone-list"></div>
+        <section class="meta-section">
+          <h2 class="meta-title">ÉCHELLE & MILESTONES</h2>
+          <div class="scale-card" id="scale-card"></div>
+          <div class="milestone-list" id="milestone-list"></div>
+        </section>
 
-        <h2 class="panel-title" style="margin-top:22px">COQUE DU NOYAU</h2>
-        <div class="core-shell-card" id="core-shell-card"></div>
-        <button class="upgrade-btn shell-break-card" id="shell-break-btn" type="button">
-          <span class="upgrade-fill" id="shell-break-fill"></span>
-          <div class="upgrade-head"><span class="upgrade-name">◇ Briser la sphère</span><span class="upgrade-cost" id="shell-break-cost"></span></div>
-          <div class="upgrade-desc" id="shell-break-desc">Stocke des fragments Nitro dans la sphère, puis dépense un fort pic d'énergie pour tenter de la briser.</div>
-        </button>
+        <section class="meta-section meta-section--shell">
+          <h2 class="meta-title">COQUE DU NOYAU</h2>
+          <div class="core-shell-card" id="core-shell-card"></div>
+          <button class="upgrade-btn shell-break-card" id="shell-break-btn" type="button">
+            <span class="upgrade-fill" id="shell-break-fill"></span>
+            <div class="upgrade-head"><span class="upgrade-name">◇ Briser la sphère</span><span class="upgrade-cost" id="shell-break-cost"></span></div>
+            <div class="upgrade-desc" id="shell-break-desc">Stocke des fragments Nitro dans la sphère, puis dépense un fort pic d'énergie pour tenter de la briser.</div>
+          </button>
+        </section>
 
-        <h2 class="panel-title" style="margin-top:22px">PRESTIGE</h2>
-        <button class="prestige-card" id="prestige-btn">
-          <span class="upgrade-fill" id="prestige-fill"></span>
-          <div class="upgrade-head"><span class="upgrade-name">✦ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
-          <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
-        </button>
-
-        <div class="save-row">
-          <button class="action-btn" id="save-btn">💾 SAUVER LOCAL</button>
-          <button class="action-btn danger" id="reset-btn">⚠ RESET LOCAL</button>
-        </div>
+        <section class="meta-section meta-section--prestige">
+          <h2 class="meta-title">PRESTIGE</h2>
+          <button class="prestige-card" id="prestige-btn">
+            <span class="upgrade-fill" id="prestige-fill"></span>
+            <div class="upgrade-head"><span class="upgrade-name">✦ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
+            <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
+          </button>
+          <div class="save-row">
+            <button class="action-btn" id="save-btn">💾 SAUVER LOCAL</button>
+            <button class="action-btn danger" id="reset-btn">⚠ RESET LOCAL</button>
+          </div>
+        </section>
       </aside>
     </section>
   `;
