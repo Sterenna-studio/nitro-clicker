@@ -2,6 +2,7 @@ import { requireAuth } from '/shared/guards.js';
 import { getProfile, getDisplayNameFromUser } from '/shared/profile.js';
 import {
   UPGRADES,
+  SCALING_LAYERS,
   applyOfflineProgress,
   attemptCoreShellBreak,
   buyUpgradeAmount,
@@ -512,7 +513,9 @@ function renderStats() {
   setMeter('meter-click', Math.min(1, state.clickPower / 1000));
   setMeter('meter-passive', Math.min(1, state.passiveRate / 2500));
   setMeter('meter-surcharge', Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge)));
-  setMeter('meter-layer', Math.min(1, (state.prestige + 1) / 10));
+  const tierStart = [...SCALING_LAYERS].reverse().find(l => l.prestige <= state.prestige)?.prestige ?? 0;
+  const tierEnd = SCALING_LAYERS.find(l => l.prestige > state.prestige)?.prestige ?? (tierStart + 100);
+  setMeter('meter-layer', Math.min(1, (state.prestige - tierStart) / Math.max(1, tierEnd - tierStart)));
   setMeter('meter-factory', Math.min(1, state.factoryRate / 50));
   setMeter('meter-shell', shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio * 0.35) : 0);
 
