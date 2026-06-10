@@ -24,6 +24,16 @@ jobs:
           echo "Nitro Clicker deploy" > deploy-test.txt
           echo "Commit: $GITHUB_SHA" >> deploy-test.txt
           echo "Date: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> deploy-test.txt
+          echo "{}" | jq \
+            --arg commit "${GITHUB_SHA:0:7}" \
+            --arg commitFull "${GITHUB_SHA}" \
+            --arg message "$(git log -1 --format='%s')" \
+            --arg branch "${GITHUB_REF_NAME}" \
+            --arg runId "${GITHUB_RUN_ID}" \
+            --arg runNumber "${GITHUB_RUN_NUMBER}" \
+            --arg deployedAt "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+            '. + {commit:$commit,commitFull:$commitFull,message:$message,branch:$branch,runId:$runId,runNumber:$runNumber,deployedAt:$deployedAt}' \
+            > deploy-info.json
 
       - name: Setup SSH key
         run: |
