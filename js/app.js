@@ -20,6 +20,14 @@ import {
   tickPassive,
   upgradeBulkCost,
   upgradeCost,
+  LEMEGETON_SKILLS,
+  isLemegetonOnline,
+  isLemegetonSkillUnlocked,
+  isLemegetonSkillMaxed,
+  lemegetonSkillLevel,
+  lemegetonSkillCost,
+  buyLemegetonSkill,
+  isAutoPurchaseEnabled,
 } from './clicker-state.js';
 import { loadSave, saveAll } from './clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
@@ -38,6 +46,7 @@ let userId;
 let saveTimer;
 let lastTick = performance.now();
 let lastUpgradeSignature = '';
+let lastLemegetonSignature = '';
 let lastScaleSignature = '';
 let lastMilestoneSignature = '';
 let lastModuleSignature = '';
@@ -230,6 +239,17 @@ function renderShell() {
             <div class="upgrade-head"><span class="upgrade-name">◇ Briser la sphère</span><span class="upgrade-cost" id="shell-break-cost"></span></div>
             <div class="upgrade-desc" id="shell-break-desc">Stocke des fragments Nitro dans la sphère, puis dépense un fort pic d'énergie pour tenter de la briser.</div>
           </button>
+        </section>
+
+        <section class="meta-section meta-section--lemegeton" id="lemegeton-skill-section">
+          <div class="meta-section-header">
+            <span class="meta-section-accent"></span>
+            <span class="meta-section-icon">⬡</span>
+            <h2 class="meta-title">ARBRE LEMEGETON</h2>
+            <span class="meta-section-rule"></span>
+          </div>
+          <p class="lemegeton-skill-hint" id="lemegeton-skill-hint">Compétences permanentes · payées en fragments · survivent au prestige.</p>
+          <div class="lemegeton-skill-list" id="lemegeton-skill-list"></div>
         </section>
 
       </aside>
@@ -718,12 +738,14 @@ function renderAll(force = false) {
   renderTendrils(force);
   renderFactories(force);
   renderSubCores();
+  renderLemegetonSkills(force);
 }
 
 function renderLive() {
   renderStats();
   renderCoreShell();
   renderUpgradesLive();
+  renderLemegetonSkills();
 }
 
 function getNextAffordableCost() {
@@ -921,6 +943,115 @@ function triggerUnlockShimmer(btn) {
   });
 }
 
+// ── Arbre LEMEGETON ────────────────────────────────────────────────────────
+function getLemegetonSignature() {
+  return LEMEGETON_SKILLS.map(skill => {
+    const unlocked = isLemegetonSkillUnlocked(state, skill) ? 1 : 0;
+    const level = lemegetonSkillLevel(state, skill.id);
+    return `${skill.id}:${unlocked}:${level}`;
+  }).join('|') + `|f${Math.floor(state.fragments ?? 0)}`;
+}
+
+function renderLemegetonSkills(force = false) {
+  const root = document.getElementById('lemegeton-skill-list');
+  if (!root) return;
+  const section = document.getElementById('lemegeton-skill-section');
+  const online = isLemegetonOnline(state);
+  if (section) section.classList.toggle('locked', !online);
+
+  const hint = document.getElementById('lemegeton-skill-hint');
+  if (hint) {
+    hint.textContent = online
+      ? 'Compétences permanentes · payées en fragments · survivent au prestige.'
+      : 'LEMEGETON hors-ligne · atteins 1 Md d’énergie cumulée ou le Prestige 10 pour booter l’arbre.';
+  }
+
+  const signature = getLemegetonSignature();
+  if (!force && signature === lastLemegetonSignature && root.children.length) return;
+  lastLemegetonSignature = signature;
+  setHtml(root, LEMEGETON_SKILLS.map(renderLemegetonSkillButton).join(''));
+  bindLemegetonButtons();
+}
+
+function renderLemegetonSkillButton(skill) {
+  const unlocked = isLemegetonSkillUnlocked(state, skill);
+  const level = lemegetonSkillLevel(state, skill.id);
+  const maxed = isLemegetonSkillMaxed(state, skill);
+  const cost = lemegetonSkillCost(skill, level);
+  const held = Math.floor(state.fragments ?? 0);
+  const canBuy = unlocked && !maxed && held >= cost;
+  const progress = unlocked && !maxed ? Math.min(1, held / Math.max(1, cost)) : maxed ? 1 : 0;
+  const desc = typeof skill.desc === 'function' ? skill.desc(state) : skill.desc;
+  const levelLabel = skill.kind === 'unlock'
+    ? (level >= 1 ? 'ACTIF' : 'INACTIF')
+    : `Lv.${level}${skill.maxLevel ? `/${skill.maxLevel}` : ''}`;
+
+  if (!unlocked) {
+    return `
+      <button class="lemegeton-skill locked" data-skill="${skill.id}" disabled>
+        <span class="lemegeton-skill-fill" style="transform:scaleX(0)"></span>
+        <div class="lemegeton-skill-head">
+          <span class="lemegeton-skill-name">${skill.icon} ${skill.name}</span>
+          <span class="lemegeton-skill-cost">LOCK</span>
+        </div>
+        <div class="lemegeton-skill-desc">${skill.lockedText ?? 'Verrouillé.'}</div>
+      </button>`;
+  }
+
+  const costLabel = maxed ? (skill.kind === 'unlock' ? 'ACTIF' : 'MAX') : `${fmt(cost)} F`;
+  return `
+    <button class="lemegeton-skill ${canBuy ? 'can-buy' : ''} ${maxed ? 'maxed' : ''}" data-skill="${skill.id}" ${canBuy ? '' : 'disabled'}>
+      <span class="lemegeton-skill-fill" style="transform:scaleX(${progress})"></span>
+      <div class="lemegeton-skill-head">
+        <span class="lemegeton-skill-name">${skill.icon} ${skill.name} <small>${levelLabel}</small></span>
+        <span class="lemegeton-skill-cost">${costLabel}</span>
+      </div>
+      <div class="lemegeton-skill-desc">${desc}</div>
+    </button>`;
+}
+
+function bindLemegetonButtons() {
+  document.querySelectorAll('[data-skill]:not(.locked)').forEach(btn => {
+    btn.addEventListener('click', event => {
+      const result = buyLemegetonSkill(state, btn.dataset.skill);
+      if (!result.ok) {
+        if (result.reason === 'maxed') return;
+        return toast(result.reason === 'not_enough_fragments'
+          ? `Fragments insuffisants (${fmt(result.cost)} F requis).`
+          : 'Compétence verrouillée.');
+      }
+      FX.buy();
+      spawnLightningToElement(event.currentTarget, result.skill.kind === 'unlock' ? 'ACTIF' : `Lv.${result.level}`);
+      spawnEnergyBurst(event.clientX, event.clientY, 18);
+      lastLemegetonSignature = '';
+      renderLemegetonSkills(true);
+      renderUpgrades(true);
+      scheduleSave();
+      toast(`LEMEGETON · ${result.skill.name} ${result.skill.kind === 'unlock' ? 'activé' : `niveau ${result.level}`}`);
+    });
+  });
+}
+
+// Auto-achat : LEMEGETON achète l'upgrade énergie abordable le moins cher.
+function runAutoPurchase() {
+  if (!isAutoPurchaseEnabled(state)) return;
+  let best = null;
+  for (const upgrade of UPGRADES) {
+    if ((upgrade.currency ?? 'energy') !== 'energy') continue;
+    if (!isUpgradeUnlocked(state, upgrade)) continue;
+    const cost = upgradeCost(upgrade, state.upgrades[upgrade.id] ?? 0);
+    if (cost > state.energy) continue;
+    if (!best || cost < best.cost) best = { id: upgrade.id, cost };
+  }
+  if (!best) return;
+  const result = buyUpgradeAmount(state, best.id, 1);
+  if (result.ok) {
+    spawnModule(best.id, result.level);
+    claimMilestonesAndRender();
+    scheduleSave();
+  }
+}
+
 function refreshUpgradesIfNeeded() {
   const previous = lastUpgradeSignature;
   const signature = getUpgradeSignature();
@@ -1072,6 +1203,9 @@ function startLoop() {
     const claimed = checkAndClaimMilestones(state);
     if (claimed.length) claimMilestonesAndRender();
   }, 1000);
+
+  // Auto-achat LEMEGETON : achète l'upgrade énergie abordable le moins cher.
+  setInterval(runAutoPurchase, 700);
 
   setInterval(() => saveAll(userId, state), 15000);
 }
