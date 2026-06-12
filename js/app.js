@@ -290,8 +290,15 @@ function bindStaticEvents() {
 
     if (result?.overdrive) {
       FX.overdrive();
-      spawnSystemWave(`OVERDRIVE +${fmt(result.overdriveGain)}`);
-      lightningStorm(5);
+      if (result.crit) {
+        spawnSystemWave(`💥 CRIT OVERDRIVE +${fmt(result.overdriveGain)}`);
+        lightningStorm(10);
+        spawnEnergyBurst(event.clientX, event.clientY, 32);
+        toast(`SURCHARGE CRITIQUE · +${fmt(result.overdriveGain)} énergie`);
+      } else {
+        spawnSystemWave(`OVERDRIVE +${fmt(result.overdriveGain)}`);
+        lightningStorm(5);
+      }
     }
     if (result?.fragmentsStored) {
       pulseShell('store');

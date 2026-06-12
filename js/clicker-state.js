@@ -50,6 +50,7 @@ export function createDefaultState(userId = null) {
     maxSurcharge: 100,
     surchargeGain: 5,
     overdriveLevel: 0,
+    overdriveCount: 0,
     factoryRate: 0,
     permanentMultiplier: 1,
     coreShellCapacity: 0,
@@ -122,6 +123,17 @@ export const LEMEGETON_SKILLS = [
     lockedText: 'Nécessite LEMEGETON en ligne et Prestige 3.',
   },
   {
+    id: 'critOverdrive', name: 'Surcharge critique', icon: '💥', kind: 'leveled',
+    baseCost: 18, scale: 1.6, maxLevel: 12,
+    desc(state) {
+      const lvl = lemegetonSkillLevel(state, 'critOverdrive');
+      if (lvl === 0) return 'Un overdrive sur N devient CRITIQUE (×gain massif). N diminue et le multiplicateur monte par niveau.';
+      return `1 overdrive sur ${getCritOverdriveInterval(state)} est CRITIQUE ×${getCritOverdriveMultiplier(state).toFixed(1)}.`;
+    },
+    unlock: state => isLemegetonOnline(state) && Number(state?.prestige ?? 0) >= 5,
+    lockedText: 'Nécessite LEMEGETON en ligne et Prestige 5.',
+  },
+  {
     id: 'offlineGrid', name: 'Grille offline', icon: '🛰️', kind: 'unlock',
     cost: 80,
     desc: 'LEMEGETON maintient le réseau hors-ligne : cap de farm offline porté de 8 h à 24 h.',
@@ -175,6 +187,15 @@ export function getFragmentGainMultiplier(state) {
 }
 export function isAutoPurchaseEnabled(state) {
   return lemegetonSkillLevel(state, 'autoPurchase') >= 1;
+}
+export function getCritOverdriveInterval(state) {
+  const lvl = lemegetonSkillLevel(state, 'critOverdrive');
+  if (lvl <= 0) return 0;
+  return Math.max(10, 50 - (lvl - 1) * 4); // Lv.1 : 1/50 · Lv.11+ : 1/10
+}
+export function getCritOverdriveMultiplier(state) {
+  const lvl = lemegetonSkillLevel(state, 'critOverdrive');
+  return lvl <= 0 ? 1 : 5 + lvl * 1.5; // Lv.1 : ×6.5 · Lv.12 : ×23
 }
 export function getOfflineCapHours(state) {
   return lemegetonSkillLevel(state, 'offlineGrid') >= 1 ? 24 : BALANCE.passiveOfflineCapHours;
@@ -594,6 +615,7 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
   let gain = Math.max(1, Math.floor(state.clickPower * gainRatio));
   let overdrive = false;
   let overdriveGain = 0;
+  let crit = false;
   let fragments = 0;
   let fragmentsStored = 0;
 
@@ -601,7 +623,14 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
   if (state.surcharge >= state.maxSurcharge) {
     overdrive = true;
     state.surcharge = 0;
+    state.overdriveCount = Math.max(0, Math.floor(Number(state.overdriveCount ?? 0))) + 1;
     overdriveGain = Math.floor(state.clickPower * gainRatio * (BALANCE.overdriveBase + state.overdriveLevel * BALANCE.overdrivePerLevel) + state.passiveRate * BALANCE.overdrivePassiveSeconds);
+    // Surcharge critique (compétence LEMEGETON) : 1 overdrive sur N est amplifié.
+    const critInterval = getCritOverdriveInterval(state);
+    if (critInterval > 0 && state.overdriveCount % critInterval === 0) {
+      crit = true;
+      overdriveGain = Math.floor(overdriveGain * getCritOverdriveMultiplier(state));
+    }
     gain += overdriveGain;
     if (Math.random() < getFragmentDropChanceOnOverdrive(state)) {
       const stored = storeCoreShellFragments(state, 1);
@@ -612,7 +641,7 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
 
   addEnergy(state, gain);
   state.updatedAt = Date.now();
-  return { gain, overdrive, overdriveGain, fragments, fragmentsStored, automatic };
+  return { gain, overdrive, overdriveGain, crit, fragments, fragmentsStored, automatic };
 }
 
 export function tickAutoClicks(state, deltaSeconds) {
