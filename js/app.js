@@ -773,7 +773,7 @@ function renderStats() {
   const tierStart = [...SCALING_LAYERS].reverse().find(l => l.prestige <= state.prestige)?.prestige ?? 0;
   const tierEnd = SCALING_LAYERS.find(l => l.prestige > state.prestige)?.prestige ?? (tierStart + 100);
   setMeter('meter-layer', Math.min(1, (state.prestige - tierStart) / Math.max(1, tierEnd - tierStart)));
-  setMeter('meter-factory', Math.min(1, state.factoryRate / 50));
+  setMeter('meter-factory', Math.min(1, state.factoryRate / 5000));
   setMeter('meter-shell', shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio * 0.35) : 0);
 
   const req = prestigeRequirement(state);

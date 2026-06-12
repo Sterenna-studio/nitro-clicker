@@ -188,17 +188,26 @@ export const UPGRADES = [
   },
   {
     id: 'enginePlant', name: 'Chaîne de production moteur', icon: '⚙️', baseCost: 900000, scale: 1.38, currency: 'energy', tier: 5,
-    desc: 'Prestige 20 : production industrielle massive.',
+    desc(state) {
+      const lvl = state?.upgrades?.enginePlant ?? 0;
+      if (lvl === 0) return 'Allume l’usine : +75 énergie/s industrielle par niveau, amplifiée par tes noyaux dupliqués.';
+      const rate = Math.round(state?.factoryRate ?? 0);
+      return `Usine active · ${rate.toLocaleString('fr-FR')} é/s industrielle · +75 é/s par niveau (×noyaux).`;
+    },
     unlock: state => state.prestige >= 20,
     lockedText: 'Débloqué au Prestige 20.',
-    apply(state) { state.clickPower += 140; state.passiveRate += 360; state.factoryRate += 8; },
+    apply(state) { state.clickPower += 140; state.passiveRate += 200; state.factoryRate += 75; },
   },
   {
     id: 'orbitalHive', name: 'Ruche orbitale Nitro', icon: '🛰️', baseCost: 6200000, scale: 1.48, currency: 'energy', tier: 6,
-    desc: 'Prestige 50 : essaim orbital, scaling très haut.',
+    desc(state) {
+      const lvl = state?.upgrades?.orbitalHive ?? 0;
+      if (lvl === 0) return 'Essaim orbital : +300 é/s industrielle et +10% production usine par niveau.';
+      return `Essaim ×${lvl} · +${lvl * 10}% production usine · +300 é/s par niveau.`;
+    },
     unlock: state => state.prestige >= 50,
     lockedText: 'Débloqué au Prestige 50.',
-    apply(state) { state.clickPower += 560; state.passiveRate += 1600; state.factoryRate += 34; state.maxSurcharge += 50; },
+    apply(state) { state.clickPower += 560; state.passiveRate += 800; state.factoryRate += 300; state.factoryMult += 0.10; state.maxSurcharge += 50; },
   },
 ];
 
@@ -307,6 +316,7 @@ export function recalcDerivedStats(state) {
   state.surchargeGain = 5;
   state.overdriveLevel = 0;
   state.factoryRate = 0;
+  state.factoryMult = 1;
   state.permanentMultiplier = 1;
   state.coreShellCapacity = 0;
   state.coreShellHardness = 0;
@@ -331,7 +341,9 @@ export function recalcDerivedStats(state) {
   state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult;
   state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult;
   state.autoClickRate *= state.permanentMultiplier;
-  state.factoryRate   *= state.permanentMultiplier;
+  // Production industrielle : source d'énergie/s réelle (tickPassive + offline).
+  // Boostée par le mult permanent, l'essaim orbital (factoryMult) et les noyaux.
+  state.factoryRate   *= state.permanentMultiplier * (state.factoryMult ?? 1) * coreMult;
   state.surcharge = Math.min(state.surcharge ?? 0, state.maxSurcharge);
 }
 
@@ -455,7 +467,7 @@ export function applyOfflineProgress(state) {
   const now = Date.now();
   const rawElapsed = Math.max(0, (now - (state.lastTickAt ?? now)) / 1000);
   const elapsed = Math.min(BALANCE.passiveOfflineCapHours * 60 * 60, rawElapsed);
-  const gained = Math.floor(elapsed * (state.passiveRate ?? 0));
+  const gained = Math.floor(elapsed * ((state.passiveRate ?? 0) + (state.factoryRate ?? 0)));
   addEnergy(state, gained);
   state.lastTickAt = now;
   state.updatedAt = now;
@@ -512,7 +524,7 @@ export function tickAutoClicks(state, deltaSeconds) {
 }
 
 export function tickPassive(state, deltaSeconds) {
-  const passiveGain = (state.passiveRate ?? 0) * deltaSeconds;
+  const passiveGain = ((state.passiveRate ?? 0) + (state.factoryRate ?? 0)) * deltaSeconds;
   addEnergy(state, passiveGain);
   const auto = tickAutoClicks(state, deltaSeconds);
   state.lastTickAt = Date.now();
