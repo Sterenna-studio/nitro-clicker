@@ -345,7 +345,7 @@ export const UPGRADES = [
     id: 'enginePlant', name: 'Chaîne de production moteur', icon: '⚙️', baseCost: 900000, scale: 1.38, currency: 'energy', tier: 5,
     desc(state) {
       const lvl = state?.upgrades?.enginePlant ?? 0;
-      if (lvl === 0) return 'Allume l'usine : +75 énergie/s industrielle par niveau, amplifiée par tes noyaux dupliqués.';
+      if (lvl === 0) return `Allume l'usine : +75 énergie/s industrielle par niveau, amplifiée par tes noyaux dupliqués.`;
       const rate = Math.round(state?.factoryRate ?? 0);
       return `Usine active · ${rate.toLocaleString('fr-FR')} é/s industrielle · +75 é/s par niveau (×noyaux).`;
     },

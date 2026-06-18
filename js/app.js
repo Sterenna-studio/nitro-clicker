@@ -1031,7 +1031,7 @@ function renderLemegetonSkills(force = false) {
   if (hint) {
     hint.textContent = online
       ? 'Compétences permanentes · payées en fragments · survivent au prestige.'
-      : 'LEMEGETON hors-ligne · atteins 1 Md d'énergie cumulée ou le Prestige 10 pour booter l'arbre.';
+      : `LEMEGETON hors-ligne · atteins 1 Md d'énergie cumulée ou le Prestige 10 pour booter l'arbre.`;
   }
 
   const signature = getLemegetonSignature();
