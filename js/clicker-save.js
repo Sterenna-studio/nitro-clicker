@@ -2,6 +2,7 @@ import { createDefaultState, hydrateState, VERSION } from './clicker-state.js';
 
 const LS_PREFIX = 'nitro-clicker.save.';
 const MIGRATION_NOTICE_KEY = 'nitro-clicker.save.migration.notice';
+const SAVE_ERROR_KEY = 'nitro-clicker.save.error';
 const CURRENT_MIGRATION_ID = `save-v${VERSION}`;
 
 export function localKey(userId) {
@@ -19,13 +20,37 @@ export function loadLocalSave(userId) {
   }
 }
 
+// #3 — Notifie le joueur en cas d'échec de sauvegarde localStorage
+// Couvre : QuotaExceededError, SecurityError, localStorage désactivé
 export function saveLocal(userId, state) {
   try {
     localStorage.setItem(localKey(userId), JSON.stringify(state));
+    // Efface toute erreur précédente si la sauvegarde réussit
+    try { sessionStorage.removeItem(SAVE_ERROR_KEY); } catch {}
     return true;
   } catch (error) {
     console.warn('[Nitro Clicker] local save failed:', error);
+    // Stocke l'erreur pour affichage toast côté UI
+    try {
+      sessionStorage.setItem(SAVE_ERROR_KEY, JSON.stringify({
+        code: error?.name ?? 'UnknownError',
+        message: error?.message ?? 'Erreur inconnue',
+        at: Date.now(),
+      }));
+    } catch {}
     return false;
+  }
+}
+
+// Lit et consomme l'erreur de sauvegarde (à appeler depuis l'UI pour afficher le toast)
+export function readSaveError() {
+  try {
+    const raw = sessionStorage.getItem(SAVE_ERROR_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(SAVE_ERROR_KEY);
+    return JSON.parse(raw);
+  } catch {
+    return null;
   }
 }
 

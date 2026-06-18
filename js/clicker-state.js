@@ -1,26 +1,46 @@
 export const VERSION = 9;
 
 export const BALANCE = {
+  // Seuil d'énergie totale requis pour le premier prestige (échelle exponentielle)
   prestigeBase: 6500,
+  // Exposant de progression prestige early (P0→P10) — calibré pour ~20-40 min par prestige
   prestigeEarlyScale: 2.05,
+  // Exposant de progression prestige tardif (P10+) — progression plus lente intentionnelle
   prestigeLateScale: 2.3,
+  // Cap de progression hors-ligne en heures (sans compétence offlineGrid LEMEGETON)
   passiveOfflineCapHours: 8,
+  // Multiplicateur de base de l'Overdrive sur le gain de clic
   overdriveBase: 16,
+  // Bonus de multiplicateur Overdrive par niveau d'overdriveLevel
   overdrivePerLevel: 2.7,
+  // Secondes de production passive incluses dans le gain Overdrive
   overdrivePassiveSeconds: 8,
+  // Chance de base de drop d'un fragment à chaque Overdrive
   fragmentBaseChance: 0.08,
+  // Bonus de chance fragment par niveau de prestige
   fragmentPrestigeChance: 0.006,
+  // Bonus de chance fragment par niveau d'overdriveLevel
   fragmentOverdriveChance: 0.014,
+  // Plafond absolu de la chance de drop fragment (45%)
   fragmentChanceCap: 0.45,
+  // Coût de base (en énergie) pour tenter de briser la sphère au stockage=0
   shellBaseBreakCost: 1250,
+  // Facteur d'échelle du coût de brisure par niveau de dureté
   shellBreakCostScale: 1.34,
   // Bonus de chance de fragment lié à la coque (déclenchement Overdrive uniquement)
   shellFragmentBonusBase: 0.035,
+  // Plafond du bonus fragment coque, indépendant de la capacité
   shellFragmentBonusMax: 0.045,
+  // Bonus fragment par point de capacité de coque
   shellFragmentBonusPerCapacity: 0.004,
+  // Ratio de gain d'énergie par clic auto vs clic manuel (58% = moins rentable intentionnellement)
   autoClickGainRatio: 0.58,
+  // Ratio de charge de surcharge par clic auto (85% = Overdrive possible mais ralenti)
   autoClickSurchargeRatio: 0.85,
+  // Nombre max de clics auto simulés par tick (évite les boucles trop longues)
   autoClickMaxBurstsPerTick: 12,
+  // Limite haute pour les achats en lot — au-delà, coût cumulatif trop long à calculer
+  maxBulkBuy: 10000,
 };
 
 export const SCALING_LAYERS = [
@@ -325,7 +345,7 @@ export const UPGRADES = [
     id: 'enginePlant', name: 'Chaîne de production moteur', icon: '⚙️', baseCost: 900000, scale: 1.38, currency: 'energy', tier: 5,
     desc(state) {
       const lvl = state?.upgrades?.enginePlant ?? 0;
-      if (lvl === 0) return 'Allume l’usine : +75 énergie/s industrielle par niveau, amplifiée par tes noyaux dupliqués.';
+      if (lvl === 0) return 'Allume l'usine : +75 énergie/s industrielle par niveau, amplifiée par tes noyaux dupliqués.';
       const rate = Math.round(state?.factoryRate ?? 0);
       return `Usine active · ${rate.toLocaleString('fr-FR')} é/s industrielle · +75 é/s par niveau (×noyaux).`;
     },
@@ -614,13 +634,15 @@ export function attemptCoreShellBreak(state) {
 export function applyOfflineProgress(state) {
   const now = Date.now();
   const rawElapsed = Math.max(0, (now - (state.lastTickAt ?? now)) / 1000);
-  const elapsed = Math.min(getOfflineCapHours(state) * 60 * 60, rawElapsed);
+  const capSeconds = getOfflineCapHours(state) * 60 * 60;
+  const elapsed = Math.min(capSeconds, rawElapsed);
   const gained = Math.floor(elapsed * ((state.passiveRate ?? 0) + (state.factoryRate ?? 0)));
   addEnergy(state, gained);
   state.lastTickAt = now;
   state.updatedAt = now;
-  // FIX #6 : on retourne aussi le temps réel écoulé et si le cap a été atteint
-  return { gained, elapsed, cappedAt: rawElapsed > elapsed ? getOfflineCapHours(state) : null };
+  // FIX #6 : retourne le temps réel, si le cap a été atteint et combien d'heures
+  const cappedAt = rawElapsed > capSeconds ? getOfflineCapHours(state) : null;
+  return { gained, elapsed, rawElapsed, cappedAt };
 }
 
 export function clickCore(state) {
@@ -697,8 +719,11 @@ export function buyUpgradeAmount(state, upgradeId, amount = 1) {
   if (!upgrade) return { ok: false, reason: 'unknown_upgrade' };
   if (!isUpgradeUnlocked(state, upgrade)) return { ok: false, reason: 'locked' };
 
-  const qty = Math.max(1, Math.floor(Number(amount) || 1));
-  const level = state.upgrades[upgrade.id] ?? 0;
+  // #6 — Guard : rejette les valeurs non finies, négatives ou trop grandes
+  if (!Number.isFinite(amount) || amount < 1) return { ok: false, reason: 'invalid_amount' };
+  const qty = Math.min(Math.floor(amount), BALANCE.maxBulkBuy);
+
+  const level = state.upgrades[upgradeId] ?? 0;
   const cost = upgradeBulkCost(upgrade, level, qty);
   const currency = upgrade.currency ?? 'energy';
 
@@ -709,7 +734,7 @@ export function buyUpgradeAmount(state, upgradeId, amount = 1) {
   }
 
   spendCurrency(state, currency, cost);
-  state.upgrades[upgrade.id] = level + qty;
+  state.upgrades[upgradeId] = level + qty;
   recalcDerivedStats(state);
   state.coreShell.storedFragments = Math.min(state.coreShell.storedFragments, getCoreShellInfo(state).capacity);
   state.updatedAt = Date.now();
@@ -772,7 +797,9 @@ export function doPrestige(state) {
   const keptLemegetonToggles = { ...(state.lemegetonToggles ?? {}) };
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
-  // Bonus prestige basé sur totalEnergy (progression globale) et non energy courante
+  // Bonus prestige basé sur totalEnergy (progression globale) et non energy courante.
+  // sqrt(totalEnergy)/2200 : racine carrée pour aplatir la courbe sur les très hautes valeurs.
+  // Diviseur 2200 calibré empiriquement pour ~4-12 fragments/prestige en mid-game.
   const baseReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.totalEnergy)) / 2200 + keptTotalFragments * 0.02);
   // Résonance fragmentaire (compétence LEMEGETON) amplifie le gain de fragments.
   const prestigeReward = Math.floor(baseReward * getFragmentGainMultiplier(state));
