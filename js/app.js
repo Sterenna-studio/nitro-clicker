@@ -31,7 +31,7 @@ import {
   isLemegetonSkillActive,
   toggleLemegetonSkill,
 } from './clicker-state.js';
-import { loadSave, saveAll } from './clicker-save.js';
+import { loadSave, saveAll, readSaveError, readMigrationNotice } from './clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
 
 const app = document.getElementById('app');
@@ -128,6 +128,13 @@ function toast(message) {
   node.textContent = message;
   document.body.appendChild(node);
   setTimeout(() => node.remove(), 2800);
+}
+
+// #3 — Affiche un toast si une erreur de sauvegarde localStorage a été détectée
+function flushSaveErrorToast() {
+  const err = readSaveError();
+  if (!err) return;
+  toast(`⚠ Sauvegarde impossible (${err.code}) — progression non persistée localement.`);
 }
 
 function renderShell() {
@@ -379,9 +386,14 @@ function bindStaticEvents() {
     });
   });
 
+  // #3 — Sauvegarde manuelle : toast succès ou erreur
   document.getElementById('save-btn').addEventListener('click', () => {
     const ok = saveAll(userId, state);
-    toast(ok ? 'Sauvegarde locale OK.' : 'Sauvegarde locale impossible.');
+    if (ok) {
+      toast('Sauvegarde locale OK.');
+    } else {
+      flushSaveErrorToast();
+    }
   });
 
   document.getElementById('prestige-btn').addEventListener('click', () => {
@@ -1013,7 +1025,7 @@ function renderLemegetonSkills(force = false) {
   if (hint) {
     hint.textContent = online
       ? 'Compétences permanentes · payées en fragments · survivent au prestige.'
-      : 'LEMEGETON hors-ligne · atteins 1 Md d’énergie cumulée ou le Prestige 10 pour booter l’arbre.';
+      : 'LEMEGETON hors-ligne · atteins 1 Md d'énergie cumulée ou le Prestige 10 pour booter l'arbre.';
   }
 
   const signature = getLemegetonSignature();
@@ -1256,7 +1268,11 @@ function setMeterNode(node, ratio) {
 
 function scheduleSave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveAll(userId, state), 900);
+  // #3 — saveAll peut échouer ; on consomme l'erreur après le debounce
+  saveTimer = setTimeout(() => {
+    const ok = saveAll(userId, state);
+    if (!ok) flushSaveErrorToast();
+  }, 900);
 }
 
 function startLoop() {
@@ -1284,7 +1300,11 @@ function startLoop() {
   // Auto-achat LEMEGETON : achète l'upgrade énergie abordable le moins cher.
   setInterval(runAutoPurchase, 700);
 
-  setInterval(() => saveAll(userId, state), 15000);
+  // #3 — Sauvegarde auto périodique avec détection d'erreur
+  setInterval(() => {
+    const ok = saveAll(userId, state);
+    if (!ok) flushSaveErrorToast();
+  }, 15000);
 }
 
 async function fetchDeployBadge() {
@@ -1304,7 +1324,14 @@ async function init() {
   userId = auth.user.id;
   profile = await getProfile(userId);
   state = loadSave(userId);
-  const { gained: offlineGain = 0 } = applyOfflineProgress(state);
+
+  // #4 — Toast progression hors-ligne avec cap si applicable
+  const offlineResult = applyOfflineProgress(state);
+  const offlineGain = offlineResult?.gained ?? 0;
+  const cappedAt = offlineResult?.cappedAt;    // heures, présent uniquement si plafonné
+
+  // Migration notice (#3 adjacent) — sauvegarde legacy détectée
+  const migrationNotice = readMigrationNotice();
 
   renderShell();
   fetchDeployBadge();
@@ -1320,7 +1347,26 @@ async function init() {
   };
 
   claimMilestonesAndRender();
-  if (offlineGain > 0) toast(`Progression hors-ligne : +${fmt(offlineGain)} énergie.`);
+
+  // Toasts de démarrage (ordre : migration → offline → save error)
+  if (migrationNotice) {
+    const comp = migrationNotice.compensated && migrationNotice.compensation
+      ? ` · +${fmt(migrationNotice.compensation.energy)} E, +${migrationNotice.compensation.fragments} F offerts`
+      : '';
+    toast(`⬡ Sauvegarde migrée v${migrationNotice.fromVersion} → v${migrationNotice.toVersion}${comp}.`);
+  }
+
+  if (offlineGain > 0) {
+    if (cappedAt != null) {
+      // #4 — Progression plafonnée : affiche la durée cap
+      toast(`Hors-ligne · +${fmt(offlineGain)} E (plafonné à ${cappedAt.toFixed(1)}h).`);
+    } else {
+      toast(`Progression hors-ligne : +${fmt(offlineGain)} énergie.`);
+    }
+  }
+
+  // #3 — Erreur de sauvegarde éventuelle héritée de la session précédente
+  flushSaveErrorToast();
 }
 
 init().catch(error => {
