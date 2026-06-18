@@ -147,32 +147,42 @@ function bindEyeTracking() {
   let last = 0;
   const TRACK_FACTOR = 0.15;   // facteur très faible : l'œil ne fait qu'effleurer la direction du curseur
   window.addEventListener('mousemove', event => {
-    if (!eyeHover || !window.eyes?.move) return;   // tracking seulement au survol
+    if (!eyeHover) return;     // tracking seulement au survol
     const now = performance.now();
     if (now - last < 60) return;
     last = now;
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    window.eyes.move(cx + (event.clientX - cx) * TRACK_FACTOR, cy + (event.clientY - cy) * TRACK_FACTOR);
+    lookToward(event.clientX, event.clientY, TRACK_FACTOR);
   }, { passive: true });
 
   setInterval(glanceAtCore, 4500);
 }
 
-// Attirance occasionnelle, légère, du regard vers le noyau central.
+// Fait regarder l'œil vers (tx,ty), mais en BORNANT la cible dans les limites
+// de l'écran : le globe ne peut jamais être envoyé hors du cadre.
+function lookToward(tx, ty, factor) {
+  if (!window.eyes?.move) return;
+  const screen = document.querySelector('.lemegeton-screen');
+  if (!screen) return;
+  const r = screen.getBoundingClientRect();
+  if (!r.width) return;
+  const sx = r.left + r.width / 2;   // centre de l'écran = position de l'œil
+  const sy = r.top + r.height / 2;
+  const maxX = r.width * 0.28;        // amplitude max du regard → reste dans le cadre
+  const maxY = r.height * 0.28;
+  const dx = Math.max(-maxX, Math.min(maxX, (tx - sx) * factor));
+  const dy = Math.max(-maxY, Math.min(maxY, (ty - sy) * factor));
+  window.eyes.move(sx + dx, sy + dy);
+}
+
+// Attirance occasionnelle, légère, du regard vers le noyau central (borné).
 function glanceAtCore() {
-  if (eyeHover || !window.eyes?.move) return;
+  if (eyeHover) return;
   if (Math.random() > 0.55) return;                // pas à chaque fois
   const core = document.getElementById('click-core');
   if (!core) return;
   const r = core.getBoundingClientRect();
   if (!r.width) return;
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  const tx = r.left + r.width / 2;
-  const ty = r.top + r.height / 2;
-  // léger : glisse à mi-chemin vers le noyau
-  window.eyes.move(cx + (tx - cx) * 0.5, cy + (ty - cy) * 0.5);
+  lookToward(r.left + r.width / 2, r.top + r.height / 2, 0.4);
 }
 
 // Charge la lib d'yeux (CyberAgent) dans le panneau dédié de LEMEGETON.
