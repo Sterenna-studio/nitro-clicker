@@ -19,6 +19,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate JS syntax (block deploy on parse errors)
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if ! node --input-type=module --check < "$f" 2>/tmp/jscheck.err; then
+              echo "::error file=$f::Erreur de syntaxe JS"
+              sed 's/^/    /' /tmp/jscheck.err
+              fail=1
+            fi
+          done < <(find js -name '*.js')
+          if [ "$fail" -ne 0 ]; then
+            echo "Déploiement bloqué : au moins un fichier JS ne parse pas."
+            exit 1
+          fi
+          echo "✅ Tous les fichiers JS passent le contrôle de syntaxe."
+
       - name: Add deployment marker
         run: |
           echo "Nitro Clicker deploy" > deploy-test.txt
