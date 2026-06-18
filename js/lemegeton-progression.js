@@ -145,12 +145,15 @@ function bindEyeTracking() {
     screen.addEventListener('mouseleave', () => { eyeHover = false; });
   }
   let last = 0;
+  const TRACK_FACTOR = 0.15;   // facteur très faible : l'œil ne fait qu'effleurer la direction du curseur
   window.addEventListener('mousemove', event => {
     if (!eyeHover || !window.eyes?.move) return;   // tracking seulement au survol
     const now = performance.now();
     if (now - last < 60) return;
     last = now;
-    window.eyes.move(event.clientX, event.clientY);
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    window.eyes.move(cx + (event.clientX - cx) * TRACK_FACTOR, cy + (event.clientY - cy) * TRACK_FACTOR);
   }, { passive: true });
 
   setInterval(glanceAtCore, 4500);
