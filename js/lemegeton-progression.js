@@ -5,6 +5,7 @@ const TANK_COUNT = 10;
 let mounted = false;
 let lastFilled = -1;
 let lastStage = '';
+let lastOnline = null;   // null = 1er passage (pas de boot à l'ouverture d'une save déjà online)
 
 const STAGES = [
   {
@@ -228,6 +229,55 @@ function showChronicle(text) {
   showChronicle._t = setTimeout(() => el.classList.remove('show'), 6500);
 }
 
+// ── Vie de LEMEGETON ───────────────────────────────────────────────────────
+// Flash de l'écran (célébration / boot)
+function flashScreen() {
+  const s = document.querySelector('.lemegeton-screen');
+  if (!s) return;
+  s.classList.remove('flash');
+  void s.offsetWidth;
+  s.classList.add('flash');
+  setTimeout(() => s.classList.remove('flash'), 700);
+}
+
+// Regard vers la bonbonne de charge (borné, donc reste dans le cadre)
+function glanceAtCharge() {
+  const c = document.getElementById('lemegeton-charge');
+  if (!c) return;
+  const r = c.getBoundingClientRect();
+  if (r.width) lookToward(r.left + r.width / 2, r.top + r.height / 2, 1);
+}
+
+// Beat à chaque bonbonne remplie : émotion + regard + chronique + flash
+function celebrateTank(n) {
+  window.eyes?.emotion?.('excitement');
+  glanceAtCharge();
+  showChronicle(`Bonbonne ${n}/${TANK_COUNT} chargée · réseau BPRD renforcé.`);
+  flashScreen();
+}
+
+// Séquence de boot au passage en ligne de LEMEGETON
+function bootSequence() {
+  window.eyes?.emotion?.('surprise');
+  setTimeout(() => window.eyes?.emotion?.('joy'), 900);
+  showChronicle('LEMEGETON EN LIGNE · ordinateur de bord opérationnel.');
+  flashScreen();
+}
+
+// Réactions aux actions du joueur (appelées depuis app.js via NitroLemegeton.react)
+function react(type) {
+  const map = {
+    prestige:   { e: 'surprise',   m: 'LEMEGETON : cycle de prestige détecté.' },
+    shellBreak: { e: 'excitement', m: 'LEMEGETON : sphère brisée — fragments libérés.' },
+    shellFail:  { e: 'fear',       m: 'LEMEGETON : la sphère résiste encore…' },
+    skill:      { e: 'love',       m: 'LEMEGETON : nouvelle compétence intégrée.' },
+  };
+  const r = map[type];
+  if (!r) return;
+  window.eyes?.emotion?.(r.e);
+  showChronicle(r.m);
+}
+
 // Charge la lib d'yeux (CyberAgent) dans le panneau dédié de LEMEGETON.
 // Le container a une taille définie au moment de l'init → la lib rend les
 // yeux DEDANS (sinon elle bascule en plein écran). Puis on ajuste l'échelle.
@@ -272,8 +322,10 @@ function update() {
   });
 
   if (filled > lastFilled) {
+    const first = lastFilled === -1;          // 1er update : pas de célébration
     lastFilled = filled;
     pulseTank(filled - 1);
+    if (!first && filled > 0) celebrateTank(filled);   // beat à chaque bonbonne remplie
     if (filled === TANK_COUNT) dispatchLoreWave('LEMEGETON ONLINE');
   }
 
@@ -285,6 +337,13 @@ function update() {
   if (chargeFill) chargeFill.style.transform = `scaleY(${chargeRatio.toFixed(4)})`;
   const charge = document.getElementById('lemegeton-charge');
   if (charge) charge.classList.toggle('full', online);
+
+  // Éveil progressif : œil terne avant l'activation, séquence de boot au passage online.
+  const screen = document.querySelector('.lemegeton-screen');
+  if (screen) screen.classList.toggle('dormant', !online);
+  if (lastOnline !== null && !lastOnline && online) bootSequence();   // transition réelle
+  else if (!online && Math.random() < 0.04) window.eyes?.emotion?.('sleepy');  // somnole en dormant
+  lastOnline = online;
 
   const stage = getStage(filled, prestige, autoLevel);
   const panel = document.getElementById('core-panel');
@@ -369,4 +428,4 @@ const boot = setInterval(() => {
   if (mounted) clearInterval(boot);
 }, 250);
 
-window.NitroLemegeton = { update };
+window.NitroLemegeton = { update, react };

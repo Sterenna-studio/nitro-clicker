@@ -361,6 +361,7 @@ function bindStaticEvents() {
         pulseShell('crack');
         spawnSystemWave('FISSURE');
         lightningStorm(3);
+        window.NitroLemegeton?.react?.('shellFail');
         renderAll(true);
         scheduleSave();
         return toast(`Rupture ratée · fissure ${result.cracks}/${result.shell.requiredHits} · chance ${Math.round(result.chance * 100)}%`);
@@ -371,6 +372,7 @@ function bindStaticEvents() {
     pulseShell('break');
     spawnSystemWave(`SPHÈRE BRISÉE +${result.released}F`);
     lightningStorm(8);
+    window.NitroLemegeton?.react?.('shellBreak');
     renderAll(true);
     claimMilestonesAndRender();
     scheduleSave();
@@ -403,6 +405,7 @@ function bindStaticEvents() {
     if (!result.ok) return toast('Prestige pas encore prêt. Continue à charger le noyau.');
     state = result.state;
     FX.prestige();
+    window.NitroLemegeton?.react?.('prestige');
     saveAll(userId, state);
     renderAll(true);
     spawnSystemWave('PRESTIGE +1');
@@ -1094,6 +1097,7 @@ function bindLemegetonButtons() {
           : 'Compétence verrouillée.');
       }
       FX.buy();
+      window.NitroLemegeton?.react?.('skill');
       spawnLightningToElement(event.currentTarget, result.skill.kind === 'unlock' ? 'ACTIF' : `Lv.${result.level}`);
       spawnEnergyBurst(event.clientX, event.clientY, 18);
       lastLemegetonSignature = '';

@@ -224,6 +224,19 @@
 }
 .fx-disabled .lemegeton-screen-scan { display: none; }
 
+/* Éveil progressif : œil terne tant que LEMEGETON n'est pas en ligne */
+.lemegeton-screen.dormant .eye-container { opacity: .42; filter: saturate(.45) brightness(.7); }
+.lemegeton-screen.dormant { border-color: rgba(0,255,204,.14); box-shadow: inset 0 0 26px rgba(0,0,0,.5); }
+
+/* Flash de célébration (bonbonne remplie / boot) */
+.lemegeton-screen.flash { animation: lemeScreenFlash .7s ease-out; }
+@keyframes lemeScreenFlash {
+  0%   { box-shadow: inset 0 0 26px rgba(0,255,204,.14), 0 0 18px rgba(0,255,204,.1); }
+  30%  { box-shadow: inset 0 0 40px rgba(0,255,204,.5), 0 0 40px rgba(0,255,204,.55); }
+  100% { box-shadow: inset 0 0 26px rgba(0,255,204,.14), 0 0 18px rgba(0,255,204,.1); }
+}
+.fx-disabled .lemegeton-screen.flash { animation: none; }
+
 .lemegeton-status span,
 .lemegeton-status small {
   display: block;
