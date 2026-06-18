@@ -30,8 +30,8 @@ import {
   isAutoPurchaseEnabled,
   isLemegetonSkillActive,
   toggleLemegetonSkill,
-} from './clicker-state.js';
-import { loadSave, saveAll, readSaveError, readMigrationNotice } from './clicker-save.js';
+} from './engine/clicker-state.js';
+import { loadSave, saveAll, readSaveError, readMigrationNotice } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
 
 const app = document.getElementById('app');
@@ -41,9 +41,7 @@ const BUY_MULTIPLIERS = [1, 5, 10];
 const LAYOUT_KEY = 'nitro-clicker.layout';
 const LAYOUTS = ['nexus', 'orbital', 'command', 'mono'];
 const CORE_ZOOM_KEY = 'nitro-clicker.core.zoom';
-// index 0 = le plus zoomé (noyau principal à 80% de sa taille naturelle), puis dézoom
 const CORE_ZOOM_LEVELS = [0.80, 0.64, 0.50, 0.38, 0.28];
-// Upgrades dont l'icône (usine/soleil) ne doit PAS décorer l'orbite du noyau
 const MODULE_ICON_BLOCKLIST = new Set(['resonance', 'nitroFactory', 'enginePlant']);
 
 let auth;
@@ -132,7 +130,6 @@ function toast(message) {
   setTimeout(() => node.remove(), 2800);
 }
 
-// #3 — Affiche un toast si une erreur de sauvegarde localStorage a été détectée
 function flushSaveErrorToast() {
   const err = readSaveError();
   if (!err) return;
@@ -213,7 +210,7 @@ function renderShell() {
           <div class="prestige-upgrade-footer">
             <button class="upgrade-btn prestige-card" id="prestige-btn" type="button">
               <span class="upgrade-fill" id="prestige-fill"></span>
-              <div class="upgrade-head"><span class="upgrade-name">✦ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
+              <div class="upgrade-head"><span class="upgrade-name">❆ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
               <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
             </button>
           </div>
@@ -241,7 +238,7 @@ function renderShell() {
           <div class="meta-section-header">
             <span class="meta-section-accent"></span>
             <span class="meta-section-icon">◈</span>
-            <h2 class="meta-title">ÉCHELLE & MILESTONES</h2>
+            <h2 class="meta-title">ÉCHELLE &amp; MILESTONES</h2>
             <span class="meta-section-rule"></span>
           </div>
           <div class="scale-card" id="scale-card"></div>
@@ -283,7 +280,7 @@ function handleCoreClick(event) {
 
   if (result?.overdrive) {
     FX.overdrive();
-    window.eyes?.emotion?.(result.crit ? 'surprise' : 'excitement'); // LEMEGETON réagit
+    window.eyes?.emotion?.(result.crit ? 'surprise' : 'excitement');
     if (result.crit) {
       spawnSystemWave(`💥 CRIT OVERDRIVE +${fmt(result.overdriveGain)}`);
       lightningStorm(10);
@@ -316,7 +313,6 @@ function bindStaticEvents() {
     setText('fx-toggle', fxEnabled ? '✨ FX ON' : 'FX OFF');
   });
 
-  // Onglets boutique : UPGRADES / LEMEGETON
   document.querySelectorAll('[data-shop-tab]').forEach(tab => {
     tab.addEventListener('click', () => {
       const target = tab.dataset.shopTab;
@@ -333,7 +329,6 @@ function bindStaticEvents() {
     });
   });
 
-  // Sélecteur de zoom de la vue noyau
   document.querySelectorAll('[data-zoom-step]').forEach(btn => {
     btn.addEventListener('click', () => stepCoreZoom(Number(btn.dataset.zoomStep)));
   });
@@ -388,7 +383,6 @@ function bindStaticEvents() {
     });
   });
 
-  // #3 — Sauvegarde manuelle : toast succès ou erreur
   document.getElementById('save-btn').addEventListener('click', () => {
     const ok = saveAll(userId, state);
     if (ok) {
@@ -518,7 +512,6 @@ function spawnBouncingBurst(clientX, clientY, count = 8) {
       p.vx *= friction;
       p.vy *= friction;
       p.life -= p.decay * dt;
-      // Bounce off sphere wall
       const d = Math.sqrt(p.x * p.x + p.y * p.y);
       if (d > 0 && d + p.r > bR) {
         const nx = p.x / d, ny = p.y / d;
@@ -610,7 +603,7 @@ function sparkTendrils() {
 
 function spawnModule(upgradeId, level) {
   if (!fxEnabled) return;
-  if (MODULE_ICON_BLOCKLIST.has(upgradeId)) return; // pas d'icônes usine/soleil en orbite
+  if (MODULE_ICON_BLOCKLIST.has(upgradeId)) return;
   const orbit = document.getElementById('module-orbit');
   if (!orbit) return;
   const upgrade = UPGRADES.find(u => u.id === upgradeId);
@@ -649,7 +642,6 @@ function formatCoreScale(coreCount) {
   return `${pm.toPrecision(3)} pm`;
 }
 
-// Applique le zoom de la vue noyau : niveau manuel plafonné par l'auto-fit.
 function applyCoreZoom() {
   const panel = document.getElementById('core-panel');
   if (!panel) return;
@@ -684,35 +676,24 @@ function renderSubCores() {
   const coreRect = coreEl?.getBoundingClientRect();
   const panelRect = panel?.getBoundingClientRect();
 
-  // Rayon NON-SCALÉ du noyau : on divise par le zoom courant pour rester stable
-  // (sinon R_main dépend du zoom → boucle de rétroaction qui dézoome à l'infini).
   const curZoom = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1;
   const R_main = coreRect ? (coreRect.width / curZoom) / 2 : 110;
   const panelShort = panelRect ? Math.min(panelRect.width, panelRect.height) : 520;
 
-  // Petri-dish layout: each sub-core placed tangent to main core,
-  // orbit radius computed so no two sub-cores overlap each other.
-  // Constraint: chord between adjacent sub-cores ≥ 2 × maxR_sub
-  //   chord = 2 × orbitR × sin(π / N)  →  orbitR ≥ maxR_sub / sin(π/N)
-  // Vrais noyaux dupliqués : taille substantielle (55%→85% du principal),
-  // pour qu'ils se lisent comme de vrais noyaux côte à côte.
   const effOf = i => Math.min(0.85, 0.55 + (i - 1) * 0.06);
   let orbitR = 0;
   let systemExtent = R_main;
   if (coreCount > 0) {
     const maxR_sub  = Math.max(34, effOf(coreCount) * R_main);
-    // Écart généreux entre les noyaux (et avec le central) — l'auto-fit dézoome pour caser.
     const gap = Math.max(60, R_main * 0.55);
-    const minTangential = R_main + maxR_sub + gap;             // distance au noyau central
+    const minTangential = R_main + maxR_sub + gap;
     const minPacking    = coreCount > 1
-      ? maxR_sub / Math.sin(Math.PI / coreCount) + gap         // distance entre voisins
+      ? maxR_sub / Math.sin(Math.PI / coreCount) + gap
       : 0;
     orbitR      = Math.max(minTangential, minPacking);
     systemExtent = orbitR + maxR_sub;
   }
 
-  // Auto-fit : plancher de dézoom pour que tout le système tienne dans le panneau,
-  // borné à 0.32 pour ne jamais réduire les noyaux à des points.
   lastAutoFitZoom = coreCount > 0
     ? Math.max(0.32, Math.min(1, (panelShort * 0.80) / (systemExtent * 2)))
     : 1;
@@ -721,7 +702,6 @@ function renderSubCores() {
   const scaleEl = document.getElementById('core-scale-value');
   if (scaleEl) scaleEl.textContent = formatCoreScale(coreCount);
 
-  // Build sub-core DOM elements
   field.innerHTML = '';
   for (let i = 1; i <= coreCount; i++) {
     const eff     = effOf(i);
@@ -881,7 +861,6 @@ function renderStats() {
     btn.disabled = state.energy < req;
     setClassToggle(btn, 'can-buy', state.energy >= req);
   }
-
 }
 
 function setMeter(id, ratio) {
@@ -968,7 +947,7 @@ function renderUpgradeButton(upgrade) {
           <span class="upgrade-cost" data-upgrade-cost="${upgrade.id}">LOCKED</span>
         </div>
         <div class="upgrade-desc">${lockText}</div>
-        <div class="upgrade-buy-meta" data-upgrade-meta="${upgrade.id}">Déblocage progressif</div>
+        <div class="upgrade-buy-meta" data-upgrade-meta="${upgrade.id}">Évolution progressive</div>
       </button>`;
   }
 
@@ -1010,7 +989,6 @@ function triggerUnlockShimmer(btn) {
   });
 }
 
-// ── Arbre LEMEGETON ────────────────────────────────────────────────────────
 function getLemegetonSignature() {
   return LEMEGETON_SKILLS.map(skill => {
     const unlocked = isLemegetonSkillUnlocked(state, skill) ? 1 : 0;
@@ -1066,7 +1044,6 @@ function renderLemegetonSkillButton(skill) {
       </button>`;
   }
 
-  // Compétence activable déjà acquise → bouton interrupteur ON/PAUSE
   if (skill.toggleable && level >= 1) {
     const active = isLemegetonSkillActive(state, skill.id);
     return `
@@ -1095,7 +1072,6 @@ function renderLemegetonSkillButton(skill) {
 function bindLemegetonButtons() {
   document.querySelectorAll('[data-skill]:not(.locked)').forEach(btn => {
     btn.addEventListener('click', event => {
-      // Interrupteur ON/PAUSE pour les compétences activables déjà acquises
       if (btn.dataset.skillToggle) {
         const r = toggleLemegetonSkill(state, btn.dataset.skill);
         if (!r.ok) return;
@@ -1125,8 +1101,6 @@ function bindLemegetonButtons() {
   });
 }
 
-// Auto-achat : LEMEGETON n'améliore QUE les systèmes automatiques
-// (noyau automatique + auto-clicker de maintien), pas les upgrades manuels.
 const AUTO_PURCHASE_IDS = ['autoCore', 'autoClicker'];
 function runAutoPurchase() {
   if (!isAutoPurchaseEnabled(state)) return;
@@ -1226,7 +1200,7 @@ function renderModules(force = false) {
   lastModuleSignature = signature;
   orbit.innerHTML = '';
   for (const upgrade of UPGRADES) {
-    if (MODULE_ICON_BLOCKLIST.has(upgrade.id)) continue; // pas d'icônes usine/soleil en orbite
+    if (MODULE_ICON_BLOCKLIST.has(upgrade.id)) continue;
     const level = state.upgrades[upgrade.id] ?? 0;
     const count = Math.min(upgrade.id.includes('Factory') || upgrade.id.includes('Plant') ? 8 : 5, level);
     for (let i = 0; i < count; i++) {
@@ -1249,7 +1223,7 @@ function renderFactories(force = false) {
   const signature = `${layer.id}:${count}`;
   if (!force && signature === lastFactorySignature) return;
   lastFactorySignature = signature;
-  setHtml(field, Array.from({ length: count }, (_, i) => `<span class="factory-node" style="--x:${6 + (i * 17) % 88}%;--y:${12 + (i * 29) % 74}%;--d:${(i * -0.17).toFixed(2)}s">${i % 3 === 0 ? '🏭' : i % 3 === 1 ? '⚙' : '⬡'}</span>`).join(''));
+  setHtml(field, Array.from({ length: count }, (_, i) => `<span class="factory-node" style="--x:${6 + (i * 17) % 88}%;--y:${12 + (i * 29) % 74}%;--d:${(i * -0.17).toFixed(2)}s">${i % 3 === 0 ? '🏡' : i % 3 === 1 ? '⚙' : '⬡'}</span>`).join(''));
 }
 
 function renderTendrils(force = false) {
@@ -1275,7 +1249,6 @@ function setMeterNode(node, ratio) {
 
 function scheduleSave() {
   clearTimeout(saveTimer);
-  // #3 — saveAll peut échouer ; on consomme l'erreur après le debounce
   saveTimer = setTimeout(() => {
     const ok = saveAll(userId, state);
     if (!ok) flushSaveErrorToast();
@@ -1304,10 +1277,8 @@ function startLoop() {
     if (claimed.length) claimMilestonesAndRender();
   }, 1000);
 
-  // Auto-achat LEMEGETON : achète l'upgrade énergie abordable le moins cher.
   setInterval(runAutoPurchase, 700);
 
-  // #3 — Sauvegarde auto périodique avec détection d'erreur
   setInterval(() => {
     const ok = saveAll(userId, state);
     if (!ok) flushSaveErrorToast();
@@ -1332,12 +1303,10 @@ async function init() {
   profile = await getProfile(userId);
   state = loadSave(userId);
 
-  // #4 — Toast progression hors-ligne avec cap si applicable
   const offlineResult = applyOfflineProgress(state);
   const offlineGain = offlineResult?.gained ?? 0;
-  const cappedAt = offlineResult?.cappedAt;    // heures, présent uniquement si plafonné
+  const cappedAt = offlineResult?.cappedAt;
 
-  // Migration notice (#3 adjacent) — sauvegarde legacy détectée
   const migrationNotice = readMigrationNotice();
 
   renderShell();
@@ -1355,7 +1324,6 @@ async function init() {
 
   claimMilestonesAndRender();
 
-  // Toasts de démarrage (ordre : migration → offline → save error)
   if (migrationNotice) {
     const comp = migrationNotice.compensated && migrationNotice.compensation
       ? ` · +${fmt(migrationNotice.compensation.energy)} E, +${migrationNotice.compensation.fragments} F offerts`
@@ -1365,14 +1333,12 @@ async function init() {
 
   if (offlineGain > 0) {
     if (cappedAt != null) {
-      // #4 — Progression plafonnée : affiche la durée cap
       toast(`Hors-ligne · +${fmt(offlineGain)} E (plafonné à ${cappedAt.toFixed(1)}h).`);
     } else {
       toast(`Progression hors-ligne : +${fmt(offlineGain)} énergie.`);
     }
   }
 
-  // #3 — Erreur de sauvegarde éventuelle héritée de la session précédente
   flushSaveErrorToast();
 }
 

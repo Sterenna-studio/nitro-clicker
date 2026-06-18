@@ -1,1 +1,1 @@
-import '../plasma-feedback.js';
+export * from '../plasma-feedback.js';
