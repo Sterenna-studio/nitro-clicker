@@ -116,6 +116,48 @@
   text-align: left;
 }
 
+/* ── Panneau dédié : écran/visage de LEMEGETON (lib CyberAgent) ──────────── */
+.lemegeton-screen {
+  position: relative;
+  width: 100%;
+  height: clamp(118px, 14vw, 150px);
+  margin: 0 0 12px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0,255,204,.3);
+  background:
+    radial-gradient(circle at 50% 38%, rgba(0,255,204,.1), transparent 62%),
+    #02060b;
+  box-shadow: inset 0 0 26px rgba(0,255,204,.14), 0 0 18px rgba(0,255,204,.1);
+}
+/* Container interne à taille fixe (la lib lit la taille à l'init pour placer
+   les 2 yeux), centré et scalé par JS (fitEyeScreen) pour rentrer dans l'écran. */
+.lemegeton-screen .eye-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 440px;
+  height: 200px;
+  transform: translate(-50%, -50%) scale(0.6);
+  transform-origin: center;
+  pointer-events: none;
+  background: transparent !important;  /* la lib met un fond noir : on l'enlève */
+}
+/* Yeux blancs de la lib → bleu/vert électrique (aucune config couleur native) */
+.lemegeton-screen .eye {
+  background: radial-gradient(circle at 50% 42%, #d6fff5 0%, #00ffcc 42%, #00b3ff 92%) !important;
+  box-shadow: 0 0 16px rgba(0,255,204,.85), 0 0 34px rgba(0,180,255,.5) !important;
+}
+/* Scanline d'écran */
+.lemegeton-screen-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,255,204,.06) 0 1px, transparent 1px 3px);
+  opacity: .45;
+}
+.fx-disabled .lemegeton-screen-scan { display: none; }
+
 .lemegeton-status span,
 .lemegeton-status small {
   display: block;

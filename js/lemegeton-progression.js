@@ -93,6 +93,10 @@ function mount() {
 
   const statusHtml = `
     <section class="lemegeton-status" id="lemegeton-status">
+      <div class="lemegeton-screen" aria-hidden="true">
+        <div class="eye-container" id="lemegeton-eye"></div>
+        <span class="lemegeton-screen-scan"></span>
+      </div>
       <span id="lemegeton-kicker">BPRD POWER GRID</span>
       <strong id="lemegeton-label">SYSTÈME DORMANT</strong>
       <p id="lemegeton-text">Le Gwen Ha Star attend une source Nitro stable.</p>
@@ -108,8 +112,55 @@ function mount() {
     panel.insertAdjacentHTML('afterend', statusHtml);
   }
 
+  loadEyeScreen();
+  bindEyeTracking();
   update();
   setInterval(update, 700);
+}
+
+// Adapte l'échelle de l'œil pour caser le visage (2 yeux) dans l'écran du panneau.
+// Container interne fixe à 440×200 (bon écart entre les yeux), scalé pour rentrer.
+const EYE_BASE_W = 440;
+const EYE_BASE_H = 200;
+function fitEyeScreen() {
+  const screen = document.querySelector('.lemegeton-screen');
+  const ec = document.getElementById('lemegeton-eye');
+  if (!screen || !ec) return;
+  const scale = Math.max(0.2, Math.min(
+    (screen.clientWidth - 10) / EYE_BASE_W,
+    (screen.clientHeight - 10) / EYE_BASE_H,
+  ));
+  ec.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+}
+
+// Tracking léger de la souris : LEMEGETON glisse le regard partiellement
+// vers le curseur (reste majoritairement "devant lui").
+function bindEyeTracking() {
+  let last = 0;
+  window.addEventListener('mousemove', event => {
+    const now = performance.now();
+    if (now - last < 60) return;        // throttle ~16/s
+    last = now;
+    if (!window.eyes?.move) return;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    window.eyes.move(cx + (event.clientX - cx) * 0.45, cy + (event.clientY - cy) * 0.45);
+  }, { passive: true });
+}
+
+// Charge la lib d'yeux (CyberAgent) dans le panneau dédié de LEMEGETON.
+// Le container a une taille définie au moment de l'init → la lib rend les
+// yeux DEDANS (sinon elle bascule en plein écran). Puis on ajuste l'échelle.
+let eyeLoaded = false;
+function loadEyeScreen() {
+  if (eyeLoaded || !document.getElementById('lemegeton-eye')) return;
+  eyeLoaded = true;
+  const s = document.createElement('script');
+  s.src = 'https://cyberagentailab.github.io/Web-Eye-Animation/web-eye-animation.js';
+  s.async = true;
+  s.onload = () => { setTimeout(fitEyeScreen, 200); setTimeout(fitEyeScreen, 1000); };
+  document.head.appendChild(s);
+  window.addEventListener('resize', fitEyeScreen, { passive: true });
 }
 
 function readState() {
@@ -165,8 +216,11 @@ function update() {
   if (progressText) progressText.textContent = `${filled} / ${TANK_COUNT} bonbonnes · prochaine ${Math.floor(nextProgress * 100)}% · ${formatEnergy(lifetimeEnergy)} lifetime`;
 
   if (stage.id !== lastStage) {
+    const booting = lastStage !== '';
     lastStage = stage.id;
     dispatchLoreWave(stage.label);
+    // L'écran de LEMEGETON réagit aux paliers franchis
+    if (booting) window.eyes?.emotion?.(stage.id === 'lemegeton_boot' ? 'surprise' : 'excitement');
   }
 
   renderCoreCells(filled, prestige);
