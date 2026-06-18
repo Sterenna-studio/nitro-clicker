@@ -20,4 +20,4 @@ import './fx/overdrive.js';
 import './fx/plasma-feedback.js';
 import './lore/lemegeton-progression.js';
 
-import './prestige-beacon.js';
+import './engine/prestige-beacon.js';
