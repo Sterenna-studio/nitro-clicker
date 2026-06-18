@@ -1,1 +1,1 @@
-import '../core-controls.js';
+export * from '../core-controls.js';
