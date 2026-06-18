@@ -280,7 +280,11 @@ function handleCoreClick(event) {
 
   if (result?.overdrive) {
     FX.overdrive();
-    window.eyes?.emotion?.(result.crit ? 'surprise' : 'excitement');
+    // LEMEGETON réagit seulement aux CRIT overdrives, et pas à chaque fois
+    if (result.crit && Math.random() < 0.5) {
+      const reactions = ['surprise', 'excitement', 'joy', 'love'];
+      window.eyes?.emotion?.(reactions[Math.floor(Math.random() * reactions.length)]);
+    }
     if (result.crit) {
       spawnSystemWave(`💥 CRIT OVERDRIVE +${fmt(result.overdriveGain)}`);
       lightningStorm(10);

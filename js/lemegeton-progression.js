@@ -93,10 +93,17 @@ function mount() {
 
   const statusHtml = `
     <section class="lemegeton-status" id="lemegeton-status">
-      <div class="lemegeton-screen" aria-hidden="true">
-        <div class="eye-container" id="lemegeton-eye"></div>
-        <span class="lemegeton-screen-scan"></span>
+      <div class="lemegeton-screen-row">
+        <div class="lemegeton-screen" aria-hidden="true">
+          <div class="eye-container" id="lemegeton-eye"></div>
+          <span class="lemegeton-screen-scan"></span>
+        </div>
+        <div class="lemegeton-charge" id="lemegeton-charge" title="Charge LEMEGETON" aria-hidden="true">
+          <span class="lemegeton-charge-fill" id="lemegeton-charge-fill"></span>
+          <em class="lemegeton-charge-label">⚡</em>
+        </div>
       </div>
+      <div class="lemegeton-chronicle" id="lemegeton-chronicle" aria-hidden="true"></div>
       <span id="lemegeton-kicker">BPRD POWER GRID</span>
       <strong id="lemegeton-label">SYSTÈME DORMANT</strong>
       <p id="lemegeton-text">Le Gwen Ha Star attend une source Nitro stable.</p>
@@ -114,6 +121,7 @@ function mount() {
 
   loadEyeScreen();
   bindEyeTracking();
+  startChronicles();
   update();
   setInterval(update, 700);
 }
@@ -185,6 +193,41 @@ function glanceAtCore() {
   lookToward(r.left + r.width / 2, r.top + r.height / 2, 0.4);
 }
 
+// Petites bulles de conseils / chroniques de LEMEGETON, sous l'œil, de temps à autre.
+const CHRONICLES = [
+  'Conseil : la surcharge à 100% déclenche un Overdrive.',
+  'Conseil : les noyaux dupliqués multiplient ta production.',
+  'Conseil : brise la sphère pour libérer les fragments stockés.',
+  'Conseil : les fragments survivent au prestige — investis-les.',
+  'Conseil : l’auto-clicker entretient la surcharge tout seul.',
+  'Conseil : chaque prestige augmente l’échelle de production.',
+  'Conseil : la Surcharge critique multiplie un Overdrive sur N.',
+  'LEMEGETON : j’analyse les circuits du Gwen Ha Star…',
+  'LEMEGETON : la réparation du vaisseau progresse.',
+  'LEMEGETON : je détecte une résonance Nitro stable.',
+  'LEMEGETON : le réseau BPRD se recharge.',
+  'LEMEGETON : je veille sur le noyau.',
+];
+
+function startChronicles() {
+  const tick = () => {
+    showChronicle(CHRONICLES[Math.floor(Math.random() * CHRONICLES.length)]);
+    setTimeout(tick, 16000 + Math.random() * 14000);   // toutes les ~16–30 s
+  };
+  setTimeout(tick, 6000 + Math.random() * 6000);        // 1er message après ~6–12 s
+}
+
+function showChronicle(text) {
+  const el = document.getElementById('lemegeton-chronicle');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('show');
+  void el.offsetWidth;                                   // relance l'anim
+  el.classList.add('show');
+  clearTimeout(showChronicle._t);
+  showChronicle._t = setTimeout(() => el.classList.remove('show'), 6500);
+}
+
 // Charge la lib d'yeux (CyberAgent) dans le panneau dédié de LEMEGETON.
 // Le container a une taille définie au moment de l'init → la lib rend les
 // yeux DEDANS (sinon elle bascule en plein écran). Puis on ajuste l'échelle.
@@ -233,6 +276,15 @@ function update() {
     pulseTank(filled - 1);
     if (filled === TANK_COUNT) dispatchLoreWave('LEMEGETON ONLINE');
   }
+
+  // Bonbonne d'énergie à côté de l'écran : se remplit jusqu'à l'activation
+  // de LEMEGETON (1 Md lifetime ou Prestige 10), comme la première bonbonne.
+  const online = lifetimeEnergy >= TANK_STEP * TANK_COUNT || prestige >= 10;
+  const chargeRatio = online ? 1 : Math.min(1, lifetimeEnergy / (TANK_STEP * TANK_COUNT));
+  const chargeFill = document.getElementById('lemegeton-charge-fill');
+  if (chargeFill) chargeFill.style.transform = `scaleY(${chargeRatio.toFixed(4)})`;
+  const charge = document.getElementById('lemegeton-charge');
+  if (charge) charge.classList.toggle('full', online);
 
   const stage = getStage(filled, prestige, autoLevel);
   const panel = document.getElementById('core-panel');
