@@ -43,6 +43,8 @@ const LAYOUTS = ['nexus', 'orbital', 'command', 'mono'];
 const CORE_ZOOM_KEY = 'nitro-clicker.core.zoom';
 // index 0 = le plus zoomé (noyau principal à 80% de sa taille naturelle), puis dézoom
 const CORE_ZOOM_LEVELS = [0.80, 0.64, 0.50, 0.38, 0.28];
+// Upgrades dont l'icône (usine/soleil) ne doit PAS décorer l'orbite du noyau
+const MODULE_ICON_BLOCKLIST = new Set(['resonance', 'nitroFactory', 'enginePlant']);
 
 let auth;
 let profile;
@@ -172,7 +174,6 @@ function renderShell() {
     <section class="game-grid game-grid-wide" id="game-grid" data-layout="${currentLayout}">
       <article class="panel core-panel" id="core-panel">
         <div class="scale-radar" id="scale-radar" aria-hidden="true"></div>
-        <div class="factory-field" id="factory-field" aria-hidden="true"></div>
         <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
         <div class="core-viewport" id="core-viewport">
           <div class="sub-core-field" id="sub-core-field" aria-hidden="true"></div>
@@ -282,6 +283,7 @@ function handleCoreClick(event) {
 
   if (result?.overdrive) {
     FX.overdrive();
+    window.eyes?.emotion?.(result.crit ? 'surprise' : 'excitement'); // LEMEGETON réagit
     if (result.crit) {
       spawnSystemWave(`💥 CRIT OVERDRIVE +${fmt(result.overdriveGain)}`);
       lightningStorm(10);
@@ -608,6 +610,7 @@ function sparkTendrils() {
 
 function spawnModule(upgradeId, level) {
   if (!fxEnabled) return;
+  if (MODULE_ICON_BLOCKLIST.has(upgradeId)) return; // pas d'icônes usine/soleil en orbite
   const orbit = document.getElementById('module-orbit');
   if (!orbit) return;
   const upgrade = UPGRADES.find(u => u.id === upgradeId);
@@ -681,8 +684,10 @@ function renderSubCores() {
   const coreRect = coreEl?.getBoundingClientRect();
   const panelRect = panel?.getBoundingClientRect();
 
-  // Use actual measured core radius for precise geometry
-  const R_main = coreRect ? coreRect.width / 2 : 110;
+  // Rayon NON-SCALÉ du noyau : on divise par le zoom courant pour rester stable
+  // (sinon R_main dépend du zoom → boucle de rétroaction qui dézoome à l'infini).
+  const curZoom = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1;
+  const R_main = coreRect ? (coreRect.width / curZoom) / 2 : 110;
   const panelShort = panelRect ? Math.min(panelRect.width, panelRect.height) : 520;
 
   // Petri-dish layout: each sub-core placed tangent to main core,
@@ -696,18 +701,20 @@ function renderSubCores() {
   let systemExtent = R_main;
   if (coreCount > 0) {
     const maxR_sub  = Math.max(34, effOf(coreCount) * R_main);
-    const minTangential = R_main + maxR_sub + 10;              // touch main core
+    // Écart généreux entre les noyaux (et avec le central) — l'auto-fit dézoome pour caser.
+    const gap = Math.max(60, R_main * 0.55);
+    const minTangential = R_main + maxR_sub + gap;             // distance au noyau central
     const minPacking    = coreCount > 1
-      ? maxR_sub / Math.sin(Math.PI / coreCount) + 8           // touch each other
+      ? maxR_sub / Math.sin(Math.PI / coreCount) + gap         // distance entre voisins
       : 0;
     orbitR      = Math.max(minTangential, minPacking);
     systemExtent = orbitR + maxR_sub;
   }
 
-  // Auto-fit : plancher de dézoom pour que tout le système tienne dans le panneau.
-  // Sert de cap au zoom manuel (si trop de noyaux, on dézoome au-delà du choix).
+  // Auto-fit : plancher de dézoom pour que tout le système tienne dans le panneau,
+  // borné à 0.32 pour ne jamais réduire les noyaux à des points.
   lastAutoFitZoom = coreCount > 0
-    ? Math.min(1, (panelShort * 0.80) / (systemExtent * 2))
+    ? Math.max(0.32, Math.min(1, (panelShort * 0.80) / (systemExtent * 2)))
     : 1;
   applyCoreZoom();
 
@@ -808,7 +815,6 @@ function renderAll(force = false) {
   renderMilestones(force);
   renderModules(force);
   renderTendrils(force);
-  renderFactories(force);
   renderSubCores();
   renderLemegetonSkills(force);
 }
@@ -1220,6 +1226,7 @@ function renderModules(force = false) {
   lastModuleSignature = signature;
   orbit.innerHTML = '';
   for (const upgrade of UPGRADES) {
+    if (MODULE_ICON_BLOCKLIST.has(upgrade.id)) continue; // pas d'icônes usine/soleil en orbite
     const level = state.upgrades[upgrade.id] ?? 0;
     const count = Math.min(upgrade.id.includes('Factory') || upgrade.id.includes('Plant') ? 8 : 5, level);
     for (let i = 0; i < count; i++) {
