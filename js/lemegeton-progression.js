@@ -118,34 +118,58 @@ function mount() {
   setInterval(update, 700);
 }
 
-// Adapte l'échelle de l'œil pour caser le visage (2 yeux) dans l'écran du panneau.
-// Container interne fixe à 440×200 (bon écart entre les yeux), scalé pour rentrer.
-const EYE_BASE_W = 440;
+// Adapte l'échelle de l'œil pour caser le visage (2 yeux) dans l'écran.
+// Base large (880) → les yeux sont rendus petits (moitié) tout en gardant
+// un bon écart, puis le tout est scalé pour rentrer dans le panneau.
+const EYE_BASE_W = 880;
 const EYE_BASE_H = 200;
 function fitEyeScreen() {
   const screen = document.querySelector('.lemegeton-screen');
   const ec = document.getElementById('lemegeton-eye');
   if (!screen || !ec) return;
-  const scale = Math.max(0.2, Math.min(
+  const scale = Math.max(0.12, Math.min(
     (screen.clientWidth - 10) / EYE_BASE_W,
     (screen.clientHeight - 10) / EYE_BASE_H,
   ));
   ec.style.transform = `translate(-50%, -50%) scale(${scale.toFixed(3)})`;
 }
 
-// Tracking léger de la souris : LEMEGETON glisse le regard partiellement
-// vers le curseur (reste majoritairement "devant lui").
+// Le regard ne suit la souris QUE lorsqu'on survole le panneau de l'œil.
+// Hors survol, LEMEGETON regarde devant lui et glisse de temps en temps
+// légèrement vers le noyau (comme s'il l'observait).
+let eyeHover = false;
 function bindEyeTracking() {
+  const screen = document.querySelector('.lemegeton-screen');
+  if (screen) {
+    screen.addEventListener('mouseenter', () => { eyeHover = true; });
+    screen.addEventListener('mouseleave', () => { eyeHover = false; });
+  }
   let last = 0;
   window.addEventListener('mousemove', event => {
+    if (!eyeHover || !window.eyes?.move) return;   // tracking seulement au survol
     const now = performance.now();
-    if (now - last < 60) return;        // throttle ~16/s
+    if (now - last < 60) return;
     last = now;
-    if (!window.eyes?.move) return;
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    window.eyes.move(cx + (event.clientX - cx) * 0.45, cy + (event.clientY - cy) * 0.45);
+    window.eyes.move(event.clientX, event.clientY);
   }, { passive: true });
+
+  setInterval(glanceAtCore, 4500);
+}
+
+// Attirance occasionnelle, légère, du regard vers le noyau central.
+function glanceAtCore() {
+  if (eyeHover || !window.eyes?.move) return;
+  if (Math.random() > 0.55) return;                // pas à chaque fois
+  const core = document.getElementById('click-core');
+  if (!core) return;
+  const r = core.getBoundingClientRect();
+  if (!r.width) return;
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const tx = r.left + r.width / 2;
+  const ty = r.top + r.height / 2;
+  // léger : glisse à mi-chemin vers le noyau
+  window.eyes.move(cx + (tx - cx) * 0.5, cy + (ty - cy) * 0.5);
 }
 
 // Charge la lib d'yeux (CyberAgent) dans le panneau dédié de LEMEGETON.

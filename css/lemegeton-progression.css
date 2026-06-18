@@ -136,9 +136,9 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 440px;
+  width: 880px;                        /* base large = yeux petits (moitié), bien espacés */
   height: 200px;
-  transform: translate(-50%, -50%) scale(0.6);
+  transform: translate(-50%, -50%) scale(0.3);
   transform-origin: center;
   pointer-events: none;
   background: transparent !important;  /* la lib met un fond noir : on l'enlève */
