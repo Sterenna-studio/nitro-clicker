@@ -101,6 +101,7 @@
       <div class="panel">
         <h2>Réglages</h2>
         <div class="row"><label>Taille</label><input type="range" id="size" min="0.4" max="1.8" step="0.05" value="1"><span class="val" id="sizeVal">1.0</span></div>
+        <div class="row"><label>Écart yeux</label><input type="range" id="gap" min="0.5" max="0.98" step="0.02" value="0.9"><span class="val" id="gapVal">90%</span></div>
         <button class="toggle off" id="trackBtn" aria-pressed="false">👁 SUIVI SOURIS · OFF</button>
         <div class="row" style="margin-top:10px"><label>Intensité</label><input type="range" id="factor" min="0.02" max="0.15" step="0.01" value="0.15"><span class="val" id="factorVal">0.15</span></div>
         <p class="hint-small">Plafonnée à 0.15 = le niveau du jeu (jamais plus fort).</p>
@@ -208,21 +209,33 @@
       log('regard recentré');
     });
 
-    // Dimensionne le container d'après la largeur du stage (la lib lit la taille
-    // à l'init pour placer les 2 yeux) → les deux yeux tiennent dans l'écran.
-    (() => {
-      const w = Math.max(360, Math.min(620, stage.clientWidth - 48));
-      $('eye').style.width = w + 'px';
-      $('eye').style.height = Math.round(w * 0.62) + 'px';
-    })();
+    // L'écart entre les yeux = largeur du container (la lib lit la taille à
+    // l'init pour placer les 2 yeux). On (ré)initialise les yeux à la demande.
+    let gap = 0.9;   // fraction de la largeur du stage (plus = plus d'écart)
+    function initEyes() {
+      const eye = $('eye');
+      eye.innerHTML = '';                                   // repart à zéro
+      const w = Math.round(Math.max(340, Math.min(stage.clientWidth - 16, stage.clientWidth * gap)));
+      eye.style.width = w + 'px';
+      eye.style.height = Math.round(w * 0.6) + 'px';
+      applyColors();
+      const s = document.createElement('script');
+      s.src = 'https://cyberagentailab.github.io/Web-Eye-Animation/web-eye-animation.js?v=' + Date.now();
+      s.onload = () => log('robot <b>en ligne</b> — joue avec les contrôles');
+      s.onerror = () => log('⚠️ échec du chargement de la lib (CDN injoignable)');
+      document.head.appendChild(s);
+    }
 
-    // Charge la lib une fois le container présent (elle lit la taille à l'init)
-    applyColors();
-    const s = document.createElement('script');
-    s.src = 'https://cyberagentailab.github.io/Web-Eye-Animation/web-eye-animation.js';
-    s.onload = () => { log('robot <b>en ligne</b> — joue avec les contrôles'); };
-    s.onerror = () => { log('⚠️ échec du chargement de la lib (CDN injoignable)'); };
-    document.head.appendChild(s);
+    // Slider d'écart : ré-init des yeux (débounce) pour reprendre la nouvelle largeur
+    let gapTimer = null;
+    $('gap').addEventListener('input', () => {
+      gap = +$('gap').value;
+      $('gapVal').textContent = Math.round(gap * 100) + '%';
+      clearTimeout(gapTimer);
+      gapTimer = setTimeout(initEyes, 300);
+    });
+
+    initEyes();
   </script>
 </body>
 </html>
