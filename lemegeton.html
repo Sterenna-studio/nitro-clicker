@@ -115,6 +115,7 @@
       </div>
 
       <div class="panel">
+        <button class="reset" id="export" style="margin-bottom:8px; border-color: var(--primary); color: var(--primary);">📤 EXPORTER LES PARAMÈTRES</button>
         <button class="reset" id="reset">↺ RÉINITIALISER LE REGARD</button>
         <div class="log" id="log" style="margin-top:10px">Chargement du robot…</div>
       </div>
@@ -207,6 +208,27 @@
       window.eyes?.move?.(r.left + r.width / 2, r.top + r.height / 2);
       window.eyes?.emotion?.('joy');
       log('regard recentré');
+    });
+
+    // Export des paramètres réglés (couleurs, taille, écart, suivi) en JSON
+    $('export').addEventListener('click', () => {
+      const params = {
+        lib: 'cyberagentailab/Web-Eye-Animation',
+        couleurs: { centre: $('c1').value, milieu: $('c2').value, bord: $('c3').value, halo: $('glow').value },
+        taille: +$('size').value,
+        ecartYeux: +$('gap').value,
+        suiviIntensite: +$('factor').value,
+        exporte_le: new Date().toISOString(),
+      };
+      const json = JSON.stringify(params, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'lemegeton-params.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      navigator.clipboard?.writeText(json).catch(() => {});
+      log('paramètres <b>exportés</b> (téléchargés + copiés dans le presse-papier)');
     });
 
     // L'écart entre les yeux = largeur du container (la lib lit la taille à
