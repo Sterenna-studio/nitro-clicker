@@ -55,6 +55,11 @@
     .row .val { flex: 0 0 38px; text-align: right; font-size: 9px; color: var(--primary); }
     .check { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--text); cursor: pointer; }
     .check input { accent-color: var(--primary); }
+    .toggle { width: 100%; padding: 10px; border-radius: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; cursor: pointer; transition: .15s; }
+    .toggle.off { border: 1px solid rgba(255,255,255,.18); background: transparent; color: var(--muted); }
+    .toggle.off:hover { border-color: var(--primary); color: var(--text); }
+    .toggle.on { border: 1px solid var(--primary); background: rgba(0,255,204,.16); color: var(--primary); box-shadow: 0 0 16px rgba(0,255,204,.2); }
+    .hint-small { font-size: 8px; letter-spacing: .08em; color: var(--muted); margin-top: 6px; }
     .reset { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: var(--text); font-family: var(--mono); font-size: 10px; letter-spacing: .14em; cursor: pointer; }
     .reset:hover { border-color: var(--primary); color: var(--primary); }
     .log { font-size: 9px; letter-spacing: .06em; color: var(--muted); min-height: 14px; }
@@ -96,8 +101,9 @@
       <div class="panel">
         <h2>Réglages</h2>
         <div class="row"><label>Taille</label><input type="range" id="size" min="0.4" max="1.8" step="0.05" value="1"><span class="val" id="sizeVal">1.0</span></div>
-        <label class="check"><input type="checkbox" id="follow"> Suivi de la souris</label>
-        <div class="row" style="margin-top:8px"><label>Intensité</label><input type="range" id="factor" min="0.05" max="1" step="0.05" value="0.6"><span class="val" id="factorVal">0.6</span></div>
+        <button class="toggle off" id="trackBtn" aria-pressed="false">👁 SUIVI SOURIS · OFF</button>
+        <div class="row" style="margin-top:10px"><label>Intensité</label><input type="range" id="factor" min="0.02" max="0.15" step="0.01" value="0.15"><span class="val" id="factorVal">0.15</span></div>
+        <p class="hint-small">Plafonnée à 0.15 = le niveau du jeu (jamais plus fort).</p>
       </div>
 
       <div class="panel">
@@ -157,20 +163,42 @@
     };
     ['tx','ty','tz'].forEach(id => $(id).addEventListener('input', applyTarget));
 
-    // Regard : clic dans l'écran + suivi souris optionnel (dampé)
+    // Regard : clic dans l'écran (direct) + suivi souris (plafonné comme le jeu)
+    const GAME_TRACK_FACTOR = 0.15;   // valeur du jeu : on ne dépasse jamais
     const stage = $('stage');
-    function look(clientX, clientY, factor = 1) {
+    function look(clientX, clientY, factor, clamp) {
       if (!window.eyes?.move) return;
       const r = stage.getBoundingClientRect();
       const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      window.eyes.move(cx + (clientX - cx) * factor, cy + (clientY - cy) * factor);
+      let dx = (clientX - cx) * factor;
+      let dy = (clientY - cy) * factor;
+      if (clamp) {   // même bornage que le jeu : l'œil reste dans le cadre
+        const mx = r.width * 0.28, my = r.height * 0.28;
+        dx = Math.max(-mx, Math.min(mx, dx));
+        dy = Math.max(-my, Math.min(my, dy));
+      }
+      window.eyes.move(cx + dx, cy + dy);
     }
-    stage.addEventListener('click', e => { look(e.clientX, e.clientY, 1); log(`move vers le clic`); });
+    stage.addEventListener('click', e => { look(e.clientX, e.clientY, 1, false); log('move vers le clic'); });
+
+    // Bouton toggle du suivi souris
+    let tracking = false;
+    const trackBtn = $('trackBtn');
+    trackBtn.addEventListener('click', () => {
+      tracking = !tracking;
+      trackBtn.classList.toggle('on', tracking);
+      trackBtn.classList.toggle('off', !tracking);
+      trackBtn.setAttribute('aria-pressed', tracking ? 'true' : 'false');
+      trackBtn.textContent = `👁 SUIVI SOURIS · ${tracking ? 'ON' : 'OFF'}`;
+      log(`suivi souris <b>${tracking ? 'activé' : 'désactivé'}</b>`);
+    });
+
     let lastMove = 0;
     stage.addEventListener('mousemove', e => {
-      if (!$('follow').checked) return;
+      if (!tracking) return;
       const now = performance.now(); if (now - lastMove < 50) return; lastMove = now;
-      look(e.clientX, e.clientY, +$('factor').value);
+      const factor = Math.min(GAME_TRACK_FACTOR, +$('factor').value);   // jamais plus fort que le jeu
+      look(e.clientX, e.clientY, factor, true);
     });
 
     $('reset').addEventListener('click', () => {
