@@ -27,6 +27,21 @@ function saveSettings() {
 let master = null;       // bus -> compresseur -> sortie
 let reverbNode = null;   // réverb (convolution)
 let noiseBuffer = null;
+const ladderState = {};  // index de gamme par son (clic mélodique qui monte)
+
+// Renvoie la note de base courante pour un son à gamme (0 si non concerné).
+// L'index monte à chaque appel et se remet à zéro après une pause.
+function ladderNote(id, sound) {
+  if (!Array.isArray(sound.scale) || !sound.scale.length) return 0;
+  const nowMs = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const st = ladderState[id] || { idx: 0, last: 0 };
+  if (nowMs - st.last > Number(sound.scaleResetMs ?? 700)) st.idx = 0;
+  const note = Number(sound.scale[st.idx % sound.scale.length]);
+  st.idx += 1;
+  st.last = nowMs;
+  ladderState[id] = st;
+  return note;
+}
 
 function ctx() {
   if (!settings.enabled) return null;
@@ -45,18 +60,18 @@ function ctx() {
 function ensureBus(context) {
   if (master) return;
   const comp = context.createDynamicsCompressor();
-  comp.threshold.value = -16; comp.knee.value = 26; comp.ratio.value = 3.2;
-  comp.attack.value = 0.003; comp.release.value = 0.2;
+  comp.threshold.value = -20; comp.knee.value = 28; comp.ratio.value = 2.5;
+  comp.attack.value = 0.004; comp.release.value = 0.22;
   comp.connect(context.destination);
 
   master = context.createGain();
-  master.gain.value = 1.35;       // makeup gain (compense le compresseur)
+  master.gain.value = 1.15;       // makeup gain doux (évite la dureté)
   master.connect(comp);
 
   reverbNode = context.createConvolver();
-  reverbNode.buffer = makeImpulse(context, 1.1, 2.8);
+  reverbNode.buffer = makeImpulse(context, 0.9, 3.4);   // réverb courte et douce (chaleur)
   const reverbReturn = context.createGain();
-  reverbReturn.gain.value = 0.85;
+  reverbReturn.gain.value = 0.7;
   reverbNode.connect(reverbReturn);
   reverbReturn.connect(comp);
 }
@@ -83,7 +98,7 @@ function getNoise(context) {
 
 // Joue une "voix" (un step) : oscillateur(s) OU bruit, filtre optionnel avec
 // balayage, glissando de hauteur, enveloppe douce, panoramique, envoi réverb.
-function playStep(context, step, volume, now) {
+function playStep(context, step, volume, now, base = 0) {
   const start = now + Number(step.delay ?? 0);
   const dur = Number(step.dur ?? 0.1);
   const peak = Math.max(0.0002, volume * Number(step.gain ?? 0.04));
@@ -130,12 +145,14 @@ function playStep(context, step, volume, now) {
   }
 
   const voices = Math.max(1, Math.floor(step.voices ?? 1));
-  const baseFreq = Math.max(20, Number(step.freq ?? 440));
+  // En mode gamme (base > 0), `mul` donne la fréquence en ratio de la note courante.
+  const baseFreq = Math.max(20, base && step.mul != null ? base * Number(step.mul) : Number(step.freq ?? 440));
+  const toFreq = base && step.mulTo != null ? base * Number(step.mulTo) : (step.freqTo != null ? Number(step.freqTo) : null);
   for (let v = 0; v < voices; v++) {
     const osc = context.createOscillator();
     osc.type = step.type ?? 'sine';
     osc.frequency.setValueAtTime(baseFreq, start);
-    if (step.freqTo) osc.frequency.exponentialRampToValueAtTime(Math.max(20, Number(step.freqTo)), start + dur);
+    if (toFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(20, toFreq), start + dur);
     const spread = voices > 1 ? (v / (voices - 1) - 0.5) * 2 : 0;
     const rand = step.detune ? (Math.random() * 2 - 1) * Number(step.detune) : 0;
     osc.detune.setValueAtTime(spread * Number(step.spread ?? 14) + rand, start);
@@ -161,8 +178,12 @@ function playSound(id, options = {}) {
   const volume = clamp01((options.volume ?? 1) * settings.masterVolume * soundVolume);
   const now = context.currentTime;
 
+  // Mode gamme : la note de base grimpe à chaque déclenchement (clic mélodique),
+  // et se réinitialise après une pause → effet « jouissif » qui monte.
+  const base = ladderNote(id, sound);
+
   for (const step of sound.synth ?? []) {
-    try { playStep(context, step, volume, now); } catch { /* un step défaillant ne casse ni le son ni le jeu */ }
+    try { playStep(context, step, volume, now, base); } catch { /* un step défaillant ne casse ni le son ni le jeu */ }
   }
 
   return true;
