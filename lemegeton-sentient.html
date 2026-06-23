@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEMEGETON · Sentient Eye test</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--primary:#00ffcc;--accent:#ff4fd8;--warn:#ffd166;--text:#cfe6f2;--muted:rgba(160,200,225,.55);--border:rgba(0,255,204,.18);--surface:#0c1218;--mono:'Share Tech Mono',monospace;--display:'Exo 2',sans-serif}
+    html,body{min-height:100vh;background:radial-gradient(circle at 50% -10%,#0a1622,#06090e 60%);color:var(--text);font-family:var(--mono)}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)}
+    header h1{font-family:var(--display);font-size:15px;letter-spacing:.16em;color:var(--primary)}
+    header small{font-size:9px;letter-spacing:.2em;color:var(--muted);display:block}
+    .top-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+    .top-actions a{color:var(--text);text-decoration:none;font-size:10px;letter-spacing:.14em;border:1px solid var(--border);padding:7px 12px;border-radius:8px}
+    .top-actions a:hover{border-color:var(--primary);color:var(--primary)}
+    main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:16px;max-width:1220px;margin:0 auto}
+    @media(max-width:860px){main{grid-template-columns:1fr}header{align-items:flex-start;flex-direction:column}}
+    .stage{position:relative;min-height:64vh;border-radius:14px;overflow:hidden;border:1px solid rgba(0,255,204,.3);background:#02060b;box-shadow:inset 0 0 60px rgba(0,255,204,.08)}
+    .stage::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(0,255,204,.04),transparent 28%,transparent 72%,rgba(255,79,216,.04)),repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 4px)}
+    canvas{position:absolute;inset:0;display:block;width:100%;height:100%;cursor:crosshair}
+    .hud{position:absolute;left:14px;bottom:12px;right:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:none;color:var(--muted);font-size:9px;letter-spacing:.12em}
+    .hud b{color:var(--primary);font-weight:400}
+    .controls{display:flex;flex-direction:column;gap:14px}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px}
+    .panel h2{font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+    .btn-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+    button.emo,.reset{font-family:var(--mono);font-size:10px;color:var(--text);background:rgba(0,255,204,.06);border:1px solid var(--border);border-radius:8px;padding:8px 6px;cursor:pointer}
+    button.emo:hover,.reset:hover{background:rgba(0,255,204,.16);border-color:var(--primary);color:var(--primary)}
+    button.emo.active{border-color:var(--primary);color:var(--primary);box-shadow:0 0 14px rgba(0,255,204,.14)}
+    .row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .row label{flex:0 0 92px;font-size:9px;color:var(--muted)}
+    .row input[type=range]{flex:1;accent-color:var(--primary)}
+    .row input[type=color]{width:38px;height:26px;background:none;border:1px solid var(--border);border-radius:6px;cursor:pointer}
+    .row .val{flex:0 0 38px;text-align:right;font-size:9px;color:var(--primary)}
+    .reset{width:100%;letter-spacing:.14em;background:transparent}
+    .reset.primary{border-color:var(--primary);color:var(--primary);background:rgba(0,255,204,.1)}
+    .log{font-size:9px;color:var(--muted);line-height:1.5;margin-top:8px}
+    .source{font-size:9px;line-height:1.5;color:var(--muted)}
+    .source a{color:var(--primary);text-decoration:none}
+    .source a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>LEMEGETON · SENTIENT EYE</h1><small>PROCEDURAL FACE RIG · CANVAS WEB TEST</small></div>
+    <nav class="top-actions">
+      <a href="./lemegeton-compare.html">COMPARER</a>
+      <a href="./lemegeton-face.html">VISAGE</a>
+      <a href="./">JOUER</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="stage" id="stage">
+      <canvas id="cv"></canvas>
+      <div class="hud"><span>clic: orienter le regard</span><span><b id="stateLabel">neutral</b> · bio-kernel web</span></div>
+    </section>
+
+    <aside class="controls">
+      <div class="panel">
+        <h2>Emotions</h2>
+        <div class="btn-grid" id="moods"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Rig procedural</h2>
+        <div class="row"><label>Taille</label><input type="range" id="size" min="0.7" max="1.35" step="0.01" value="1"><span class="val" id="sizeVal">1.00</span></div>
+        <div class="row"><label>Ecart</label><input type="range" id="gap" min="0.12" max="0.42" step="0.01" value="0.28"><span class="val" id="gapVal">.28</span></div>
+        <div class="row"><label>Tension</label><input type="range" id="tension" min="0" max="1" step="0.01" value="0.55"><span class="val" id="tensionVal">.55</span></div>
+        <div class="row"><label>Poids</label><input type="range" id="weight" min="0" max="1" step="0.01" value="0.2"><span class="val" id="weightVal">.20</span></div>
+      </div>
+
+      <div class="panel">
+        <h2>Surgery test</h2>
+        <div class="row"><label>Scars</label><input type="range" id="scar" min="0" max="1" step="0.01" value="0.28"><span class="val" id="scarVal">.28</span></div>
+        <div class="row"><label>Glitch</label><input type="range" id="glitch" min="0" max="1" step="0.01" value="0.16"><span class="val" id="glitchVal">.16</span></div>
+        <div class="row"><label>Glow</label><input type="color" id="glow" value="#00ffcc"></div>
+        <button class="reset" id="blink" type="button">CLIGNEMENT</button>
+      </div>
+
+      <div class="panel">
+        <button class="reset primary" id="export" type="button">EXPORTER PRESET</button>
+        <div class="log" id="log">Prototype web inspire de Sentient Eye Engine. Pas d'import Python/Pygame.</div>
+      </div>
+
+      <div class="panel source">
+        Source d'inspiration:
+        <a href="https://github.com/Sentient-LabsDev/Sentient-Eye-Engine" target="_blank" rel="noreferrer">Sentient-LabsDev/Sentient-Eye-Engine</a>.
+        Cette page est une adaptation canvas autonome pour test navigateur.
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const cv = $('cv');
+    const ctx = cv.getContext('2d');
+    const stage = $('stage');
+    const moods = {
+      neutral: { brow: 0, lid: 0.08, squint: 0.04, mouth: 0.05 },
+      focus: { brow: -0.35, lid: 0.18, squint: 0.16, mouth: 0.02 },
+      anger: { brow: -0.8, lid: 0.28, squint: 0.3, mouth: -0.12 },
+      joy: { brow: 0.28, lid: -0.05, squint: -0.12, mouth: 0.22 },
+      fear: { brow: 0.72, lid: -0.22, squint: -0.22, mouth: 0.34 },
+      sleepy: { brow: -0.1, lid: 0.55, squint: 0.18, mouth: -0.02 },
+      corrupt: { brow: -0.45, lid: 0.08, squint: 0.04, mouth: 0.12 },
+      love: { brow: 0.45, lid: -0.02, squint: -0.08, mouth: 0.28 },
+    };
+    const S = {
+      mood: 'neutral',
+      lookX: 0,
+      lookY: 0,
+      targetX: 0,
+      targetY: 0,
+      blink: 0,
+      blinkTarget: 0,
+      size: 1,
+      gap: 0.28,
+      tension: 0.55,
+      weight: 0.2,
+      scar: 0.28,
+      glitch: 0.16,
+      glow: '#00ffcc',
+      time: 0,
+    };
+    let W = 0;
+    let H = 0;
+    let dpr = 1;
+
+    function resize() {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = cv.clientWidth;
+      H = cv.clientHeight;
+      cv.width = Math.max(1, Math.floor(W * dpr));
+      cv.height = Math.max(1, Math.floor(H * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    new ResizeObserver(resize).observe(cv);
+    resize();
+
+    function hexToRgb(hex) {
+      return {
+        r: parseInt(hex.slice(1, 3), 16),
+        g: parseInt(hex.slice(3, 5), 16),
+        b: parseInt(hex.slice(5, 7), 16),
+      };
+    }
+
+    function rgba(hex, alpha) {
+      const c = hexToRgb(hex);
+      return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+    }
+
+    function roundedPath(x, y, w, h, r) {
+      r = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawBackplate(cx, cy, w, h) {
+      ctx.save();
+      ctx.strokeStyle = rgba(S.glow, 0.2);
+      ctx.lineWidth = 1;
+      ctx.shadowColor = rgba(S.glow, 0.35);
+      ctx.shadowBlur = 22;
+      roundedPath(cx - w / 2, cy - h / 2, w, h, h * 0.22);
+      ctx.stroke();
+      for (let i = 0; i < 9; i++) {
+        const x = cx - w * 0.44 + i * w * 0.11;
+        ctx.beginPath();
+        ctx.moveTo(x, cy - h * 0.44);
+        ctx.lineTo(x + Math.sin(S.time + i) * 8, cy + h * 0.44);
+        ctx.strokeStyle = rgba(S.glow, 0.04 + i * 0.008);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function eyeShape(x, y, w, h, side, mood) {
+      const sag = S.weight * h * 0.24;
+      const squint = mood.squint * h;
+      const topTilt = mood.brow * side * h * 0.18;
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2, y);
+      ctx.bezierCurveTo(x - w * 0.42, y - h * 0.58 + sag + topTilt, x + w * 0.42, y - h * 0.58 + sag - topTilt, x + w / 2, y);
+      ctx.bezierCurveTo(x + w * 0.38, y + h * 0.42 + squint, x - w * 0.38, y + h * 0.42 + squint, x - w / 2, y);
+      ctx.closePath();
+    }
+
+    function drawEye(x, y, w, h, side, mood) {
+      const blinkCut = Math.max(S.blink, mood.lid);
+      const glitchOffset = S.mood === 'corrupt' || Math.random() < S.glitch * 0.03
+        ? (Math.random() * 2 - 1) * S.glitch * 18
+        : 0;
+      const ex = x + glitchOffset;
+      const ey = y + Math.sin(S.time * 2.1 + side) * 2;
+
+      ctx.save();
+      eyeShape(ex, ey, w, h, side, mood);
+      ctx.clip();
+
+      const g = ctx.createRadialGradient(ex - w * 0.12, ey - h * 0.2, 4, ex, ey, w * 0.72);
+      g.addColorStop(0, '#efffff');
+      g.addColorStop(0.36, S.glow);
+      g.addColorStop(1, '#0077aa');
+      ctx.shadowColor = S.glow;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = g;
+      eyeShape(ex, ey, w, h, side, mood);
+      ctx.fill();
+
+      const px = ex + S.lookX * w * 0.18;
+      const py = ey + S.lookY * h * 0.18 + S.weight * h * 0.1;
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#041018';
+      ctx.beginPath();
+      ctx.ellipse(px, py, w * 0.14, h * 0.26, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(S.glow, 0.7);
+      ctx.beginPath();
+      ctx.ellipse(px - w * 0.035, py - h * 0.07, w * 0.025, h * 0.05, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (blinkCut > 0.02) {
+        ctx.fillStyle = '#02060b';
+        ctx.fillRect(ex - w * 0.62, ey - h * 0.62, w * 1.24, h * 1.24 * blinkCut);
+      }
+
+      ctx.restore();
+      ctx.save();
+      ctx.strokeStyle = rgba(S.glow, 0.75);
+      ctx.lineWidth = 2;
+      ctx.shadowColor = S.glow;
+      ctx.shadowBlur = 12;
+      eyeShape(ex, ey, w, h, side, mood);
+      ctx.stroke();
+      ctx.restore();
+
+      drawBrow(ex, ey - h * 0.62, w * 1.05, h * 0.42, side, mood);
+      drawScars(ex, ey, w, h, side);
+    }
+
+    function drawBrow(x, y, w, h, side, mood) {
+      const points = [];
+      const base = mood.brow * h * 0.5;
+      for (let i = 0; i < 5; i++) {
+        const p = i / 4;
+        const px = x - w / 2 + p * w;
+        const wave = Math.sin(S.time * 1.9 + i * 0.85 + side) * h * 0.05;
+        const bend = (Math.abs(p - 0.5) - 0.5) * base * side;
+        const py = y + wave + bend - S.tension * h * 0.18;
+        points.push({ x: px, y: py });
+      }
+      ctx.save();
+      ctx.strokeStyle = rgba(S.glow, 0.8);
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = S.glow;
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const midX = (points[i - 1].x + points[i].x) / 2;
+        const midY = (points[i - 1].y + points[i].y) / 2;
+        ctx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, midX, midY);
+      }
+      ctx.lineTo(points[4].x, points[4].y);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.fillStyle = '#02060b';
+      points.forEach((p, i) => {
+        if (i === 0 || i === points.length - 1) return;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    function drawScars(x, y, w, h, side) {
+      if (S.scar <= 0.01) return;
+      const count = Math.ceil(S.scar * 5);
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.shadowColor = S.mood === 'corrupt' ? '#ff4fd8' : S.glow;
+      ctx.shadowBlur = 8;
+      for (let i = 0; i < count; i++) {
+        const seed = side * 20 + i * 7.3;
+        const sx = x - w * 0.34 + ((Math.sin(seed) + 1) / 2) * w * 0.68;
+        const sy = y - h * 0.32 + ((Math.cos(seed * 1.2) + 1) / 2) * h * 0.52;
+        const len = h * (0.12 + 0.12 * ((Math.sin(seed * 2) + 1) / 2));
+        ctx.strokeStyle = i % 2 ? rgba('#ff4fd8', 0.62) : rgba(S.glow, 0.55);
+        ctx.lineWidth = 1 + S.scar * 2;
+        ctx.beginPath();
+        ctx.moveTo(sx - len * 0.4, sy - len * 0.5);
+        ctx.lineTo(sx + len * 0.3, sy + len * 0.5);
+        ctx.stroke();
+        if (S.glitch > 0.35) {
+          ctx.strokeStyle = rgba('#ffffff', 0.25);
+          ctx.beginPath();
+          ctx.moveTo(sx - len * 0.2 + Math.random() * 8, sy);
+          ctx.lineTo(sx + len * 0.5 + Math.random() * 8, sy + Math.random() * 5);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawMouth(cx, cy, w, mood) {
+      const open = Math.max(0, mood.mouth);
+      const down = Math.min(0, mood.mouth);
+      const h = w * (0.04 + open * 0.12);
+      ctx.save();
+      ctx.strokeStyle = rgba(S.glow, 0.78);
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = S.glow;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      if (down < 0) {
+        ctx.moveTo(cx - w * 0.28, cy);
+        ctx.quadraticCurveTo(cx, cy - w * 0.08, cx + w * 0.28, cy);
+      } else {
+        ctx.moveTo(cx - w * 0.28, cy);
+        ctx.quadraticCurveTo(cx, cy + h, cx + w * 0.28, cy);
+      }
+      ctx.stroke();
+      if (open > 0.22) {
+        ctx.fillStyle = '#02060b';
+        roundedPath(cx - w * 0.12, cy - h * 0.2, w * 0.24, h * 1.2, h * 0.4);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawGlitch() {
+      if (S.glitch <= 0.02) return;
+      const intensity = S.mood === 'corrupt' ? Math.min(1, S.glitch + 0.35) : S.glitch;
+      ctx.save();
+      for (let i = 0; i < 9 * intensity; i++) {
+        const y = Math.random() * H;
+        const x = Math.random() * W;
+        const w = 28 + Math.random() * 220 * intensity;
+        ctx.fillStyle = i % 2 ? rgba('#ff4fd8', 0.12) : rgba(S.glow, 0.12);
+        ctx.fillRect(x, y, w, 1 + Math.random() * 3);
+      }
+      ctx.restore();
+    }
+
+    function frame() {
+      S.time += 0.016;
+      S.lookX += (S.targetX - S.lookX) * 0.12;
+      S.lookY += (S.targetY - S.lookY) * 0.12;
+      S.blink += (S.blinkTarget - S.blink) * 0.42;
+      if (S.blink > 0.92) S.blinkTarget = 0;
+
+      ctx.clearRect(0, 0, W, H);
+      const mood = moods[S.mood];
+      const cx = W / 2;
+      const cy = H * 0.48;
+      const eyeW = Math.min(W, H) * 0.26 * S.size;
+      const eyeH = eyeW * 0.5;
+      const gap = W * S.gap;
+      drawBackplate(cx, cy, Math.min(W * 0.82, eyeW * 3.4 + gap), eyeH * 2.8);
+      drawEye(cx - eyeW / 2 - gap / 2, cy, eyeW, eyeH, -1, mood);
+      drawEye(cx + eyeW / 2 + gap / 2, cy, eyeW, eyeH, 1, mood);
+      drawMouth(cx, cy + eyeH * 1.18, eyeW * 1.25, mood);
+      drawGlitch();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    setInterval(() => {
+      if (Math.random() < 0.65) S.blinkTarget = 1;
+    }, 2800);
+
+    setInterval(() => {
+      if (S.mood === 'focus') return;
+      S.targetX = (Math.random() * 2 - 1) * 0.65;
+      S.targetY = (Math.random() * 2 - 1) * 0.45;
+      setTimeout(() => {
+        S.targetX = 0;
+        S.targetY = 0;
+      }, 1200);
+    }, 4800);
+
+    const moodRoot = $('moods');
+    Object.keys(moods).forEach(name => {
+      const b = document.createElement('button');
+      b.className = 'emo';
+      b.type = 'button';
+      b.dataset.mood = name;
+      b.textContent = name;
+      b.addEventListener('click', () => setMood(name));
+      moodRoot.appendChild(b);
+    });
+
+    function setMood(name) {
+      S.mood = name;
+      $('stateLabel').textContent = name;
+      document.querySelectorAll('[data-mood]').forEach(btn => btn.classList.toggle('active', btn.dataset.mood === name));
+      $('log').textContent = `emotion preset: ${name}`;
+    }
+    setMood('neutral');
+
+    function bindRange(id, key, format = value => Number(value).toFixed(2)) {
+      const input = $(id);
+      const out = $(`${id}Val`);
+      input.addEventListener('input', () => {
+        S[key] = Number(input.value);
+        out.textContent = format(input.value);
+      });
+    }
+    bindRange('size', 'size');
+    bindRange('gap', 'gap');
+    bindRange('tension', 'tension');
+    bindRange('weight', 'weight');
+    bindRange('scar', 'scar');
+    bindRange('glitch', 'glitch');
+    $('glow').addEventListener('input', () => { S.glow = $('glow').value; });
+    $('blink').addEventListener('click', () => { S.blinkTarget = 1; });
+
+    stage.addEventListener('click', event => {
+      const r = stage.getBoundingClientRect();
+      S.targetX = Math.max(-1, Math.min(1, ((event.clientX - r.left) / r.width - 0.5) * 2));
+      S.targetY = Math.max(-1, Math.min(1, ((event.clientY - r.top) / r.height - 0.45) * 2));
+      $('log').textContent = `target gaze: ${S.targetX.toFixed(2)}, ${S.targetY.toFixed(2)}`;
+    });
+
+    $('export').addEventListener('click', () => {
+      const preset = {
+        variant: 'Sentient Eye Engine inspired canvas rig',
+        source: 'https://github.com/Sentient-LabsDev/Sentient-Eye-Engine',
+        mood: S.mood,
+        size: S.size,
+        gap: S.gap,
+        tension: S.tension,
+        weight: S.weight,
+        scar: S.scar,
+        glitch: S.glitch,
+        glow: S.glow,
+        exported_at: new Date().toISOString(),
+      };
+      const json = JSON.stringify(preset, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'lemegeton-sentient-preset.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      navigator.clipboard?.writeText(json).catch(() => {});
+      $('log').textContent = 'preset exporte';
+    });
+  </script>
+</body>
+</html>
