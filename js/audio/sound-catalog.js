@@ -39,6 +39,17 @@ export const SOUND_BANKS = [
         ],
       },
       {
+        id: 'core.hum',
+        label: 'Hum noyau vivant',
+        description: 'Lit sonore adaptatif: drone cyber-organique discret module par energie, sub-cores, coque et surcharge.',
+        volume: 0.28,
+        synth: [
+          { freq: 43, freqTo: 49, type: 'sine', gain: 0.035, dur: 0.5, attack: 0.08, filter: { type: 'lowpass', freq: 340, q: 0.8 }, reverb: 0.16 },
+          { freq: 86, type: 'triangle', voices: 2, spread: 8, detune: 4, gain: 0.018, dur: 0.62, delay: 0.04, attack: 0.08, filter: { type: 'lowpass', freq: 620, q: 1.2 }, reverb: 0.28 },
+          { type: 'noise', gain: 0.008, dur: 0.55, delay: 0.08, attack: 0.12, filter: { type: 'bandpass', freq: 1500, q: 4.5 }, reverb: 0.24 },
+        ],
+      },
+      {
         id: 'core.subCorePulse',
         label: 'Pulse sub-core',
         description: 'Echo satellite: membranes synchronisees autour du noyau, avec une reponse alien legere.',

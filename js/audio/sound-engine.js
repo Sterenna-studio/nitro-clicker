@@ -28,6 +28,8 @@ let master = null;       // bus -> compresseur -> sortie
 let reverbNode = null;   // réverb (convolution)
 let noiseBuffer = null;
 const ladderState = {};  // index de gamme par son (clic mélodique qui monte)
+let coreAmbience = null;
+const CORE_AMBIENCE_ID = 'core.hum';
 
 // Renvoie la note de base courante pour un son à gamme (0 si non concerné).
 // L'index monte à chaque appel et se remet à zéro après une pause.
@@ -94,6 +96,178 @@ function getNoise(context) {
   const data = noiseBuffer.getChannelData(0);
   for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
   return noiseBuffer;
+}
+
+function rampParam(param, value, now, time = 0.35) {
+  param.cancelScheduledValues(now);
+  param.setTargetAtTime(value, now, time);
+}
+
+function createCoreAmbience(context) {
+  const out = context.createGain();
+  out.gain.value = 0.0001;
+  out.connect(master);
+
+  const wet = context.createGain();
+  wet.gain.value = 0.18;
+  out.connect(wet);
+  wet.connect(reverbNode);
+
+  const low = context.createOscillator();
+  low.type = 'sine';
+  low.frequency.value = 42;
+  const lowGain = context.createGain();
+  lowGain.gain.value = 0.0001;
+  low.connect(lowGain);
+  lowGain.connect(out);
+
+  const body = context.createOscillator();
+  body.type = 'triangle';
+  body.frequency.value = 84;
+  const bodyFilter = context.createBiquadFilter();
+  bodyFilter.type = 'lowpass';
+  bodyFilter.frequency.value = 520;
+  bodyFilter.Q.value = 1.1;
+  const bodyGain = context.createGain();
+  bodyGain.gain.value = 0.0001;
+  body.connect(bodyFilter);
+  bodyFilter.connect(bodyGain);
+  bodyGain.connect(out);
+
+  const cyber = context.createOscillator();
+  cyber.type = 'sawtooth';
+  cyber.frequency.value = 230;
+  const cyberFilter = context.createBiquadFilter();
+  cyberFilter.type = 'bandpass';
+  cyberFilter.frequency.value = 1450;
+  cyberFilter.Q.value = 5.5;
+  const cyberGain = context.createGain();
+  cyberGain.gain.value = 0.0001;
+  cyber.connect(cyberFilter);
+  cyberFilter.connect(cyberGain);
+  cyberGain.connect(out);
+
+  const membrane = context.createBufferSource();
+  membrane.buffer = getNoise(context);
+  membrane.loop = true;
+  const membraneFilter = context.createBiquadFilter();
+  membraneFilter.type = 'bandpass';
+  membraneFilter.frequency.value = 900;
+  membraneFilter.Q.value = 1.4;
+  const membraneGain = context.createGain();
+  membraneGain.gain.value = 0.0001;
+  membrane.connect(membraneFilter);
+  membraneFilter.connect(membraneGain);
+  membraneGain.connect(out);
+
+  const wobble = context.createOscillator();
+  wobble.type = 'sine';
+  wobble.frequency.value = 0.07;
+  const wobbleDepth = context.createGain();
+  wobbleDepth.gain.value = 5;
+  wobble.connect(wobbleDepth);
+  wobbleDepth.connect(cyber.detune);
+  wobbleDepth.connect(body.detune);
+
+  const now = context.currentTime;
+  low.start(now);
+  body.start(now);
+  cyber.start(now);
+  membrane.start(now);
+  wobble.start(now);
+
+  return {
+    out,
+    wet,
+    low,
+    lowGain,
+    body,
+    bodyFilter,
+    bodyGain,
+    cyber,
+    cyberFilter,
+    cyberGain,
+    membrane,
+    membraneFilter,
+    membraneGain,
+    wobble,
+    wobbleDepth,
+  };
+}
+
+function stopCoreAmbience() {
+  if (!coreAmbience) return;
+  const ambience = coreAmbience;
+  coreAmbience = null;
+  const context = audioCtx;
+  const now = context?.currentTime ?? 0;
+  try {
+    ambience.out.gain.cancelScheduledValues(now);
+    ambience.out.gain.setTargetAtTime(0.0001, now, 0.08);
+    [ambience.low, ambience.body, ambience.cyber, ambience.membrane, ambience.wobble].forEach(node => node.stop(now + 0.45));
+  } catch {}
+  setTimeout(() => {
+    try {
+      [
+        ambience.out,
+        ambience.wet,
+        ambience.lowGain,
+        ambience.bodyFilter,
+        ambience.bodyGain,
+        ambience.cyberFilter,
+        ambience.cyberGain,
+        ambience.membraneFilter,
+        ambience.membraneGain,
+        ambience.wobbleDepth,
+      ].forEach(node => node.disconnect());
+    } catch {}
+  }, 700);
+}
+
+function updateCoreAmbience(metrics = {}) {
+  if (!settings.enabled || settings.mutedSounds?.[CORE_AMBIENCE_ID]) {
+    stopCoreAmbience();
+    return false;
+  }
+
+  // Avoid creating/resuming AudioContext on first page paint. The ambience joins
+  // only after a user-triggered sound has already unlocked the audio bus.
+  if (!audioCtx || !master) return false;
+
+  const sound = getSoundDefinition(CORE_AMBIENCE_ID);
+  const context = ctx();
+  if (!context) return false;
+  ensureBus(context);
+  if (!coreAmbience) coreAmbience = createCoreAmbience(context);
+
+  const energy = clamp01(Number(metrics.energyRatio ?? 0));
+  const passive = clamp01(Number(metrics.passiveRatio ?? 0));
+  const surcharge = clamp01(Number(metrics.surchargeRatio ?? 0));
+  const fragments = clamp01(Number(metrics.fragmentRatio ?? 0));
+  const shell = clamp01(Number(metrics.shellRatio ?? 0));
+  const subCores = clamp01(Number(metrics.subCoreRatio ?? 0));
+  const modules = clamp01(Number(metrics.moduleRatio ?? 0));
+  const prestige = clamp01(Number(metrics.prestigeRatio ?? 0));
+  const drive = clamp01(0.12 + energy * 0.18 + passive * 0.24 + surcharge * 0.2 + subCores * 0.12 + modules * 0.12 + shell * 0.08);
+  const soundVolume = settings.volumes?.[CORE_AMBIENCE_ID] ?? sound?.volume ?? 0.28;
+  const volume = clamp01(settings.masterVolume * soundVolume);
+  const now = context.currentTime;
+
+  rampParam(coreAmbience.out.gain, volume * (0.08 + drive * 0.34), now, 0.65);
+  rampParam(coreAmbience.low.frequency, 38 + subCores * 16 + prestige * 8, now, 0.7);
+  rampParam(coreAmbience.lowGain.gain, volume * (0.022 + drive * 0.055), now, 0.55);
+  rampParam(coreAmbience.body.frequency, 74 + energy * 24 + subCores * 10, now, 0.6);
+  rampParam(coreAmbience.bodyFilter.frequency, 340 + passive * 620 + shell * 260, now, 0.5);
+  rampParam(coreAmbience.bodyGain.gain, volume * (0.012 + passive * 0.04 + modules * 0.018), now, 0.5);
+  rampParam(coreAmbience.cyber.frequency, 190 + modules * 170 + surcharge * 260, now, 0.45);
+  rampParam(coreAmbience.cyberFilter.frequency, 950 + modules * 1150 + surcharge * 1600, now, 0.38);
+  rampParam(coreAmbience.cyberGain.gain, volume * (0.004 + modules * 0.018 + surcharge * 0.034), now, 0.38);
+  rampParam(coreAmbience.membraneFilter.frequency, 420 + shell * 840 + fragments * 1050 + surcharge * 900, now, 0.55);
+  rampParam(coreAmbience.membraneGain.gain, volume * (0.004 + shell * 0.02 + fragments * 0.018 + subCores * 0.012), now, 0.55);
+  rampParam(coreAmbience.wet.gain, 0.12 + fragments * 0.2 + subCores * 0.1 + prestige * 0.08, now, 0.8);
+  rampParam(coreAmbience.wobble.frequency, 0.055 + surcharge * 0.11 + modules * 0.04, now, 1.0);
+  rampParam(coreAmbience.wobbleDepth.gain, 3.5 + surcharge * 8 + subCores * 3, now, 0.8);
+  return true;
 }
 
 // Joue une "voix" (un step) : oscillateur(s) OU bruit, filtre optionnel avec
@@ -197,6 +371,7 @@ function playFile(sound, options = {}) {
 
 function setEnabled(enabled) {
   settings.enabled = !!enabled;
+  if (!settings.enabled) stopCoreAmbience();
   saveSettings();
 }
 
@@ -212,6 +387,7 @@ function setSoundVolume(id, value) {
 
 function setSoundMuted(id, muted) {
   settings.mutedSounds = { ...(settings.mutedSounds ?? {}), [id]: !!muted };
+  if (id === CORE_AMBIENCE_ID && muted) stopCoreAmbience();
   saveSettings();
 }
 
@@ -241,6 +417,8 @@ window.NitroSound = {
   banks: SOUND_BANKS,
   sounds: flattenSoundCatalog,
   play: playSound,
+  updateCoreAmbience,
+  stopCoreAmbience,
   get: getSoundDefinition,
   settings: getSettings,
   setEnabled,

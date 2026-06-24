@@ -894,6 +894,11 @@ function renderStats() {
   const passiveRatio = Math.min(1, Number(state.passiveRate ?? 0) / 2500);
   const surchargeRatio = Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge));
   const fragmentRatio = Math.min(1, state.fragments / 25);
+  const subCoreCount = Math.floor((state.upgrades?.nitroFactory ?? 0) / 10);
+  const moduleLevelTotal = CORE_MODULE_GROUPS.reduce((sum, group) => (
+    sum + group.ids.reduce((inner, id) => inner + (state.upgrades?.[id] ?? 0), 0)
+  ), 0);
+  const shellRatio = shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio) : 0;
   app.dataset.layer = layer.id;
   app.dataset.coreGrowth = String(growth);
   const corePanel = document.getElementById('core-panel');
@@ -909,6 +914,16 @@ function renderStats() {
     corePanel.style.setProperty('--core-surcharge-ratio', surchargeRatio.toFixed(4));
     corePanel.style.setProperty('--core-fragment-ratio', fragmentRatio.toFixed(4));
   }
+  window.NitroSound?.updateCoreAmbience?.({
+    energyRatio,
+    passiveRatio,
+    surchargeRatio,
+    fragmentRatio,
+    shellRatio,
+    subCoreRatio: Math.min(1, subCoreCount / 12),
+    moduleRatio: Math.min(1, moduleLevelTotal / 90),
+    prestigeRatio: Math.min(1, (state.prestige ?? 0) / 25),
+  });
 
   if (lastLayerId && lastLayerId !== layer.id) spawnScaleShift();
   lastLayerId = layer.id;
