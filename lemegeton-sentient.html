@@ -26,9 +26,9 @@
     .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px}
     .panel h2{font-family:var(--display);font-size:10px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
     .btn-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
-    button.emo,.reset{font-family:var(--mono);font-size:10px;color:var(--text);background:rgba(0,255,204,.06);border:1px solid var(--border);border-radius:8px;padding:8px 6px;cursor:pointer}
-    button.emo:hover,.reset:hover{background:rgba(0,255,204,.16);border-color:var(--primary);color:var(--primary)}
-    button.emo.active{border-color:var(--primary);color:var(--primary);box-shadow:0 0 14px rgba(0,255,204,.14)}
+    button.emo,.tool-btn,.reset{font-family:var(--mono);font-size:10px;color:var(--text);background:rgba(0,255,204,.06);border:1px solid var(--border);border-radius:8px;padding:8px 6px;cursor:pointer}
+    button.emo:hover,.tool-btn:hover,.reset:hover{background:rgba(0,255,204,.16);border-color:var(--primary);color:var(--primary)}
+    button.emo.active,.tool-btn.active{border-color:var(--primary);color:var(--primary);box-shadow:0 0 14px rgba(0,255,204,.14)}
     .row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
     .row label{flex:0 0 92px;font-size:9px;color:var(--muted)}
     .row input[type=range]{flex:1;accent-color:var(--primary)}
@@ -36,6 +36,12 @@
     .row .val{flex:0 0 38px;text-align:right;font-size:9px;color:var(--primary)}
     .reset{width:100%;letter-spacing:.14em;background:transparent}
     .reset.primary{border-color:var(--primary);color:var(--primary);background:rgba(0,255,204,.1)}
+    .stack{display:grid;gap:8px}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .tool-grid{grid-template-columns:repeat(2,1fr)}
+    .tool-btn[data-tool="cut"].active{border-color:var(--accent);color:var(--accent);box-shadow:0 0 14px rgba(255,79,216,.14)}
+    .tool-btn[data-tool="sculpt"].active{border-color:var(--warn);color:var(--warn);box-shadow:0 0 14px rgba(255,209,102,.14)}
+    input[type=file]{display:none}
     .log{font-size:9px;color:var(--muted);line-height:1.5;margin-top:8px}
     .source{font-size:9px;line-height:1.5;color:var(--muted)}
     .source a{color:var(--primary);text-decoration:none}
@@ -74,14 +80,32 @@
 
       <div class="panel">
         <h2>Surgery test</h2>
+        <div class="btn-grid tool-grid" id="tools">
+          <button class="tool-btn active" data-tool="look" type="button" title="Orienter le regard au clic">LOOK</button>
+          <button class="tool-btn" data-tool="draw" type="button" title="Dessiner un artefact parenté au regard">DRAW</button>
+          <button class="tool-btn" data-tool="cut" type="button" title="Découper le rendu avec un masque sombre">CUT</button>
+          <button class="tool-btn" data-tool="sculpt" type="button" title="Déplacer les 5 noeuds du sourcil">SCULPT</button>
+        </div>
+        <div class="row" style="margin-top:10px"><label>Pinceau</label><input type="range" id="brush" min="1" max="36" step="1" value="5"><span class="val" id="brushVal">5</span></div>
         <div class="row"><label>Scars</label><input type="range" id="scar" min="0" max="1" step="0.01" value="0.28"><span class="val" id="scarVal">.28</span></div>
         <div class="row"><label>Glitch</label><input type="range" id="glitch" min="0" max="1" step="0.01" value="0.16"><span class="val" id="glitchVal">.16</span></div>
         <div class="row"><label>Glow</label><input type="color" id="glow" value="#00ffcc"></div>
-        <button class="reset" id="blink" type="button">CLIGNEMENT</button>
+        <div class="split">
+          <button class="reset" id="blink" type="button">CLIGNEMENT</button>
+          <button class="reset" id="toggleEye" type="button">OEIL ON</button>
+        </div>
       </div>
 
       <div class="panel">
-        <button class="reset primary" id="export" type="button">EXPORTER PRESET</button>
+        <div class="stack">
+          <button class="reset primary" id="export" type="button">EXPORTER PRESET</button>
+          <button class="reset" id="importBtn" type="button">IMPORTER PRESET</button>
+          <input id="importFile" type="file" accept="application/json">
+          <div class="split">
+            <button class="reset" id="undoStroke" type="button">UNDO</button>
+            <button class="reset" id="clearStrokes" type="button">CLEAR</button>
+          </div>
+        </div>
         <div class="log" id="log">Prototype web inspire de Sentient Eye Engine. Pas d'import Python/Pygame.</div>
       </div>
 
@@ -123,6 +147,16 @@
       scar: 0.28,
       glitch: 0.16,
       glow: '#00ffcc',
+      brush: 5,
+      tool: 'look',
+      eyeVisible: true,
+      extras: [],
+      currentStroke: null,
+      isDrawing: false,
+      hoverNode: null,
+      dragNode: null,
+      browHandles: [],
+      segments: Array.from({ length: 5 }, () => ({ offY: 0, thick: 5 })),
       time: 0,
     };
     let W = 0;
@@ -164,6 +198,39 @@
       ctx.closePath();
     }
 
+    function catmull(p0, p1, p2, p3, t) {
+      return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+    }
+
+    function smoothPoints(nodes, segments) {
+      if (nodes.length < 2) return [];
+      const padded = [nodes[0], ...nodes, nodes[nodes.length - 1]];
+      const points = [];
+      for (let i = 0; i < nodes.length - 1; i++) {
+        const p0 = padded[i];
+        const p1 = padded[i + 1];
+        const p2 = padded[i + 2];
+        const p3 = padded[i + 3];
+        for (let step = 0; step < 10; step++) {
+          const t = step / 10;
+          const thick = catmull(
+            segments[Math.max(0, i - 1)].thick,
+            segments[i].thick,
+            segments[i + 1].thick,
+            segments[Math.min(4, i + 2)].thick,
+            t
+          );
+          points.push({
+            x: catmull(p0.x, p1.x, p2.x, p3.x, t),
+            y: catmull(p0.y, p1.y, p2.y, p3.y, t),
+            thick: Math.max(2, thick),
+          });
+        }
+      }
+      points.push({ ...nodes[nodes.length - 1], thick: Math.max(2, segments[segments.length - 1].thick) });
+      return points;
+    }
+
     function drawBackplate(cx, cy, w, h) {
       ctx.save();
       ctx.strokeStyle = rgba(S.glow, 0.2);
@@ -201,6 +268,17 @@
         : 0;
       const ex = x + glitchOffset;
       const ey = y + Math.sin(S.time * 2.1 + side) * 2;
+
+      if (!S.eyeVisible) {
+        ctx.save();
+        ctx.strokeStyle = rgba(S.glow, 0.28);
+        ctx.lineWidth = 1;
+        eyeShape(ex, ey, w, h, side, mood);
+        ctx.stroke();
+        ctx.restore();
+        drawBrow(ex, ey - h * 0.62, w * 1.05, h * 0.42, side, mood);
+        return;
+      }
 
       ctx.save();
       eyeShape(ex, ey, w, h, side, mood);
@@ -248,43 +326,51 @@
     }
 
     function drawBrow(x, y, w, h, side, mood) {
-      const points = [];
+      const nodes = [];
       const base = mood.brow * h * 0.5;
       for (let i = 0; i < 5; i++) {
         const p = i / 4;
         const px = x - w / 2 + p * w;
         const wave = Math.sin(S.time * 1.9 + i * 0.85 + side) * h * 0.05;
         const bend = (Math.abs(p - 0.5) - 0.5) * base * side;
-        const py = y + wave + bend - S.tension * h * 0.18;
-        points.push({ x: px, y: py });
+        const py = y + wave + bend - S.tension * h * 0.18 + S.segments[i].offY;
+        nodes.push({ x: px, y: py, index: i, side });
       }
+      const points = smoothPoints(nodes, S.segments);
       ctx.save();
       ctx.strokeStyle = rgba(S.glow, 0.8);
-      ctx.lineWidth = 5;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.shadowColor = S.glow;
       ctx.shadowBlur = 16;
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i++) {
-        const midX = (points[i - 1].x + points[i].x) / 2;
-        const midY = (points[i - 1].y + points[i].y) / 2;
-        ctx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, midX, midY);
+        ctx.lineWidth = points[i].thick;
+        ctx.beginPath();
+        ctx.moveTo(points[i - 1].x, points[i - 1].y);
+        ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
       }
-      ctx.lineTo(points[4].x, points[4].y);
-      ctx.stroke();
       ctx.restore();
 
       ctx.save();
       ctx.fillStyle = '#02060b';
-      points.forEach((p, i) => {
-        if (i === 0 || i === points.length - 1) return;
+      nodes.forEach((p, i) => {
+        if (i === 0 || i === nodes.length - 1) return;
         ctx.beginPath();
         ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
         ctx.fill();
       });
       ctx.restore();
+
+      for (const node of nodes) {
+        S.browHandles.push({
+          x: node.x,
+          y: node.y,
+          index: node.index,
+          side: node.side,
+          radius: 10 + S.segments[node.index].thick * 0.35,
+        });
+      }
     }
 
     function drawScars(x, y, w, h, side) {
@@ -343,6 +429,80 @@
       ctx.restore();
     }
 
+    function getRig() {
+      const mood = moods[S.mood];
+      const cx = W / 2;
+      const cy = H * 0.48;
+      const eyeW = Math.min(W, H) * 0.26 * S.size;
+      const eyeH = eyeW * 0.5;
+      const gap = W * S.gap;
+      return {
+        mood,
+        cx,
+        cy,
+        eyeW,
+        eyeH,
+        gap,
+        leftX: cx - eyeW / 2 - gap / 2,
+        rightX: cx + eyeW / 2 + gap / 2,
+        anchorX: cx + S.lookX * eyeW * 0.18,
+        anchorY: cy + S.lookY * eyeH * 0.18 + S.weight * eyeH * 0.1,
+      };
+    }
+
+    function screenToLocal(x, y) {
+      const rig = getRig();
+      return { x: x - rig.anchorX, y: y - rig.anchorY };
+    }
+
+    function drawStroke(stroke) {
+      const points = stroke.points ?? [];
+      if (points.length < 2) return;
+      const rig = getRig();
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = stroke.thick;
+      ctx.shadowBlur = stroke.type === 'cut' ? 0 : Math.min(20, stroke.thick * 2.2);
+      ctx.shadowColor = stroke.type === 'cut' ? '#02060b' : (stroke.color || S.glow);
+      ctx.strokeStyle = stroke.type === 'cut'
+        ? '#02060b'
+        : (stroke.type === 'draw' ? rgba(stroke.color || S.glow, 0.88) : rgba('#ff4fd8', 0.8));
+      ctx.beginPath();
+      ctx.moveTo(rig.anchorX + points[0].x, rig.anchorY + points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(rig.anchorX + points[i].x, rig.anchorY + points[i].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawEditorLayer() {
+      for (const stroke of S.extras) drawStroke(stroke);
+      if (S.currentStroke) drawStroke(S.currentStroke);
+    }
+
+    function drawEditorHandles() {
+      if (S.tool !== 'sculpt') return;
+      ctx.save();
+      for (const handle of S.browHandles) {
+        const active = S.hoverNode?.index === handle.index && S.hoverNode?.side === handle.side;
+        ctx.strokeStyle = active ? '#ffd166' : rgba('#ffd166', 0.72);
+        ctx.fillStyle = active ? 'rgba(255,209,102,.18)' : 'rgba(0,0,0,.35)';
+        ctx.lineWidth = active ? 2 : 1;
+        ctx.beginPath();
+        ctx.arc(handle.x, handle.y, handle.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = active ? '#ffd166' : rgba(S.glow, 0.8);
+        ctx.font = '10px "Share Tech Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(handle.index + 1), handle.x, handle.y);
+      }
+      ctx.restore();
+    }
+
     function drawGlitch() {
       if (S.glitch <= 0.02) return;
       const intensity = S.mood === 'corrupt' ? Math.min(1, S.glitch + 0.35) : S.glitch;
@@ -365,17 +525,15 @@
       if (S.blink > 0.92) S.blinkTarget = 0;
 
       ctx.clearRect(0, 0, W, H);
-      const mood = moods[S.mood];
-      const cx = W / 2;
-      const cy = H * 0.48;
-      const eyeW = Math.min(W, H) * 0.26 * S.size;
-      const eyeH = eyeW * 0.5;
-      const gap = W * S.gap;
-      drawBackplate(cx, cy, Math.min(W * 0.82, eyeW * 3.4 + gap), eyeH * 2.8);
-      drawEye(cx - eyeW / 2 - gap / 2, cy, eyeW, eyeH, -1, mood);
-      drawEye(cx + eyeW / 2 + gap / 2, cy, eyeW, eyeH, 1, mood);
-      drawMouth(cx, cy + eyeH * 1.18, eyeW * 1.25, mood);
+      S.browHandles = [];
+      const rig = getRig();
+      drawBackplate(rig.cx, rig.cy, Math.min(W * 0.82, rig.eyeW * 3.4 + rig.gap), rig.eyeH * 2.8);
+      drawEye(rig.leftX, rig.cy, rig.eyeW, rig.eyeH, -1, rig.mood);
+      drawEye(rig.rightX, rig.cy, rig.eyeW, rig.eyeH, 1, rig.mood);
+      drawMouth(rig.cx, rig.cy + rig.eyeH * 1.18, rig.eyeW * 1.25, rig.mood);
+      drawEditorLayer();
       drawGlitch();
+      drawEditorHandles();
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
@@ -407,7 +565,8 @@
 
     function setMood(name) {
       S.mood = name;
-      $('stateLabel').textContent = name;
+      const labels = { look: 'regard', draw: 'dessin', cut: 'coupe', sculpt: 'sculpt' };
+      $('stateLabel').textContent = `${name} · ${labels[S.tool] ?? S.tool}`;
       document.querySelectorAll('[data-mood]').forEach(btn => btn.classList.toggle('active', btn.dataset.mood === name));
       $('log').textContent = `emotion preset: ${name}`;
     }
@@ -427,14 +586,219 @@
     bindRange('weight', 'weight');
     bindRange('scar', 'scar');
     bindRange('glitch', 'glitch');
+    bindRange('brush', 'brush', value => String(Math.round(Number(value))));
     $('glow').addEventListener('input', () => { S.glow = $('glow').value; });
     $('blink').addEventListener('click', () => { S.blinkTarget = 1; });
 
-    stage.addEventListener('click', event => {
+    function setTool(tool) {
+      S.tool = tool;
+      document.querySelectorAll('[data-tool]').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
+      const labels = { look: 'regard', draw: 'dessin', cut: 'coupe', sculpt: 'sculpt' };
+      $('stateLabel').textContent = `${S.mood} · ${labels[tool]}`;
+      $('log').textContent = `outil: ${labels[tool]}`;
+    }
+
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => setTool(btn.dataset.tool));
+    });
+
+    function eventPoint(event) {
       const r = stage.getBoundingClientRect();
-      S.targetX = Math.max(-1, Math.min(1, ((event.clientX - r.left) / r.width - 0.5) * 2));
-      S.targetY = Math.max(-1, Math.min(1, ((event.clientY - r.top) / r.height - 0.45) * 2));
+      return { x: event.clientX - r.left, y: event.clientY - r.top, w: r.width, h: r.height };
+    }
+
+    function targetGaze(event) {
+      const p = eventPoint(event);
+      S.targetX = Math.max(-1, Math.min(1, (p.x / p.w - 0.5) * 2));
+      S.targetY = Math.max(-1, Math.min(1, (p.y / p.h - 0.45) * 2));
       $('log').textContent = `target gaze: ${S.targetX.toFixed(2)}, ${S.targetY.toFixed(2)}`;
+    }
+
+    function findHandle(x, y) {
+      let best = null;
+      let bestDist = Infinity;
+      for (const handle of S.browHandles) {
+        const dist = Math.hypot(x - handle.x, y - handle.y);
+        if (dist <= handle.radius + 6 && dist < bestDist) {
+          best = handle;
+          bestDist = dist;
+        }
+      }
+      return best;
+    }
+
+    function appendPointToStroke(event) {
+      if (!S.currentStroke) return;
+      const p = eventPoint(event);
+      const local = screenToLocal(p.x, p.y);
+      const last = S.currentStroke.points[S.currentStroke.points.length - 1];
+      if (!last || Math.hypot(local.x - last.x, local.y - last.y) >= 3) {
+        S.currentStroke.points.push(local);
+      }
+    }
+
+    function startStroke(event) {
+      const p = eventPoint(event);
+      S.currentStroke = {
+        type: S.tool,
+        thick: S.brush,
+        color: S.tool === 'cut' ? '#02060b' : S.glow,
+        points: [screenToLocal(p.x, p.y)],
+      };
+      S.isDrawing = true;
+      $('log').textContent = S.tool === 'cut' ? 'coupe en cours' : 'dessin en cours';
+    }
+
+    function finishStroke() {
+      if (!S.currentStroke) return;
+      if (S.currentStroke.points.length > 1) {
+        S.extras.push(S.currentStroke);
+        $('log').textContent = `${S.currentStroke.type}: ${S.currentStroke.points.length} points`;
+      }
+      S.currentStroke = null;
+      S.isDrawing = false;
+    }
+
+    stage.addEventListener('contextmenu', event => event.preventDefault());
+
+    stage.addEventListener('pointerdown', event => {
+      stage.setPointerCapture?.(event.pointerId);
+      const p = eventPoint(event);
+      if (S.tool === 'sculpt' || event.button === 2) {
+        const handle = findHandle(p.x, p.y);
+        if (handle) {
+          S.dragNode = { index: handle.index, side: handle.side, lastY: p.y };
+          S.hoverNode = handle;
+          $('log').textContent = `node ${handle.index + 1} edit`;
+          return;
+        }
+      }
+      if (S.tool === 'draw' || S.tool === 'cut') {
+        startStroke(event);
+        return;
+      }
+      targetGaze(event);
+    });
+
+    stage.addEventListener('pointermove', event => {
+      const p = eventPoint(event);
+      S.hoverNode = findHandle(p.x, p.y);
+      if (S.dragNode) {
+        const dy = p.y - S.dragNode.lastY;
+        S.segments[S.dragNode.index].offY += dy;
+        S.dragNode.lastY = p.y;
+        return;
+      }
+      if (S.isDrawing) appendPointToStroke(event);
+    });
+
+    stage.addEventListener('pointerup', event => {
+      stage.releasePointerCapture?.(event.pointerId);
+      finishStroke();
+      S.dragNode = null;
+    });
+
+    stage.addEventListener('pointercancel', () => {
+      finishStroke();
+      S.dragNode = null;
+    });
+
+    stage.addEventListener('wheel', event => {
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? 1 : -1;
+      if (S.tool === 'sculpt' && S.hoverNode) {
+        const segment = S.segments[S.hoverNode.index];
+        segment.thick = Math.max(2, Math.min(30, segment.thick + delta));
+        $('log').textContent = `node ${S.hoverNode.index + 1} thick ${segment.thick}`;
+        return;
+      }
+      S.brush = Math.max(1, Math.min(36, S.brush + delta));
+      $('brush').value = String(S.brush);
+      $('brushVal').textContent = String(S.brush);
+      $('log').textContent = `pinceau ${S.brush}`;
+    }, { passive: false });
+
+    window.addEventListener('keydown', event => {
+      if (event.target?.tagName === 'INPUT') return;
+      if (event.code === 'Space') { event.preventDefault(); setTool('draw'); }
+      else if (event.key.toLowerCase() === 'c') setTool('cut');
+      else if (event.key.toLowerCase() === 's') setTool('sculpt');
+      else if (event.key.toLowerCase() === 'v') setTool('look');
+      else if (event.key.toLowerCase() === 'z') undoStroke();
+      else if (event.key.toLowerCase() === 't') toggleEyeVisibility();
+    });
+
+    function undoStroke() {
+      S.extras.pop();
+      $('log').textContent = `undo · ${S.extras.length} traits`;
+    }
+
+    function clearStrokes() {
+      S.extras = [];
+      $('log').textContent = 'canvas editor clear';
+    }
+
+    function toggleEyeVisibility() {
+      S.eyeVisible = !S.eyeVisible;
+      $('toggleEye').textContent = S.eyeVisible ? 'OEIL ON' : 'OEIL OFF';
+      $('log').textContent = S.eyeVisible ? 'oeil visible' : 'oeil masque';
+    }
+
+    $('undoStroke').addEventListener('click', undoStroke);
+    $('clearStrokes').addEventListener('click', clearStrokes);
+    $('toggleEye').addEventListener('click', toggleEyeVisibility);
+    setTool('look');
+
+    function applyPreset(preset) {
+      if (!preset || typeof preset !== 'object') return;
+      if (preset.mood && moods[preset.mood]) setMood(preset.mood);
+      for (const key of ['size', 'gap', 'tension', 'weight', 'scar', 'glitch', 'brush']) {
+        if (Number.isFinite(Number(preset[key]))) {
+          S[key] = Number(preset[key]);
+          const input = $(key);
+          const out = $(`${key}Val`);
+          if (input) input.value = String(S[key]);
+          if (out) out.textContent = key === 'brush' ? String(Math.round(S[key])) : S[key].toFixed(2);
+        }
+      }
+      if (typeof preset.glow === 'string' && preset.glow.startsWith('#')) {
+        S.glow = preset.glow;
+        $('glow').value = preset.glow;
+      }
+      if (Array.isArray(preset.segments) && preset.segments.length === 5) {
+        S.segments = preset.segments.map(seg => ({
+          offY: Number(seg.offY ?? seg.off_y ?? 0),
+          thick: Math.max(2, Number(seg.thick ?? 5)),
+        }));
+      }
+      if (Array.isArray(preset.extras)) {
+        S.extras = preset.extras
+          .filter(item => item && Array.isArray(item.points))
+          .map(item => ({
+            type: item.type === 'cut' ? 'cut' : 'draw',
+            thick: Math.max(1, Number(item.thick ?? S.brush)),
+            color: typeof item.color === 'string' ? item.color : S.glow,
+            points: item.points.map(p => ({ x: Number(p.x ?? p[0] ?? 0), y: Number(p.y ?? p[1] ?? 0) })),
+          }));
+      }
+      if (typeof preset.eyeVisible === 'boolean') {
+        S.eyeVisible = preset.eyeVisible;
+        $('toggleEye').textContent = S.eyeVisible ? 'OEIL ON' : 'OEIL OFF';
+      }
+      $('log').textContent = `preset importe · ${S.extras.length} traits`;
+    }
+
+    $('importBtn').addEventListener('click', () => $('importFile').click());
+    $('importFile').addEventListener('change', async event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        applyPreset(JSON.parse(await file.text()));
+      } catch (error) {
+        $('log').textContent = `import impossible: ${error?.message ?? error}`;
+      } finally {
+        event.target.value = '';
+      }
     });
 
     $('export').addEventListener('click', () => {
@@ -448,7 +812,16 @@
         weight: S.weight,
         scar: S.scar,
         glitch: S.glitch,
+        brush: S.brush,
         glow: S.glow,
+        eyeVisible: S.eyeVisible,
+        segments: S.segments.map(seg => ({ offY: Math.round(seg.offY * 100) / 100, thick: seg.thick })),
+        extras: S.extras.map(stroke => ({
+          type: stroke.type,
+          thick: stroke.thick,
+          color: stroke.color,
+          points: stroke.points.map(point => ({ x: Math.round(point.x * 100) / 100, y: Math.round(point.y * 100) / 100 })),
+        })),
         exported_at: new Date().toISOString(),
       };
       const json = JSON.stringify(preset, null, 2);
