@@ -158,6 +158,7 @@ function renderShell() {
           ${LAYOUTS.map(l => `<button class="layout-btn${currentLayout === l ? ' active' : ''}" data-layout-btn="${l}" type="button">${l.toUpperCase()}</button>`).join('')}
         </div>
         <a href="./lemegeton-compare.html" class="nav-btn">◇ TESTS</a>
+        <a href="./core-fx-editor.html" class="nav-btn">FX EDITOR</a>
         <a href="/star/" class="nav-btn">⬡ STAR</a>
         <a href="/" class="nav-btn">← HUB</a>
         <a href="/clicker/deploy.html" class="nav-btn deploy-badge" id="deploy-badge" title="Deploy status">BUILD</a>
