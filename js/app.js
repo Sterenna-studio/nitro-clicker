@@ -43,11 +43,11 @@ const LAYOUTS = ['nexus', 'orbital', 'command', 'mono'];
 const CORE_ZOOM_KEY = 'nitro-clicker.core.zoom';
 const CORE_ZOOM_LEVELS = [0.80, 0.64, 0.50, 0.38, 0.28];
 const CORE_MODULE_GROUPS = [
-  { id: 'amplifier', label: 'AMP', color: '#00ffcc', ids: ['clickAmplifier', 'resonance', 'prism', 'fragmentCatalyst'] },
-  { id: 'automation', label: 'AUTO', color: '#00ff80', ids: ['autoCore', 'autoClicker', 'bioConduit'] },
-  { id: 'overdrive', label: 'OVR', color: '#ff3df2', ids: ['surchargeCoil', 'fractureTuning', 'orbitalHive'] },
-  { id: 'shell', label: 'SHELL', color: '#ffcc00', ids: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'] },
-  { id: 'coreNetwork', label: 'COREx', color: '#8fb7ff', ids: ['nitroFactory', 'enginePlant'] },
+  { id: 'amplifier', label: 'AMP', color: '#00ffcc', sound: 'module.amplifier', ids: ['clickAmplifier', 'resonance', 'prism', 'fragmentCatalyst'] },
+  { id: 'automation', label: 'AUTO', color: '#00ff80', sound: 'module.automation', ids: ['autoCore', 'autoClicker', 'bioConduit'] },
+  { id: 'overdrive', label: 'OVR', color: '#ff3df2', sound: 'module.overdrive', ids: ['surchargeCoil', 'fractureTuning', 'orbitalHive'] },
+  { id: 'shell', label: 'SHELL', color: '#ffcc00', sound: 'module.shell', ids: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'] },
+  { id: 'coreNetwork', label: 'COREx', color: '#8fb7ff', sound: 'module.coreNetwork', ids: ['nitroFactory', 'enginePlant'] },
 ];
 
 let auth;
@@ -1053,6 +1053,7 @@ function bindUpgradeButtons() {
       }
       const isMilestoneBuy = result.level % 10 === 0 || result.amount >= 10;
       playGameSound(isMilestoneBuy ? 'upgrade.levelUp' : 'upgrade.buy', { volume: Math.min(1, 0.72 + result.amount * 0.025) }, 'buy');
+      setTimeout(() => playCoreModuleSound(btn.dataset.upgrade, result.level, result.amount), 55);
       spawnModule(btn.dataset.upgrade, result.level);
       spawnLightningToElement(event.currentTarget, `×${result.amount}`);
       spawnEnergyBurst(event.clientX, event.clientY, Math.min(26, 8 + result.amount * 2));
@@ -1201,6 +1202,7 @@ function runAutoPurchase() {
   if (!best) return;
   const result = buyUpgradeAmount(state, best.id, 1);
   if (result.ok) {
+    playCoreModuleSound(best.id, result.level, 1, 0.38);
     spawnModule(best.id, result.level);
     claimMilestonesAndRender();
     scheduleSave();
@@ -1322,6 +1324,14 @@ function getCoreModuleGroup(upgradeId) {
   return CORE_MODULE_GROUPS.find(group => group.ids.includes(upgradeId));
 }
 
+function playCoreModuleSound(upgradeId, level = 1, amount = 1, volumeScale = 1) {
+  const group = getCoreModuleGroup(upgradeId);
+  if (!group?.sound) return;
+  const levelLift = Math.min(0.18, Math.log1p(Math.max(0, Number(level) || 0)) * 0.025);
+  const amountLift = Math.min(0.12, Math.max(0, Number(amount) || 0) * 0.014);
+  playGameSound(group.sound, { volume: Math.min(0.86, (0.56 + levelLift + amountLift) * volumeScale) });
+}
+
 function renderFactories(force = false) {
   const field = document.getElementById('factory-field');
   if (!field) return;
@@ -1375,7 +1385,13 @@ function startLoop() {
       lastEnergyPulse = now;
       const panel = document.getElementById('core-panel')?.getBoundingClientRect();
       if (panel && state.passiveRate > 0) spawnBouncingBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(8, Math.ceil(state.passiveRate / 4)));
-      if (state.passiveRate > 0) playGameSound('core.passivePulse', { volume: Math.min(0.8, 0.28 + state.passiveRate / 120) });
+      if (state.passiveRate > 0) {
+        const subCoreCount = Math.floor((state.upgrades?.nitroFactory ?? 0) / 10);
+        playGameSound('core.passivePulse', { volume: Math.min(0.72, 0.26 + state.passiveRate / 140) });
+        if (subCoreCount > 0) {
+          setTimeout(() => playGameSound('core.subCorePulse', { volume: Math.min(0.58, 0.18 + subCoreCount * 0.026) }), 90);
+        }
+      }
       if (Math.random() > 0.35) zapToRandomModule();
     }
   }, 250);

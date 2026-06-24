@@ -54,6 +54,7 @@ function updateCurrentObjective(force = false) {
     card.classList.remove('objective-changed');
     void card.offsetWidth;
     card.classList.add('objective-changed');
+    if (!force) window.NitroSound?.play?.('ui.objective', { volume: 0.72 });
     lastObjectiveId = objective.id;
   }
 
