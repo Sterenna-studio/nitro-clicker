@@ -16,9 +16,11 @@ Runtime source of truth: `js/app.js` renders the core DOM, then the CSS layers i
 
 - `scale-radar`: background radar/scale rings in the core panel. Styled in `css/progression.css`.
 - `sub-core-field`: duplicated core orbit field from Nitro Factory progression. Styled in `css/progression.css`.
+- `sub-core-link`: conduit/rail from the main core to each duplicated sub-core.
 - `energy-field`: transient energy particle container from older click feedback. Styled in `css/clicker.css`.
-- `module-orbit`: upgrade module orbit container. Runtime nodes use `spawned-module`.
-- `spawned-module`: upgrade icons orbiting around the core. Styled in `css/clicker.css`, `css/biopunk-fx.css`, `css/svg-icons.css`, and responsive CSS.
+- `module-orbit`: grouped core augmentation network. Runtime nodes are generated from upgrade families rather than one icon per upgrade.
+- `module-link`: conduit/rail connecting an augmentation group to the core.
+- `spawned-module`: grouped augmentation node (`AMP`, `AUTO`, `OVR`, `SHELL`, `COREx`) with a level meter. Styled in `css/clicker.css`, `css/biopunk-fx.css`, `css/svg-icons.css`, and responsive CSS.
 - `tendril-layer` / `bio-tendril`: biopunk tendrils generated from total upgrade levels. Styled in `css/biopunk-fx.css`.
 
 ## Click, burst and feedback layers

@@ -74,7 +74,7 @@ function replaceUpgradeIcons(root) {
 }
 
 function replaceModuleIcons(root) {
-  root.querySelectorAll('.spawned-module:not([data-svg-ready])').forEach(node => {
+  root.querySelectorAll('.spawned-module:not([data-svg-ready]):not([data-module-group])').forEach(node => {
     const title = node.getAttribute('title') ?? '';
     const upgrade = [...UPGRADE_BY_NAME.entries()].find(([name]) => title.startsWith(name))?.[1];
     node.dataset.svgReady = 'true';

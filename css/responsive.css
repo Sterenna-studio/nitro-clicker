@@ -137,8 +137,9 @@ body {
 }
 
 .spawned-module {
-  width: clamp(26px, 2.4vw, 34px);
-  height: clamp(26px, 2.4vw, 34px);
+  width: var(--module-width, clamp(46px, 4.8vw, 58px));
+  height: auto;
+  min-height: clamp(36px, 3.4vw, 42px);
   border-radius: clamp(9px, 1vw, 12px);
 }
 

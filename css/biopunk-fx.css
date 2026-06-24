@@ -290,19 +290,21 @@ body::after {
 .energy-particle::after { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid rgba(0,255,204,.38); }
 
 .spawned-module {
-  border-color: rgba(0,255,204,.42);
+  border-color: color-mix(in srgb, var(--module-color, var(--nc-primary)) 55%, transparent);
   background:
     radial-gradient(circle at 35% 28%, rgba(255,255,255,.24), transparent 22%),
-    linear-gradient(135deg, rgba(0,255,204,.16), rgba(255,61,242,.10)),
+    linear-gradient(135deg, color-mix(in srgb, var(--module-color, var(--nc-primary)) 20%, transparent), rgba(255,61,242,.10)),
     rgba(7,10,20,.88);
-  box-shadow: 0 0 24px rgba(0,255,204,.22), inset 0 0 18px rgba(0,255,128,.12);
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--module-color, var(--nc-primary)) 24%, transparent),
+    inset 0 0 18px rgba(0,255,128,.12);
 }
 .spawned-module::before {
   content: '';
   position: absolute;
   inset: -8px;
   border-radius: 16px;
-  border: 1px solid rgba(255,61,242,.22);
+  border: 1px solid color-mix(in srgb, var(--module-color, var(--nc-pink)) 36%, transparent);
   animation: moduleMembrane 2.1s ease-in-out infinite alternate;
 }
 @keyframes moduleMembrane { from { transform: scale(.9) rotate(-4deg); opacity:.28; } to { transform: scale(1.18) rotate(6deg); opacity:.72; } }

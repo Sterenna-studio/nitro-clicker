@@ -42,7 +42,13 @@ const LAYOUT_KEY = 'nitro-clicker.layout';
 const LAYOUTS = ['nexus', 'orbital', 'command', 'mono'];
 const CORE_ZOOM_KEY = 'nitro-clicker.core.zoom';
 const CORE_ZOOM_LEVELS = [0.80, 0.64, 0.50, 0.38, 0.28];
-const MODULE_ICON_BLOCKLIST = new Set(['resonance', 'nitroFactory', 'enginePlant']);
+const CORE_MODULE_GROUPS = [
+  { id: 'amplifier', label: 'AMP', color: '#00ffcc', ids: ['clickAmplifier', 'resonance', 'prism', 'fragmentCatalyst'] },
+  { id: 'automation', label: 'AUTO', color: '#00ff80', ids: ['autoCore', 'autoClicker', 'bioConduit'] },
+  { id: 'overdrive', label: 'OVR', color: '#ff3df2', ids: ['surchargeCoil', 'fractureTuning', 'orbitalHive'] },
+  { id: 'shell', label: 'SHELL', color: '#ffcc00', ids: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'] },
+  { id: 'coreNetwork', label: 'COREx', color: '#8fb7ff', ids: ['nitroFactory', 'enginePlant'] },
+];
 
 let auth;
 let profile;
@@ -661,18 +667,18 @@ function sparkTendrils() {
 
 function spawnModule(upgradeId, level) {
   if (!fxEnabled) return;
-  if (MODULE_ICON_BLOCKLIST.has(upgradeId)) return;
-  const orbit = document.getElementById('module-orbit');
-  if (!orbit) return;
-  const upgrade = UPGRADES.find(u => u.id === upgradeId);
-  const node = document.createElement('div');
-  node.className = 'spawned-module';
-  node.textContent = upgrade?.icon ?? '◆';
-  node.title = `${upgrade?.name ?? upgradeId} Lv.${level}`;
-  node.style.setProperty('--angle', `${Math.random() * 360}deg`);
-  node.style.setProperty('--radius', `${118 + Math.random() * 90}px`);
-  orbit.appendChild(node);
-  while (orbit.children.length > 26) orbit.firstElementChild.remove();
+  const group = getCoreModuleGroup(upgradeId);
+  if (!group) return;
+  let node = document.querySelector(`[data-module-group="${group.id}"]`);
+  if (!node) {
+    renderModules(true);
+    node = document.querySelector(`[data-module-group="${group.id}"]`);
+  }
+  if (!node) return;
+  node.classList.remove('module-just-upgraded');
+  node.style.setProperty('--module-last-level', String(level ?? 1));
+  void node.offsetWidth;
+  node.classList.add('module-just-upgraded');
 }
 
 function spawnSystemWave(text) {
@@ -765,6 +771,14 @@ function renderSubCores() {
     const eff     = effOf(i);
     const subSize = Math.max(60, eff * R_main * 2);
     const angle   = -90 + ((i - 1) / coreCount) * 360;
+    const link = document.createElement('span');
+    link.className = 'sub-core-link';
+    link.style.setProperty('--angle', `${angle}deg`);
+    link.style.setProperty('--orbit-r', `${orbitR}px`);
+    link.style.setProperty('--sub-size', `${subSize}px`);
+    link.style.setProperty('--eff', String(eff));
+    field.appendChild(link);
+
     const div = document.createElement('div');
     div.className = 'sub-core';
     div.style.setProperty('--angle',   `${angle}deg`);
@@ -772,7 +786,7 @@ function renderSubCores() {
     div.style.setProperty('--orbit-r', `${orbitR}px`);
     div.style.setProperty('--sub-size',`${subSize}px`);
     div.title = `Noyau dupliqué ×${i}`;
-    div.innerHTML = `<div class="sub-core-inner"></div>`;
+    div.innerHTML = `<div class="sub-core-inner"><span class="sub-core-glyph">×${i}</span><span class="sub-core-eff">${Math.round(eff * 100)}%</span></div>`;
     field.appendChild(div);
   }
 }
@@ -1267,24 +1281,45 @@ function renderMilestones(force = false) {
 function renderModules(force = false) {
   const orbit = document.getElementById('module-orbit');
   if (!orbit) return;
-  const signature = UPGRADES.map(upgrade => `${upgrade.id}:${state.upgrades[upgrade.id] ?? 0}`).join('|');
+  const signature = [
+    `prestige:${state.prestige ?? 0}`,
+    ...UPGRADES.map(upgrade => `${upgrade.id}:${state.upgrades[upgrade.id] ?? 0}`),
+  ].join('|');
   if (!force && signature === lastModuleSignature) return;
   lastModuleSignature = signature;
-  orbit.innerHTML = '';
-  for (const upgrade of UPGRADES) {
-    if (MODULE_ICON_BLOCKLIST.has(upgrade.id)) continue;
-    const level = state.upgrades[upgrade.id] ?? 0;
-    const count = Math.min(upgrade.id.includes('Factory') || upgrade.id.includes('Plant') ? 8 : 5, level);
-    for (let i = 0; i < count; i++) {
-      const node = document.createElement('div');
-      node.className = 'spawned-module persistent';
-      node.textContent = upgrade.icon;
-      node.title = `${upgrade.name} Lv.${level}`;
-      node.style.setProperty('--angle', `${((i + 1) / (count + 1)) * 360 + UPGRADES.indexOf(upgrade) * 35}deg`);
-      node.style.setProperty('--radius', `${112 + UPGRADES.indexOf(upgrade) * 18}px`);
-      orbit.appendChild(node);
-    }
-  }
+  const coreCount = Math.floor((state.upgrades?.nitroFactory ?? 0) / 10);
+  const activeGroups = CORE_MODULE_GROUPS
+    .map((group, index) => {
+      const entries = group.ids
+        .map(id => {
+          const upgrade = UPGRADES.find(item => item.id === id);
+          const level = state.upgrades[id] ?? 0;
+          return upgrade && level > 0 ? { upgrade, level } : null;
+        })
+        .filter(Boolean);
+      const totalLevel = entries.reduce((sum, entry) => sum + entry.level, 0);
+      if (totalLevel <= 0) return null;
+      const angle = -90 + index * (360 / CORE_MODULE_GROUPS.length);
+      const radius = 138 + index * 24 + Math.min(120, coreCount * 16 + Math.floor((state.prestige ?? 0) * 1.5));
+      const charge = Math.min(1, totalLevel / 40);
+      const width = Math.min(76, 46 + Math.min(totalLevel, 40) * 0.72);
+      const title = entries.map(entry => `${entry.upgrade.name} Lv.${entry.level}`).join(' · ');
+      return { ...group, entries, totalLevel, angle, radius, charge, title, width };
+    })
+    .filter(Boolean);
+
+  setHtml(orbit, activeGroups.map(group => `
+    <span class="module-link" style="--angle:${group.angle}deg;--radius:${group.radius}px;--charge:${group.charge};--module-color:${group.color}"></span>
+    <div class="spawned-module persistent module-${group.id}" data-module-group="${group.id}" style="--angle:${group.angle}deg;--radius:${group.radius}px;--charge:${group.charge};--module-color:${group.color};--module-width:${group.width}px" title="${group.title}">
+      <span class="module-code">${group.label}</span>
+      <small>Lv.${group.totalLevel}</small>
+      <i></i>
+    </div>
+  `).join(''));
+}
+
+function getCoreModuleGroup(upgradeId) {
+  return CORE_MODULE_GROUPS.find(group => group.ids.includes(upgradeId));
 }
 
 function renderFactories(force = false) {

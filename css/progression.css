@@ -282,12 +282,38 @@
     rotate(var(--angle))
     translateX(var(--orbit-r, 155px))
     rotate(calc(-1 * var(--angle)));
+  z-index: 2;
+}
+
+.sub-core-link {
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: max(44px, calc(var(--orbit-r, 155px) - var(--sub-size, 46px) * .28));
+  height: 2px;
+  transform-origin: 0 50%;
+  transform: rotate(var(--angle));
+  border-radius: 999px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,
+      rgba(0,255,204,.04),
+      rgba(0,255,204, calc(.18 + var(--eff, .55) * .26)),
+      rgba(255,61,242,.16)
+    );
+  box-shadow: 0 0 12px rgba(0,255,204,.18);
+  opacity: calc(.32 + var(--eff, .55) * .4);
+  z-index: 1;
+  animation: subCoreLinkFlow 2.6s linear infinite;
 }
 
 .sub-core-inner {
   position: relative;
   width: 100%;
   height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
   border-radius: 50%;
   border: 1.5px solid rgba(0, 255, 204, 0.75);
   /* Vraie sphère Nitro lumineuse — même identité que le noyau principal */
@@ -300,6 +326,10 @@
     0 0 52px rgba(0,255,204,.22),
     inset 0 0 20px rgba(255,255,255,.14);
   animation: subCoreCounterSpin 50s linear infinite, subCorePulse 3.8s ease-in-out infinite;
+}
+
+@keyframes subCoreLinkFlow {
+  to { filter: hue-rotate(34deg) brightness(1.12); }
 }
 
 @keyframes subCoreCounterSpin {
