@@ -61,7 +61,7 @@
   <main>
     <section class="stage" id="stage">
       <canvas id="cv"></canvas>
-      <div class="hud"><span>clic: orienter le regard</span><span><b id="stateLabel">neutral</b> · bio-kernel web</span></div>
+      <div class="hud"><span>clic: orienter le regard</span><span><b id="stateLabel">focus</b> · robot face preset</span></div>
     </section>
 
     <aside class="controls">
@@ -98,6 +98,7 @@
 
       <div class="panel">
         <div class="stack">
+          <button class="reset" id="robotPreset" type="button">PRESET ROBOT</button>
           <button class="reset primary" id="export" type="button">EXPORTER PRESET</button>
           <button class="reset" id="importBtn" type="button">IMPORTER PRESET</button>
           <input id="importFile" type="file" accept="application/json">
@@ -106,7 +107,7 @@
             <button class="reset" id="clearStrokes" type="button">CLEAR</button>
           </div>
         </div>
-        <div class="log" id="log">Prototype web inspire de Sentient Eye Engine. Pas d'import Python/Pygame.</div>
+        <div class="log" id="log">Preset robotique Sentient Eye actif. Pas d'import Python/Pygame.</div>
       </div>
 
       <div class="panel source">
@@ -132,31 +133,61 @@
       corrupt: { brow: -0.45, lid: 0.08, squint: 0.04, mouth: 0.12 },
       love: { brow: 0.45, lid: -0.02, squint: -0.08, mouth: 0.28 },
     };
+    const ROBOT_DEFAULT_PRESET = {
+      name: 'sentient-robot-face',
+      mood: 'focus',
+      size: 1.08,
+      gap: 0.31,
+      tension: 0.82,
+      weight: 0.34,
+      scar: 0.36,
+      glitch: 0.22,
+      brush: 6,
+      glow: '#66f7ff',
+      eyeVisible: true,
+      segments: [
+        { offY: -3.5, thick: 8 },
+        { offY: -8, thick: 6 },
+        { offY: -10, thick: 5 },
+        { offY: -8, thick: 6 },
+        { offY: -3.5, thick: 8 },
+      ],
+      extras: [
+        { type: 'draw', thick: 2, color: '#66f7ff', points: [{ x: -210, y: -78 }, { x: -128, y: -112 }, { x: -40, y: -118 }] },
+        { type: 'draw', thick: 2, color: '#66f7ff', points: [{ x: 40, y: -118 }, { x: 128, y: -112 }, { x: 210, y: -78 }] },
+        { type: 'draw', thick: 2, color: '#ff4fd8', points: [{ x: -34, y: -18 }, { x: -8, y: 10 }, { x: 18, y: -8 }] },
+        { type: 'cut', thick: 7, color: '#02060b', points: [{ x: -155, y: 48 }, { x: -96, y: 62 }, { x: -42, y: 46 }] },
+        { type: 'cut', thick: 7, color: '#02060b', points: [{ x: 42, y: 46 }, { x: 96, y: 62 }, { x: 155, y: 48 }] },
+      ],
+    };
     const S = {
-      mood: 'neutral',
+      mood: ROBOT_DEFAULT_PRESET.mood,
       lookX: 0,
       lookY: 0,
       targetX: 0,
       targetY: 0,
       blink: 0,
       blinkTarget: 0,
-      size: 1,
-      gap: 0.28,
-      tension: 0.55,
-      weight: 0.2,
-      scar: 0.28,
-      glitch: 0.16,
-      glow: '#00ffcc',
-      brush: 5,
+      size: ROBOT_DEFAULT_PRESET.size,
+      gap: ROBOT_DEFAULT_PRESET.gap,
+      tension: ROBOT_DEFAULT_PRESET.tension,
+      weight: ROBOT_DEFAULT_PRESET.weight,
+      scar: ROBOT_DEFAULT_PRESET.scar,
+      glitch: ROBOT_DEFAULT_PRESET.glitch,
+      glow: ROBOT_DEFAULT_PRESET.glow,
+      brush: ROBOT_DEFAULT_PRESET.brush,
       tool: 'look',
-      eyeVisible: true,
-      extras: [],
+      eyeVisible: ROBOT_DEFAULT_PRESET.eyeVisible,
+      extras: ROBOT_DEFAULT_PRESET.extras.map(stroke => ({
+        ...stroke,
+        points: stroke.points.map(point => ({ ...point })),
+      })),
       currentStroke: null,
       isDrawing: false,
       hoverNode: null,
       dragNode: null,
       browHandles: [],
-      segments: Array.from({ length: 5 }, () => ({ offY: 0, thick: 5 })),
+      segments: ROBOT_DEFAULT_PRESET.segments.map(segment => ({ ...segment })),
       time: 0,
     };
     let W = 0;
@@ -246,6 +277,52 @@
         ctx.lineTo(x + Math.sin(S.time + i) * 8, cy + h * 0.44);
         ctx.strokeStyle = rgba(S.glow, 0.04 + i * 0.008);
         ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawRobotFaceplate(cx, cy, w, h) {
+      ctx.save();
+      ctx.shadowColor = rgba(S.glow, 0.26);
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = 'rgba(3, 10, 16, 0.58)';
+      ctx.strokeStyle = rgba(S.glow, 0.24);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - w * 0.32, cy - h * 0.48);
+      ctx.lineTo(cx + w * 0.32, cy - h * 0.48);
+      ctx.lineTo(cx + w * 0.46, cy - h * 0.22);
+      ctx.lineTo(cx + w * 0.38, cy + h * 0.32);
+      ctx.lineTo(cx + w * 0.18, cy + h * 0.52);
+      ctx.lineTo(cx - w * 0.18, cy + h * 0.52);
+      ctx.lineTo(cx - w * 0.38, cy + h * 0.32);
+      ctx.lineTo(cx - w * 0.46, cy - h * 0.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = rgba(S.glow, 0.11);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - h * 0.42);
+      ctx.lineTo(cx, cy + h * 0.42);
+      ctx.moveTo(cx - w * 0.36, cy - h * 0.12);
+      ctx.lineTo(cx - w * 0.5, cy + h * 0.04);
+      ctx.moveTo(cx + w * 0.36, cy - h * 0.12);
+      ctx.lineTo(cx + w * 0.5, cy + h * 0.04);
+      ctx.moveTo(cx - w * 0.26, cy + h * 0.36);
+      ctx.lineTo(cx + w * 0.26, cy + h * 0.36);
+      ctx.stroke();
+
+      ctx.fillStyle = rgba(S.glow, 0.72);
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(cx + side * w * 0.36, cy - h * 0.31, w * 0.012, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + side * w * 0.28, cy + h * 0.33, w * 0.01, 0, Math.PI * 2);
+        ctx.fill();
       }
       ctx.restore();
     }
@@ -527,6 +604,7 @@
       ctx.clearRect(0, 0, W, H);
       S.browHandles = [];
       const rig = getRig();
+      drawRobotFaceplate(rig.cx, rig.cy + rig.eyeH * 0.2, Math.min(W * 0.72, rig.eyeW * 3.5 + rig.gap), rig.eyeH * 4.2);
       drawBackplate(rig.cx, rig.cy, Math.min(W * 0.82, rig.eyeW * 3.4 + rig.gap), rig.eyeH * 2.8);
       drawEye(rig.leftX, rig.cy, rig.eyeW, rig.eyeH, -1, rig.mood);
       drawEye(rig.rightX, rig.cy, rig.eyeW, rig.eyeH, 1, rig.mood);
@@ -570,7 +648,7 @@
       document.querySelectorAll('[data-mood]').forEach(btn => btn.classList.toggle('active', btn.dataset.mood === name));
       $('log').textContent = `emotion preset: ${name}`;
     }
-    setMood('neutral');
+    setMood(ROBOT_DEFAULT_PRESET.mood);
 
     function bindRange(id, key, format = value => Number(value).toFixed(2)) {
       const input = $(id);
@@ -788,6 +866,13 @@
       $('log').textContent = `preset importe · ${S.extras.length} traits`;
     }
 
+    function applyRobotDefaultPreset() {
+      applyPreset(ROBOT_DEFAULT_PRESET);
+      $('log').textContent = 'preset robotique Sentient Eye applique';
+    }
+
+    $('robotPreset').addEventListener('click', applyRobotDefaultPreset);
+
     $('importBtn').addEventListener('click', () => $('importFile').click());
     $('importFile').addEventListener('change', async event => {
       const file = event.target.files?.[0];
@@ -805,6 +890,7 @@
       const preset = {
         variant: 'Sentient Eye Engine inspired canvas rig',
         source: 'https://github.com/Sentient-LabsDev/Sentient-Eye-Engine',
+        preset: ROBOT_DEFAULT_PRESET.name,
         mood: S.mood,
         size: S.size,
         gap: S.gap,
@@ -834,6 +920,9 @@
       navigator.clipboard?.writeText(json).catch(() => {});
       $('log').textContent = 'preset exporte';
     });
+
+    applyRobotDefaultPreset();
+    $('log').textContent = 'preset robotique Sentient Eye actif';
   </script>
 </body>
 </html>
