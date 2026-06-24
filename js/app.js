@@ -553,6 +553,47 @@ function spawnBouncingBurst(clientX, clientY, count = 8) {
   bounceLoop = requestAnimationFrame(tick);
 }
 
+function spawnEnergyBurst(clientX, clientY, count = 12) {
+  if (!fxEnabled) return;
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
+  const layer = ensureEnergyBurstLayer();
+  const n = Math.max(4, Math.min(36, Math.round(count)));
+  if (n >= 24) {
+    const badge = document.createElement('span');
+    badge.className = 'dopamine-badge';
+    badge.textContent = 'BURST';
+    badge.style.left = `${clientX}px`;
+    badge.style.top = `${clientY}px`;
+    layer.appendChild(badge);
+    setTimeout(() => badge.remove(), 900);
+  }
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+    const distance = 36 + Math.random() * 74;
+    const spark = document.createElement('span');
+    spark.className = 'dopamine-spark';
+    spark.style.left = `${clientX}px`;
+    spark.style.top = `${clientY}px`;
+    spark.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty('--dy', `${Math.sin(angle) * distance - 28}px`);
+    spark.style.setProperty('--delay', `${Math.random() * 70}ms`);
+    layer.appendChild(spark);
+    setTimeout(() => spark.remove(), 900);
+  }
+}
+
+function ensureEnergyBurstLayer() {
+  let layer = document.getElementById('dopamine-burst-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'dopamine-burst-layer';
+    layer.className = 'dopamine-burst-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(layer);
+  }
+  return layer;
+}
+
 function spawnFragmentOrbs(count) {
   if (count <= 0) return;
   const core  = document.getElementById('click-core');
