@@ -108,6 +108,12 @@ const FX = {
   shatter() { [130, 260, 520, 1040, 1560].forEach((f, i) => setTimeout(() => this.tone(f, i < 2 ? 'square' : 'triangle', 0.065, 0.11), i * 45)); },
 };
 
+function playGameSound(id, options = {}, fallback = null) {
+  if (window.NitroSound?.play) return window.NitroSound.play(id, options);
+  if (fallback && fxEnabled) FX[fallback]?.();
+  return false;
+}
+
 function fmt(value) {
   const n = Math.floor(Number(value ?? 0));
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
@@ -173,6 +179,7 @@ function renderShell() {
       <article class="panel core-panel" id="core-panel">
         <div class="scale-radar" id="scale-radar" aria-hidden="true"></div>
         <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
+        <div class="core-state-aura" id="core-state-aura" aria-hidden="true"><span></span><i></i><b></b></div>
         <div class="core-viewport" id="core-viewport">
           <div class="sub-core-field" id="sub-core-field" aria-hidden="true"></div>
           <div class="core-shell-visual" id="core-shell-visual" aria-hidden="true"><span></span><i></i><b></b></div>
@@ -272,7 +279,7 @@ function renderShell() {
 function handleCoreClick(event) {
   const result = clickCore(state);
   const gain = typeof result === 'number' ? result : result.gain;
-  FX.click();
+  playGameSound('core.click', { volume: result?.crit ? 1 : 0.9 }, 'click');
   spawnPop(event.clientX, event.clientY, `+${fmt(gain)}`);
   spawnBouncingBurst(event.clientX, event.clientY, Math.min(14, 4 + Math.floor(gain / Math.max(1, state.clickPower / 3))));
   pulseReactor();
@@ -280,7 +287,7 @@ function handleCoreClick(event) {
   sparkTendrils();
 
   if (result?.overdrive) {
-    FX.overdrive();
+    playGameSound('overdrive.trigger', { volume: result.crit ? 1 : 0.8 }, 'overdrive');
     // LEMEGETON réagit seulement aux CRIT overdrives, et pas à chaque fois
     if (result.crit && Math.random() < 0.5) {
       const reactions = ['surprise', 'excitement', 'joy', 'love'];
@@ -297,6 +304,7 @@ function handleCoreClick(event) {
     }
   }
   if (result?.fragmentsStored) {
+    playGameSound('shell.store', { volume: Math.min(1, 0.55 + result.fragmentsStored * 0.08) });
     pulseShell('store');
     toast(`Fragment Nitro confiné dans la sphère +${result.fragmentsStored}`);
   }
@@ -358,7 +366,7 @@ function bindStaticEvents() {
       if (result.reason === 'empty') return toast('Aucun fragment stocké dans la sphère.');
       if (result.reason === 'not_enough_energy') return toast(`Pic d'énergie insuffisant : ${fmt(result.shell.breakCost)} E requis.`);
       if (result.reason === 'failed') {
-        FX.crack();
+        playGameSound('shell.crack', {}, 'crack');
         pulseShell('crack');
         spawnSystemWave('FISSURE');
         lightningStorm(3);
@@ -369,7 +377,7 @@ function bindStaticEvents() {
       }
       return;
     }
-    FX.shatter();
+    playGameSound('shell.shatter', {}, 'shatter');
     pulseShell('break');
     spawnSystemWave(`SPHÈRE BRISÉE +${result.released}F`);
     lightningStorm(8);
@@ -405,7 +413,7 @@ function bindStaticEvents() {
     const result = doPrestige(state);
     if (!result.ok) return toast('Prestige pas encore prêt. Continue à charger le noyau.');
     state = result.state;
-    FX.prestige();
+    playGameSound('prestige.activate', {}, 'prestige');
     window.NitroLemegeton?.react?.('prestige');
     saveAll(userId, state);
     renderAll(true);
@@ -422,7 +430,7 @@ function bindStaticEvents() {
 function claimMilestonesAndRender() {
   const claimed = checkAndClaimMilestones(state);
   if (claimed.length) {
-    FX.milestone();
+    playGameSound('milestone.claim', { volume: Math.min(1, 0.8 + claimed.length * 0.05) }, 'milestone');
     for (const m of claimed) {
       const bits = [];
       if (m.reward?.energy) bits.push(`+${fmt(m.reward.energy)} E`);
@@ -771,7 +779,7 @@ function spawnLightningToElement(element, label = '') {
   path.setAttribute('d', makeLightningPath(core.x, core.y, target.x, target.y));
   layer.appendChild(path);
   setTimeout(() => path.remove(), 520);
-  FX.zap();
+  playGameSound('ui.zap', { volume: 0.65 }, 'zap');
 
   if (label) {
     const tag = document.createElement('div');
@@ -825,6 +833,11 @@ function renderStats() {
   const layer = getScalingLayer(state);
   const shell = getCoreShellInfo(state);
   const growth = getCoreGrowthLevel(state);
+  const nextCost = getNextAffordableCost();
+  const energyRatio = Math.min(1, state.energy / Math.max(1, nextCost));
+  const passiveRatio = Math.min(1, Number(state.passiveRate ?? 0) / 2500);
+  const surchargeRatio = Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge));
+  const fragmentRatio = Math.min(1, state.fragments / 25);
   app.dataset.layer = layer.id;
   app.dataset.coreGrowth = String(growth);
   const corePanel = document.getElementById('core-panel');
@@ -835,6 +848,10 @@ function renderStats() {
     corePanel.style.setProperty('--core-shell-fill', String(shell.fillRatio));
     corePanel.style.setProperty('--core-shell-crack', String(shell.crackRatio));
     corePanel.style.setProperty('--core-shell-reflect', String(Math.min(1, shell.reflect)));
+    corePanel.style.setProperty('--core-energy-ratio', energyRatio.toFixed(4));
+    corePanel.style.setProperty('--core-passive-ratio', passiveRatio.toFixed(4));
+    corePanel.style.setProperty('--core-surcharge-ratio', surchargeRatio.toFixed(4));
+    corePanel.style.setProperty('--core-fragment-ratio', fragmentRatio.toFixed(4));
   }
 
   if (lastLayerId && lastLayerId !== layer.id) spawnScaleShift();
@@ -849,13 +866,12 @@ function renderStats() {
   setText('stat-surcharge', `${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%`);
   setText('stat-shell', shell.unlocked ? `${shell.storedFragments}/${shell.capacity}` : 'LOCK');
 
-  const nextCost = getNextAffordableCost();
-  setMeter('meter-energy', Math.min(1, state.energy / Math.max(1, nextCost)));
+  setMeter('meter-energy', energyRatio);
   setMeter('meter-total-energy', Math.min(1, state.totalEnergy / Math.max(1, prestigeRequirement(state) * 10)));
-  setMeter('meter-fragments', Math.min(1, state.fragments / 25));
+  setMeter('meter-fragments', fragmentRatio);
   setMeter('meter-click', Math.min(1, state.clickPower / 1000));
-  setMeter('meter-passive', Math.min(1, state.passiveRate / 2500));
-  setMeter('meter-surcharge', Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge)));
+  setMeter('meter-passive', passiveRatio);
+  setMeter('meter-surcharge', surchargeRatio);
   setMeter('meter-shell', shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio * 0.35) : 0);
 
   const req = prestigeRequirement(state);
@@ -975,8 +991,12 @@ function bindUpgradeButtons() {
   document.querySelectorAll('[data-upgrade]:not(.locked)').forEach(btn => {
     btn.addEventListener('click', event => {
       const result = buyUpgradeAmount(state, btn.dataset.upgrade, buyMultiplier);
-      if (!result.ok) return toast(result.reason === 'locked' ? 'Upgrade verrouillé.' : `Ressource insuffisante pour ×${buyMultiplier}.`);
-      FX.buy();
+      if (!result.ok) {
+        playGameSound('upgrade.locked', { volume: 0.75 });
+        return toast(result.reason === 'locked' ? 'Upgrade verrouillé.' : `Ressource insuffisante pour ×${buyMultiplier}.`);
+      }
+      const isMilestoneBuy = result.level % 10 === 0 || result.amount >= 10;
+      playGameSound(isMilestoneBuy ? 'upgrade.levelUp' : 'upgrade.buy', { volume: Math.min(1, 0.72 + result.amount * 0.025) }, 'buy');
       spawnModule(btn.dataset.upgrade, result.level);
       spawnLightningToElement(event.currentTarget, `×${result.amount}`);
       spawnEnergyBurst(event.clientX, event.clientY, Math.min(26, 8 + result.amount * 2));
@@ -1093,11 +1113,12 @@ function bindLemegetonButtons() {
       const result = buyLemegetonSkill(state, btn.dataset.skill);
       if (!result.ok) {
         if (result.reason === 'maxed') return;
+        playGameSound('upgrade.locked', { volume: 0.68 });
         return toast(result.reason === 'not_enough_fragments'
           ? `Fragments insuffisants (${fmt(result.cost)} F requis).`
           : 'Compétence verrouillée.');
       }
-      FX.buy();
+      playGameSound(result.skill.kind === 'unlock' ? 'upgrade.levelUp' : 'upgrade.buy', { volume: result.skill.kind === 'unlock' ? 0.9 : 0.78 }, 'buy');
       window.NitroLemegeton?.react?.('skill');
       spawnLightningToElement(event.currentTarget, result.skill.kind === 'unlock' ? 'ACTIF' : `Lv.${result.level}`);
       spawnEnergyBurst(event.clientX, event.clientY, 18);
@@ -1277,6 +1298,7 @@ function startLoop() {
       lastEnergyPulse = now;
       const panel = document.getElementById('core-panel')?.getBoundingClientRect();
       if (panel && state.passiveRate > 0) spawnBouncingBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(8, Math.ceil(state.passiveRate / 4)));
+      if (state.passiveRate > 0) playGameSound('core.passivePulse', { volume: Math.min(0.8, 0.28 + state.passiveRate / 120) });
       if (Math.random() > 0.35) zapToRandomModule();
     }
   }, 250);
