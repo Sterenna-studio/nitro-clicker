@@ -18,9 +18,9 @@ Runtime source of truth: `js/app.js` renders the core DOM, then the CSS layers i
 - `sub-core-field`: duplicated factory grouping field from Nitro Factory progression. Each 10 levels renders one local core grouping with mini duplicate cores and plasma layers. Styled in `css/progression.css`.
 - `sub-core-link`: conduit/rail from the main core to each duplicated factory grouping.
 - `energy-field`: transient energy particle container from older click feedback. Styled in `css/clicker.css`.
-- `module-orbit`: grouped core augmentation network. Runtime nodes are generated from upgrade families rather than one icon per upgrade.
-- `module-link`: conduit/rail connecting an augmentation group to the core.
-- `spawned-module`: grouped augmentation node (`AMP`, `AUTO`, `OVR`, `SHELL`, `COREx`) with a level meter. Styled in `css/clicker.css`, `css/biopunk-fx.css`, `css/svg-icons.css`, and responsive CSS.
+- `module-orbit`: bottom dock for grouped core augmentation nodes. Runtime nodes are generated from upgrade families rather than one icon per upgrade.
+- `module-link`: legacy/editor conduit rail for older orbital previews.
+- `spawned-module`: bottom-aligned grouped augmentation node (`AMP`, `AUTO`, `OVR`, `SHELL`, `COREx`) with a level meter. Styled in `css/clicker.css`, `css/biopunk-fx.css`, `css/svg-icons.css`, and responsive CSS.
 - `tendril-layer` / `bio-tendril`: biopunk tendrils generated from total upgrade levels. Styled in `css/biopunk-fx.css`.
 
 ## Click, burst and feedback layers

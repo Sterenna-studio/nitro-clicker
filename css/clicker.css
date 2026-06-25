@@ -171,12 +171,45 @@ body {
   pointer-events: none;
 }
 
-.energy-field,
-.module-orbit {
+.energy-field {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
+}
+
+.module-orbit {
+  position: absolute;
+  left: clamp(14px, 3cqw, 28px);
+  right: clamp(14px, 3cqw, 28px);
+  bottom: clamp(14px, 3cqw, 24px);
+  min-height: 52px;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: clamp(7px, 1.2cqw, 12px);
+  pointer-events: none;
+  z-index: 6;
+}
+
+.module-orbit::before {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  bottom: 9px;
+  height: 1px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg,
+      transparent,
+      rgba(0,255,204,.28),
+      rgba(255,61,242,.16),
+      rgba(0,255,204,.28),
+      transparent
+    );
+  box-shadow: 0 0 14px rgba(0,255,204,.15);
+  opacity: .72;
 }
 
 .click-core {
@@ -270,9 +303,7 @@ body {
 }
 
 .spawned-module {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+  position: relative;
   width: var(--module-width, 52px);
   min-height: 38px;
   display: grid;
@@ -289,9 +320,22 @@ body {
     0 0 24px color-mix(in srgb, var(--module-color, var(--nc-primary)) 24%, transparent),
     inset 0 0 16px color-mix(in srgb, var(--module-color, var(--nc-primary)) 11%, transparent);
   color: color-mix(in srgb, var(--module-color, var(--nc-primary)) 86%, white 14%);
-  transform: rotate(var(--angle)) translateX(var(--radius)) rotate(calc(-1 * var(--angle)));
-  z-index: 4;
-  animation: moduleSpawn .42s ease-out both, moduleFloat 3.8s ease-in-out infinite;
+  transform: translateY(var(--dock-lift, 0px));
+  z-index: 2;
+  animation: moduleDockIn .34s ease-out both, moduleFloat 3.8s ease-in-out infinite;
+}
+
+.spawned-module::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 1px;
+  height: 8px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--module-color, var(--nc-primary)) 62%, transparent);
+  box-shadow: 0 0 8px currentColor;
+  opacity: calc(.24 + var(--charge, .1) * .54);
 }
 
 .module-code {
@@ -321,9 +365,9 @@ body {
 .spawned-module.persistent { animation: moduleFloat 4.4s ease-in-out infinite; }
 .spawned-module.module-just-upgraded { animation: moduleUpgradePulse .72s ease-out, moduleFloat 4.4s ease-in-out infinite; }
 
-@keyframes moduleSpawn {
-  from { opacity:0; transform: rotate(var(--angle)) translateX(0) rotate(calc(-1 * var(--angle))) scale(.2); }
-  to { opacity:1; transform: rotate(var(--angle)) translateX(var(--radius)) rotate(calc(-1 * var(--angle))) scale(1); }
+@keyframes moduleDockIn {
+  from { opacity:0; transform: translateY(14px) scale(.86); }
+  to { opacity:1; transform: translateY(var(--dock-lift, 0px)) scale(1); }
 }
 @keyframes moduleFloat {
   0%,100% { filter: brightness(1); }

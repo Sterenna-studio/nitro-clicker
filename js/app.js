@@ -1373,18 +1373,16 @@ function renderModules(force = false) {
         .filter(Boolean);
       const totalLevel = entries.reduce((sum, entry) => sum + entry.level, 0);
       if (totalLevel <= 0) return null;
-      const angle = -90 + index * (360 / CORE_MODULE_GROUPS.length);
-      const radius = 138 + index * 24 + Math.min(120, coreCount * 16 + Math.floor((state.prestige ?? 0) * 1.5));
       const charge = Math.min(1, totalLevel / 40);
       const width = Math.min(76, 46 + Math.min(totalLevel, 40) * 0.72);
+      const lift = index % 2 ? -4 : 0;
       const title = entries.map(entry => `${entry.upgrade.name} Lv.${entry.level}`).join(' · ');
-      return { ...group, entries, totalLevel, angle, radius, charge, title, width };
+      return { ...group, entries, totalLevel, index, coreCount, charge, title, width, lift };
     })
     .filter(Boolean);
 
   setHtml(orbit, activeGroups.map(group => `
-    <span class="module-link" style="--angle:${group.angle}deg;--radius:${group.radius}px;--charge:${group.charge};--module-color:${group.color}"></span>
-    <div class="spawned-module persistent module-${group.id}" data-module-group="${group.id}" style="--angle:${group.angle}deg;--radius:${group.radius}px;--charge:${group.charge};--module-color:${group.color};--module-width:${group.width}px" title="${group.title}">
+    <div class="spawned-module persistent module-${group.id}" data-module-group="${group.id}" style="--charge:${group.charge};--module-color:${group.color};--module-width:${group.width}px;--dock-lift:${group.lift}px;--factory-count:${group.coreCount}" title="${group.title}">
       <span class="module-code">${group.label}</span>
       <small>Lv.${group.totalLevel}</small>
       <i></i>
