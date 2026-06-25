@@ -2,6 +2,7 @@ let mounted = false;
 let lastMeterBuckets = new Map();
 let lastStatBuckets = new Map();
 let lastMilestoneDone = 0;
+let lastSubCorePlasmaAt = 0;
 
 function mountPlasmaFeedback() {
   if (mounted) return;
@@ -31,9 +32,14 @@ function triggerPlasmaArc(clientX, clientY, count = 4) {
   const core  = document.getElementById('click-core');
   if (!layer || !core) return;
 
-  const cr = core.getBoundingClientRect();
+  triggerPlasmaArcIn(core, layer, clientX, clientY, count);
+}
+
+function triggerPlasmaArcIn(target, layer, clientX, clientY, count = 4) {
+  const cr = target.getBoundingClientRect();
   const w  = cr.width;
   const h  = cr.height;
+  if (!w || !h) return;
   const cx = w / 2;
   const cy = h / 2;
   const r  = Math.min(w, h) / 2;
@@ -54,6 +60,32 @@ function triggerPlasmaArc(clientX, clientY, count = 4) {
     layer.appendChild(svg);
     setTimeout(() => svg.remove(), 460 + Math.random() * 160);
   }
+}
+
+function triggerSubCorePlasma(count = 1) {
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  if (now - lastSubCorePlasmaAt < 140) return;
+  lastSubCorePlasmaAt = now;
+
+  document.querySelectorAll('.sub-core').forEach(group => {
+    const nodes = [
+      group.querySelector('.sub-core-inner'),
+      ...group.querySelectorAll('.sub-core-mini'),
+    ].filter(Boolean).sort(() => Math.random() - 0.5).slice(0, 3);
+
+    for (const node of nodes) {
+      const layer = node.querySelector('.sub-core-plasma-layer');
+      if (!layer) continue;
+      const rect = node.getBoundingClientRect();
+      triggerPlasmaArcIn(
+        node,
+        layer,
+        rect.left + rect.width * (0.38 + Math.random() * 0.24),
+        rect.top + rect.height * (0.38 + Math.random() * 0.24),
+        count
+      );
+    }
+  });
 }
 
 
@@ -207,5 +239,6 @@ const boot = setInterval(() => {
 
 window.NitroPlasmaFeedback = {
   trigger: triggerPlasmaArc,
+  triggerSubCores: triggerSubCorePlasma,
   burst: fireRewardBurst,
 };

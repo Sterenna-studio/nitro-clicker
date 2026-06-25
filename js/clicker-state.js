@@ -332,10 +332,10 @@ export const UPGRADES = [
     desc(state) {
       const lvl = state?.upgrades?.nitroFactory ?? 0;
       const cores = Math.floor(lvl / 10);
-      if (cores === 0) return '+1 noyau dupliqué tous les 10 niveaux · copies à 10%→80% du noyau principal.';
+      if (cores === 0) return '+1 groupement de noyaux tous les 10 niveaux · chaque groupement duplique le noyau et ses doubles locaux.';
       const mult = state?.coreMultiplier ?? 1;
       const nextIn = lvl % 10 === 0 ? 10 : 10 - (lvl % 10);
-      return `${cores} noyau${cores > 1 ? 'x' : ''} actif${cores > 1 ? 's' : ''} · ×${mult.toFixed(2)} puissance · prochain dans ${nextIn} niveaux.`;
+      return `${cores} groupement${cores > 1 ? 's' : ''} usine actif${cores > 1 ? 's' : ''} · ×${mult.toFixed(2)} puissance · prochain dans ${nextIn} niveaux.`;
     },
     unlock: state => state.prestige >= 10,
     lockedText: 'Débloqué au Prestige 10 : le noyau devient multiplicable.',

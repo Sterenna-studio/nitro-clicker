@@ -204,9 +204,54 @@
       aspect-ratio: 1;
       border-radius: 50%;
       transform: rotate(var(--angle)) translateX(calc(var(--core-size) * 1.1)) rotate(calc(-1 * var(--angle)));
-      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.3), transparent 18%), radial-gradient(circle, rgba(0,255,204,.28), rgba(255,61,242,.08) 64%, rgba(0,0,0,.82));
-      border: 1px solid rgba(0,255,204,.28);
-      box-shadow: 0 0 28px rgba(0,255,204,.18);
+    }
+    .sub-core-cluster { position: relative; width: 100%; height: 100%; }
+    .sub-core-cluster::before {
+      content: "";
+      position: absolute;
+      inset: 6%;
+      border-radius: 50%;
+      border: 1px dashed rgba(0,255,204,.24);
+      background: radial-gradient(circle, rgba(0,255,204,.07), transparent 62%);
+      box-shadow: 0 0 18px rgba(0,255,204,.13);
+    }
+    .sub-core-inner,
+    .sub-core-mini {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      border-radius: 50%;
+      border: 1px solid rgba(0,255,204,.42);
+      background:
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,.34), transparent 20%),
+        radial-gradient(circle, rgba(0,255,204,.32), rgba(255,61,242,.10) 64%, rgba(0,0,0,.82));
+      box-shadow: 0 0 20px rgba(0,255,204,.18);
+      overflow: hidden;
+    }
+    .sub-core-inner {
+      width: calc(var(--sub-size) * .56);
+      height: calc(var(--sub-size) * .56);
+      display: grid;
+      place-items: center;
+      transform: translate(-50%, -50%);
+      font-size: 9px;
+      color: rgba(232,250,255,.82);
+    }
+    .sub-core-mini {
+      width: max(12px, calc(var(--sub-size) * .21));
+      height: max(12px, calc(var(--sub-size) * .21));
+      transform: translate(-50%, -50%) rotate(var(--mini-angle)) translateX(calc(var(--sub-size) * .34)) rotate(calc(-1 * var(--mini-angle)));
+    }
+    .sub-core-plasma {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        repeating-conic-gradient(from 25deg, rgba(255,255,255,.32) 0 2deg, transparent 2deg 17deg),
+        conic-gradient(from 120deg, rgba(0,255,204,.45), rgba(255,61,242,.24), rgba(255,204,0,.16), rgba(0,255,204,.45));
+      mask: radial-gradient(circle, transparent 0 22%, #000 25% 72%, transparent 76%);
+      opacity: .62;
+      mix-blend-mode: screen;
     }
     .sub-core-link {
       position: absolute;
@@ -511,9 +556,11 @@
       $('subcores').innerHTML = Array.from({ length: state.subCoreCount }, (_, i) => {
         const angle = (360 / Math.max(1, state.subCoreCount)) * i - 90;
         const size = 54 + (i % 3) * 10;
+        const miniCount = Math.min(6, i + 1);
+        const mini = Array.from({ length: miniCount }, (_, idx) => `<span class="sub-core-mini" style="--mini-angle:${-90 + (idx / miniCount) * 360 + i * 11}deg"><span class="sub-core-plasma"></span></span>`).join('');
         return `
           <span class="sub-core-link" style="--angle:${angle}deg"></span>
-          <span class="sub-core" style="--angle:${angle}deg;--sub-size:${size}px"></span>
+          <span class="sub-core" style="--angle:${angle}deg;--sub-size:${size}px"><span class="sub-core-cluster"><span class="sub-core-inner"><span class="sub-core-plasma"></span>G${i + 1}</span>${mini}</span></span>
         `;
       }).join('');
       $('lightning').innerHTML = Array.from({ length: 5 }, (_, i) => `<span class="lightning-bolt" style="--angle:${i * 72 + 18}deg"></span>`).join('');

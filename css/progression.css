@@ -285,6 +285,29 @@
   z-index: 2;
 }
 
+.sub-core-cluster {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: subCoreClusterBreath 4.6s ease-in-out infinite;
+}
+
+.sub-core-group-ring {
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  border: 1px dashed rgba(0,255,204,.22);
+  background:
+    repeating-conic-gradient(from 0deg, rgba(0,255,204,.10) 0 3deg, transparent 3deg 15deg),
+    radial-gradient(circle, rgba(0,255,204,.07), transparent 62%);
+  box-shadow:
+    0 0 18px rgba(0,255,204,.13),
+    inset 0 0 18px rgba(255,61,242,.06);
+  opacity: calc(.34 + var(--eff, .55) * .24);
+  animation: subCoreLocalOrbit 11s linear infinite;
+}
+
 .sub-core-link {
   position: absolute;
   left: 0;
@@ -308,9 +331,12 @@
 }
 
 .sub-core-inner {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--sub-size, 46px) * .56);
+  height: calc(var(--sub-size, 46px) * .56);
+  transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
   align-content: center;
@@ -326,14 +352,94 @@
     0 0 52px rgba(0,255,204,.22),
     inset 0 0 20px rgba(255,255,255,.14);
   animation: subCoreCounterSpin 50s linear infinite, subCorePulse 3.8s ease-in-out infinite;
+  overflow: hidden;
+  z-index: 3;
+}
+
+.sub-core-mini {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(13px, calc(var(--sub-size, 46px) * .21));
+  height: max(13px, calc(var(--sub-size, 46px) * .21));
+  border-radius: 50%;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--mini-angle))
+    translateX(calc(var(--sub-size, 46px) * .34))
+    rotate(calc(-1 * var(--mini-angle)));
+  border: 1px solid rgba(0,255,204,.54);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.48), transparent 32%),
+    radial-gradient(circle, rgba(0,255,204,.42), rgba(0,20,34,.86) 72%);
+  box-shadow:
+    0 0 13px rgba(0,255,204,.42),
+    inset 0 0 10px rgba(255,255,255,.10);
+  overflow: hidden;
+  z-index: 2;
+  animation: subCoreMiniPulse 2.9s ease-in-out infinite;
+  animation-delay: var(--mini-delay, 0s);
+}
+
+.sub-core-plasma,
+.sub-core-plasma-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.sub-core-plasma {
+  z-index: 1;
+  opacity: calc(.34 + var(--eff, .55) * .28);
+  mix-blend-mode: screen;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.18), transparent 15%),
+    repeating-conic-gradient(from 25deg, rgba(255,255,255,.36) 0 2deg, transparent 2deg 17deg),
+    conic-gradient(from 120deg, rgba(0,255,204,.55), rgba(255,61,242,.28), rgba(255,204,0,.22), rgba(0,255,204,.55));
+  mask: radial-gradient(circle, transparent 0 22%, #000 25% 72%, transparent 76%);
+  filter: blur(.2px) drop-shadow(0 0 8px rgba(0,255,204,.45));
+  animation: subCorePlasmaDrift 2.4s linear infinite;
+}
+
+.sub-core-plasma-layer {
+  overflow: hidden;
+  z-index: 4;
+}
+
+.sub-core-plasma-layer .plasma-arc-main {
+  stroke-width: 1.15;
+}
+
+.sub-core-plasma-layer .plasma-arc-glow {
+  stroke-width: 4.5;
+  filter: blur(3px) drop-shadow(0 0 8px rgba(255,61,242,.58));
 }
 
 @keyframes subCoreLinkFlow {
   to { filter: hue-rotate(34deg) brightness(1.12); }
 }
 
+@keyframes subCoreClusterBreath {
+  0%, 100% { filter: saturate(1) brightness(1); }
+  50% { filter: saturate(1.18) brightness(1.12); }
+}
+
+@keyframes subCoreLocalOrbit {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes subCoreCounterSpin {
-  to { transform: rotate(-360deg); }
+  to { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+@keyframes subCoreMiniPulse {
+  0%, 100% { opacity: .78; filter: brightness(1); }
+  50% { opacity: 1; filter: brightness(1.3); }
+}
+
+@keyframes subCorePlasmaDrift {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes subCorePulse {
@@ -351,14 +457,35 @@
   opacity: 0;
 }
 
-.sub-core-inner.pulse-hit::after {
+.sub-core-mini::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.sub-core-inner.pulse-hit::after,
+.sub-core-mini.pulse-hit::after {
   animation: subCorePulseFlash .38s ease-out forwards;
+}
+
+.sub-core-inner.pulse-hit .sub-core-plasma,
+.sub-core-mini.pulse-hit .sub-core-plasma {
+  animation: subCorePlasmaHit .38s ease-out forwards;
 }
 
 @keyframes subCorePulseFlash {
   0%   { opacity: 0; background: radial-gradient(circle, rgba(255,204,0,.65), transparent 55%); transform: scale(.7); }
   28%  { opacity: 1; transform: scale(1.18); }
   100% { opacity: 0; transform: scale(1.6); }
+}
+
+@keyframes subCorePlasmaHit {
+  0% { opacity: .28; filter: brightness(1) drop-shadow(0 0 6px rgba(0,255,204,.32)); }
+  38% { opacity: 1; filter: brightness(1.75) drop-shadow(0 0 14px rgba(255,61,242,.65)); }
+  100% { opacity: .58; filter: brightness(1.1) drop-shadow(0 0 8px rgba(0,255,204,.4)); }
 }
 
 .sub-core-glyph {
@@ -377,7 +504,11 @@
 
 /* FX disabled: keep sub-cores static */
 .fx-disabled .sub-core-field { animation: none; }
-.fx-disabled .sub-core-inner { animation: none; }
+.fx-disabled .sub-core-inner,
+.fx-disabled .sub-core-cluster,
+.fx-disabled .sub-core-group-ring,
+.fx-disabled .sub-core-mini,
+.fx-disabled .sub-core-plasma { animation: none; }
 
 /* Float-pop contained inside click-core (override body inheritance) */
 .float-pop { font-size: clamp(13px, 1.5vw, 19px); }

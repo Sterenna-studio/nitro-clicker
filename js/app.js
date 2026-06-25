@@ -766,9 +766,9 @@ function renderSubCores() {
   const field = document.getElementById('sub-core-field');
   if (!field) return;
   const lvl = state.upgrades?.nitroFactory ?? 0;
-  const coreCount = Math.floor(lvl / 10);
-  if (coreCount === lastSubCoreCount) return;
-  lastSubCoreCount = coreCount;
+  const groupCount = Math.floor(lvl / 10);
+  if (groupCount === lastSubCoreCount) return;
+  lastSubCoreCount = groupCount;
 
   const panel = document.getElementById('core-panel');
   const coreEl = document.getElementById('click-core');
@@ -782,30 +782,31 @@ function renderSubCores() {
   const effOf = i => Math.min(0.85, 0.55 + (i - 1) * 0.06);
   let orbitR = 0;
   let systemExtent = R_main;
-  if (coreCount > 0) {
-    const maxR_sub  = Math.max(34, effOf(coreCount) * R_main);
+  if (groupCount > 0) {
+    const maxR_sub  = Math.max(34, effOf(groupCount) * R_main);
     const gap = Math.max(60, R_main * 0.55);
     const minTangential = R_main + maxR_sub + gap;
-    const minPacking    = coreCount > 1
-      ? maxR_sub / Math.sin(Math.PI / coreCount) + gap
+    const minPacking    = groupCount > 1
+      ? maxR_sub / Math.sin(Math.PI / groupCount) + gap
       : 0;
     orbitR      = Math.max(minTangential, minPacking);
     systemExtent = orbitR + maxR_sub;
   }
 
-  lastAutoFitZoom = coreCount > 0
+  lastAutoFitZoom = groupCount > 0
     ? Math.max(0.32, Math.min(1, (panelShort * 0.80) / (systemExtent * 2)))
     : 1;
   applyCoreZoom();
 
   const scaleEl = document.getElementById('core-scale-value');
-  if (scaleEl) scaleEl.textContent = formatCoreScale(coreCount);
+  if (scaleEl) scaleEl.textContent = formatCoreScale(groupCount);
 
   field.innerHTML = '';
-  for (let i = 1; i <= coreCount; i++) {
+  for (let i = 1; i <= groupCount; i++) {
     const eff     = effOf(i);
     const subSize = Math.max(60, eff * R_main * 2);
-    const angle   = -90 + ((i - 1) / coreCount) * 360;
+    const angle   = -90 + ((i - 1) / groupCount) * 360;
+    const localCopies = Math.min(6, i);
     const link = document.createElement('span');
     link.className = 'sub-core-link';
     link.style.setProperty('--angle', `${angle}deg`);
@@ -820,19 +821,40 @@ function renderSubCores() {
     div.style.setProperty('--eff',     String(eff));
     div.style.setProperty('--orbit-r', `${orbitR}px`);
     div.style.setProperty('--sub-size',`${subSize}px`);
-    div.title = `Noyau dupliqué ×${i}`;
-    div.innerHTML = `<div class="sub-core-inner"><span class="sub-core-glyph">×${i}</span><span class="sub-core-eff">${Math.round(eff * 100)}%</span></div>`;
+    div.style.setProperty('--local-copies', String(localCopies));
+    div.title = `Groupement usine ×${i} · ${localCopies + 1} noyaux locaux · ${Math.round(eff * 100)}% efficacité`;
+    const miniCores = Array.from({ length: localCopies }, (_, idx) => {
+      const miniAngle = -90 + (idx / localCopies) * 360 + i * 11;
+      return `
+        <span class="sub-core-mini" style="--mini-angle:${miniAngle}deg;--mini-delay:${(-idx * 0.22).toFixed(2)}s">
+          <span class="sub-core-plasma" aria-hidden="true"></span>
+          <span class="sub-core-plasma-layer" aria-hidden="true"></span>
+        </span>`;
+    }).join('');
+    div.innerHTML = `
+      <div class="sub-core-cluster">
+        <span class="sub-core-group-ring" aria-hidden="true"></span>
+        <div class="sub-core-inner">
+          <span class="sub-core-plasma" aria-hidden="true"></span>
+          <span class="sub-core-plasma-layer" aria-hidden="true"></span>
+          <span class="sub-core-glyph">G${i}</span>
+          <span class="sub-core-eff">${Math.round(eff * 100)}%</span>
+        </div>
+        ${miniCores}
+      </div>`;
     field.appendChild(div);
   }
 }
 
 function pulseSubCores() {
   if (!fxEnabled) return;
-  document.querySelectorAll('.sub-core-inner').forEach(inner => {
+  document.querySelectorAll('.sub-core-inner, .sub-core-mini').forEach(inner => {
     inner.classList.remove('pulse-hit');
     void inner.offsetWidth;
     inner.classList.add('pulse-hit');
+    setTimeout(() => inner.classList.remove('pulse-hit'), 430);
   });
+  window.NitroPlasmaFeedback?.triggerSubCores?.(1);
 }
 
 function getCoreCenter() {
