@@ -120,6 +120,30 @@ function playGameSound(id, options = {}, fallback = null) {
   return false;
 }
 
+function getSoundFxEnabled() {
+  return window.NitroSound?.settings?.().enabled !== false;
+}
+
+function syncToggleButton(id, label, enabled) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  setText(btn, `${label} ${enabled ? 'ON' : 'OFF'}`);
+  btn.setAttribute('aria-pressed', String(!!enabled));
+  setClassToggle(btn, 'is-off', !enabled);
+}
+
+function syncUiFxToggle() {
+  syncToggleButton('fx-toggle', 'FX UI', fxEnabled);
+}
+
+function syncSoundFxToggle() {
+  const btn = document.getElementById('sound-fx-toggle');
+  if (!btn) return;
+  const hasEngine = !!window.NitroSound?.settings;
+  btn.disabled = !hasEngine;
+  syncToggleButton('sound-fx-toggle', 'FX SOUND', hasEngine && getSoundFxEnabled());
+}
+
 function fmt(value) {
   const n = Math.floor(Number(value ?? 0));
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
@@ -159,7 +183,8 @@ function renderShell() {
         <div class="brand-sub">// AGENT ${name.toUpperCase()} · PROGRESSION PAR ÉCHELLES</div>
       </div>
       <nav class="top-actions">
-        <button class="nav-btn" id="fx-toggle" type="button">${fxEnabled ? '✨ FX ON' : 'FX OFF'}</button>
+        <button class="nav-btn" id="fx-toggle" type="button" aria-pressed="${String(fxEnabled)}">FX UI ${fxEnabled ? 'ON' : 'OFF'}</button>
+        <button class="nav-btn" id="sound-fx-toggle" type="button" aria-pressed="${String(getSoundFxEnabled())}">FX SOUND ${getSoundFxEnabled() ? 'ON' : 'OFF'}</button>
         <div class="layout-switcher" role="group" aria-label="Disposition des panels">
           ${LAYOUTS.map(l => `<button class="layout-btn${currentLayout === l ? ' active' : ''}" data-layout-btn="${l}" type="button">${l.toUpperCase()}</button>`).join('')}
         </div>
@@ -326,11 +351,21 @@ function handleCoreClick(event) {
 }
 
 function bindStaticEvents() {
+  syncUiFxToggle();
+  syncSoundFxToggle();
+  window.addEventListener('nitro:sound-settings-changed', syncSoundFxToggle);
+
   document.getElementById('fx-toggle').addEventListener('click', () => {
     fxEnabled = !fxEnabled;
     localStorage.setItem(FX_KEY, String(fxEnabled));
     app.classList.toggle('fx-disabled', !fxEnabled);
-    setText('fx-toggle', fxEnabled ? '✨ FX ON' : 'FX OFF');
+    syncUiFxToggle();
+  });
+
+  document.getElementById('sound-fx-toggle').addEventListener('click', () => {
+    if (!window.NitroSound?.setEnabled) return toast('Moteur son indisponible.');
+    window.NitroSound.setEnabled(!getSoundFxEnabled());
+    syncSoundFxToggle();
   });
 
   document.querySelectorAll('[data-shop-tab]').forEach(tab => {

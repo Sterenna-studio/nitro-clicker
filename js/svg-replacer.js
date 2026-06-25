@@ -104,7 +104,14 @@ function replaceActionIcons(root) {
   if (fx && fx.dataset.svgReady !== 'true') {
     const isOn = fx.textContent.includes('ON');
     fx.dataset.svgReady = 'true';
-    fx.innerHTML = `${svgIcon('fx', 'nc-svg-icon nc-svg-inline')} ${isOn ? 'FX ON' : 'FX OFF'}`;
+    fx.innerHTML = `${svgIcon('fx', 'nc-svg-icon nc-svg-inline')} FX UI ${isOn ? 'ON' : 'OFF'}`;
+  }
+
+  const soundFx = root.querySelector('#sound-fx-toggle');
+  if (soundFx && soundFx.dataset.svgReady !== 'true') {
+    const isOn = soundFx.textContent.includes('ON');
+    soundFx.dataset.svgReady = 'true';
+    soundFx.innerHTML = `${svgIcon('fx', 'nc-svg-icon nc-svg-inline')} FX SOUND ${isOn ? 'ON' : 'OFF'}`;
   }
 
   const save = root.querySelector('#save-btn');

@@ -84,6 +84,17 @@ body {
   cursor: pointer;
 }
 
+.nav-btn[aria-pressed="true"] {
+  border-color: rgba(0,255,204,.26);
+  box-shadow: inset 0 0 0 1px rgba(0,255,204,.08), 0 0 16px rgba(0,255,204,.08);
+}
+
+.nav-btn.is-off {
+  color: rgba(232,250,255,.58);
+  border-color: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.025);
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
