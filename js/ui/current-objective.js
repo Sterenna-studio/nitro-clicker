@@ -111,8 +111,11 @@ function getObjective(state) {
   }
 
   const prestigeReq = prestigeRequirementApprox(prestige);
-  if (totalEnergy < prestigeReq) {
-    return objective('prestige_ready', 'Préparer la surcharge contrôlée', 'Continue à charger le noyau jusqu’au seuil de prestige pour reset proprement et gagner des fragments.', totalEnergy / prestigeReq, `${format(totalEnergy)} / ${format(prestigeReq)} E total`);
+  if (energy < prestigeReq) {
+    const progressText = totalEnergy < prestigeReq
+      ? `${format(totalEnergy)} / ${format(prestigeReq)} E total · réserve ${format(energy)} E`
+      : `${format(energy)} / ${format(prestigeReq)} E en réserve`;
+    return objective('prestige_ready', 'Préparer la surcharge contrôlée', 'Accumule assez d’énergie disponible pour reset proprement et gagner des fragments.', energy / prestigeReq, progressText);
   }
 
   if (prestige < 3) {

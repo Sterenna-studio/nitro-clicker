@@ -34,25 +34,15 @@ function runAutoClicker(delta) {
   autoAccumulator += rate * delta;
   while (autoAccumulator >= 1) {
     autoAccumulator -= 1;
-    syntheticCoreClick('auto');
+    pulseAutoClick();
   }
 }
 
-function syntheticCoreClick(mode = 'auto') {
+// Gameplay auto-clicks are applied in clicker-state; this module is visual only.
+function pulseAutoClick() {
   const core = document.getElementById('click-core');
   if (!core) return;
-  const rect = core.getBoundingClientRect();
-  const jitter = mode === 'auto' ? 8 : 12;
-  const x = rect.left + rect.width / 2 + (Math.random() - 0.5) * jitter;
-  const y = rect.top + rect.height / 2 + (Math.random() - 0.5) * jitter;
-  const event = new MouseEvent('click', {
-    bubbles: true,
-    cancelable: true,
-    clientX: x,
-    clientY: y,
-  });
   core.classList.add('auto-click-pulse');
-  core.dispatchEvent(event);
   setTimeout(() => core.classList.remove('auto-click-pulse'), 180);
 }
 
@@ -83,5 +73,5 @@ const boot = setInterval(() => {
 }, 250);
 
 window.NitroCoreControls = {
-  autoClick() { syntheticCoreClick('auto'); },
+  autoClick() { pulseAutoClick(); },
 };
