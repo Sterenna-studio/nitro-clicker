@@ -1,20 +1,20 @@
 export const VERSION = 9;
 
 export const BALANCE = {
-  // Seuil d'énergie totale requis pour le premier prestige (échelle exponentielle)
-  prestigeBase: 6500,
-  // Exposant de progression prestige early (P0→P10) — calibré pour ~20-40 min par prestige
+  // Seuil d'énergie disponible requis pour le premier prestige (échelle exponentielle)
+  prestigeBase: 18000,
+  // Exposant de progression prestige early (P0->P10) — P1 vise ~25-35 min, P10 plusieurs heures
   prestigeEarlyScale: 2.05,
   // Exposant de progression prestige tardif (P10+) — progression plus lente intentionnelle
   prestigeLateScale: 2.3,
   // Cap de progression hors-ligne en heures (sans compétence offlineGrid LEMEGETON)
   passiveOfflineCapHours: 8,
   // Multiplicateur de base de l'Overdrive sur le gain de clic
-  overdriveBase: 16,
+  overdriveBase: 12,
   // Bonus de multiplicateur Overdrive par niveau d'overdriveLevel
-  overdrivePerLevel: 2.7,
+  overdrivePerLevel: 1.9,
   // Secondes de production passive incluses dans le gain Overdrive
-  overdrivePassiveSeconds: 8,
+  overdrivePassiveSeconds: 5,
   // Chance de base de drop d'un fragment à chaque Overdrive
   fragmentBaseChance: 0.08,
   // Bonus de chance fragment par niveau de prestige
@@ -33,8 +33,8 @@ export const BALANCE = {
   shellFragmentBonusMax: 0.045,
   // Bonus fragment par point de capacité de coque
   shellFragmentBonusPerCapacity: 0.004,
-  // Ratio de gain d'énergie par clic auto vs clic manuel (58% = moins rentable intentionnellement)
-  autoClickGainRatio: 0.58,
+  // Ratio de gain d'énergie par clic auto vs clic manuel (45% = moins rentable intentionnellement)
+  autoClickGainRatio: 0.45,
   // Ratio de charge de surcharge par clic auto (85% = Overdrive possible mais ralenti)
   autoClickSurchargeRatio: 0.85,
   // Nombre max de clics auto simulés par tick (évite les boucles trop longues)
@@ -239,40 +239,40 @@ export function getOfflineCapHours(state) {
 
 export const UPGRADES = [
   {
-    id: 'clickAmplifier', name: 'Amplificateur de clic', icon: '⚡', baseCost: 14, scale: 1.30, currency: 'energy', tier: 0,
-    desc: '+1.15 puissance de clic par niveau. Très rentable en début de run.',
+    id: 'clickAmplifier', name: 'Amplificateur de clic', icon: '⚡', baseCost: 24, scale: 1.34, currency: 'energy', tier: 0,
+    desc: '+1 puissance de clic par niveau. Très rentable en début de run.',
     unlock: () => true,
-    apply(state) { state.clickPower += 1.15; },
+    apply(state) { state.clickPower += 1; },
   },
   {
-    id: 'autoCore', name: 'Noyau automatique', icon: '⬡', baseCost: 65, scale: 1.40, currency: 'energy', tier: 0,
-    desc: '+0.55 énergie / seconde par niveau. Production passive stable.',
+    id: 'autoCore', name: 'Noyau automatique', icon: '⬡', baseCost: 110, scale: 1.46, currency: 'energy', tier: 0,
+    desc: '+0.45 énergie / seconde par niveau. Production passive stable.',
     unlock: () => true,
-    apply(state) { state.passiveRate += 0.55; },
+    apply(state) { state.passiveRate += 0.45; },
   },
   {
-    id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 180, scale: 1.45, currency: 'energy', tier: 1,
+    id: 'autoClicker', name: 'Auto-clicker de maintien', icon: '◌', baseCost: 420, scale: 1.52, currency: 'energy', tier: 1,
     desc: 'Simule des clics automatiques : charge la surcharge, déclenche l\'Overdrive, aide LEMEGETON.',
     unlock: state => state.totalEnergy >= 220 || state.prestige >= 1,
     lockedText: 'Débloqué à 220 énergie totale.',
-    apply(state) { state.autoClickRate += 0.22; state.surchargeGain += 0.18; state.overdriveLevel += 0.25; },
+    apply(state) { state.autoClickRate += 0.16; state.surchargeGain += 0.12; state.overdriveLevel += 0.16; },
   },
   {
-    id: 'resonance', name: 'Résonance Star', icon: '✦', baseCost: 300, scale: 1.50, currency: 'energy', tier: 1,
-    desc: '+3.5 clic et +1/s. Débloque le réacteur vivant.',
+    id: 'resonance', name: 'Résonance Star', icon: '✦', baseCost: 700, scale: 1.54, currency: 'energy', tier: 1,
+    desc: '+2.8 clic et +0.8/s. Débloque le réacteur vivant.',
     unlock: state => state.totalEnergy >= 360 || state.prestige >= 1,
     lockedText: 'Débloqué à 360 énergie totale.',
-    apply(state) { state.clickPower += 3.5; state.passiveRate += 1; },
+    apply(state) { state.clickPower += 2.8; state.passiveRate += 0.8; },
   },
   {
-    id: 'surchargeCoil', name: 'Bobine de surcharge', icon: '🧬', baseCost: 620, scale: 1.45, currency: 'energy', tier: 1,
-    desc: '+10 capacité de surcharge, +2 charge par clic. Overdrive plus fréquent.',
+    id: 'surchargeCoil', name: 'Bobine de surcharge', icon: '🧬', baseCost: 1600, scale: 1.52, currency: 'energy', tier: 1,
+    desc: '+8 capacité de surcharge, +1.25 charge par clic. Overdrive plus fréquent.',
     unlock: state => state.totalEnergy >= 720 || state.prestige >= 1,
     lockedText: 'Débloqué à 720 énergie totale.',
-    apply(state) { state.maxSurcharge += 10; state.surchargeGain += 2; state.overdriveLevel += 1; },
+    apply(state) { state.maxSurcharge += 8; state.surchargeGain += 1.25; state.overdriveLevel += 0.6; },
   },
   {
-    id: 'coreIsolation', name: 'Isolation du noyau', icon: '◉', baseCost: 950, scale: 1.38, currency: 'energy', tier: 2,
+    id: 'coreIsolation', name: 'Isolation du noyau', icon: '◉', baseCost: 2300, scale: 1.44, currency: 'energy', tier: 2,
     desc: 'Crée une sphère de confinement. +2 stockage fragment, +1 dureté, +8 surcharge.',
     unlock: state => state.totalEnergy >= 1000 || state.prestige >= 1,
     lockedText: 'Débloqué à 1 000 énergie totale : première coque de confinement.',
@@ -293,11 +293,11 @@ export const UPGRADES = [
     apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 1; state.coreShellReflect += 0.075; state.passiveRate += 5; state.clickPower += 5; },
   },
   {
-    id: 'prism', name: 'Prisme Nitro', icon: '◆', baseCost: 1400, scale: 1.54, currency: 'energy', tier: 2,
-    desc: '+10 clic et +3/s. Stabilise les flux biopunk.',
+    id: 'prism', name: 'Prisme Nitro', icon: '◆', baseCost: 4200, scale: 1.58, currency: 'energy', tier: 2,
+    desc: '+8 clic et +2.4/s. Stabilise les flux biopunk.',
     unlock: state => state.totalEnergy >= 1800 || state.prestige >= 1,
     lockedText: 'Débloqué à 1 800 énergie totale.',
-    apply(state) { state.clickPower += 10; state.passiveRate += 3; },
+    apply(state) { state.clickPower += 8; state.passiveRate += 2.4; },
   },
   {
     id: 'prismGlass', name: 'Verre prismatique', icon: '◇', baseCost: 18000, scale: 1.50, currency: 'energy', tier: 3,
@@ -307,11 +307,11 @@ export const UPGRADES = [
     apply(state) { state.coreShellCapacity += 2; state.coreShellHardness += 1; state.coreShellReflect += 0.10; state.passiveRate += 10; state.clickPower += 9; },
   },
   {
-    id: 'bioConduit', name: 'Conduit organique', icon: '🫀', baseCost: 4300, scale: 1.52, currency: 'energy', tier: 2,
-    desc: '+7 clic, +9.5/s, tentacules plus denses.',
+    id: 'bioConduit', name: 'Conduit organique', icon: '🫀', baseCost: 9000, scale: 1.58, currency: 'energy', tier: 2,
+    desc: '+6 clic, +7/s, tentacules plus denses.',
     unlock: state => (state.upgrades?.prism ?? 0) >= 2 || state.totalEnergy >= 6000 || state.prestige >= 2,
     lockedText: 'Débloqué avec Prisme Nitro Lv.2 ou 6 000 énergie totale.',
-    apply(state) { state.clickPower += 7; state.passiveRate += 9.5; state.maxSurcharge += 5; },
+    apply(state) { state.clickPower += 6; state.passiveRate += 7; state.maxSurcharge += 4; },
   },
   {
     id: 'fractureTuning', name: 'Accord de fracture', icon: '✧', baseCost: 3, scale: 1.45, currency: 'fragments', tier: 3, persistent: true,

@@ -82,7 +82,7 @@ function getObjective(state) {
   }
 
   if ((upgrades.autoCore ?? 0) < 1) {
-    return objective('first_idle', 'Installer un flux passif', 'Achète Noyau automatique pour produire même sans cliquer.', energy / cost(65, 1.40, upgrades.autoCore ?? 0), `${format(energy)} E · coût estimé ${format(cost(65, 1.40, upgrades.autoCore ?? 0))}`);
+    return objective('first_idle', 'Installer un flux passif', 'Achète Noyau automatique pour produire même sans cliquer.', energy / cost(110, 1.46, upgrades.autoCore ?? 0), `${format(energy)} E · coût estimé ${format(cost(110, 1.46, upgrades.autoCore ?? 0))}`);
   }
 
   if (totalEnergy < 1000) {
@@ -90,11 +90,11 @@ function getObjective(state) {
   }
 
   if ((upgrades.coreIsolation ?? 0) < 1) {
-    return objective('core_isolation', 'Former la sphère d’isolation', 'Achète Isolation du noyau pour commencer à stocker les fragments dans une coque visible.', energy / cost(950, 1.38, upgrades.coreIsolation ?? 0), `${format(energy)} E · coût ${format(cost(950, 1.38, upgrades.coreIsolation ?? 0))}`);
+    return objective('core_isolation', 'Former la sphère d’isolation', 'Achète Isolation du noyau pour commencer à stocker les fragments dans une coque visible.', energy / cost(2300, 1.44, upgrades.coreIsolation ?? 0), `${format(energy)} E · coût ${format(cost(2300, 1.44, upgrades.coreIsolation ?? 0))}`);
   }
 
   if (storedFragments < 1 && totalFragments < 3) {
-    return objective('store_fragment', 'Confiner un Fragment Nitro', 'Déclenche des Overdrives : la coque peut maintenant stocker les fragments trouvés.', Math.min(1, totalEnergy / 6500), `${storedFragments} fragment stocké · surcharge/Overdrive recommandé`);
+    return objective('store_fragment', 'Confiner un Fragment Nitro', 'Déclenche des Overdrives : la coque peut maintenant stocker les fragments trouvés.', Math.min(1, totalEnergy / 18000), `${storedFragments} fragment stocké · surcharge/Overdrive recommandé`);
   }
 
   if (storedFragments >= 1 && lastBreakAt <= 0) {
@@ -153,7 +153,7 @@ function cost(base, scale, level) {
 
 function prestigeRequirementApprox(prestige) {
   const p = Math.max(0, Number(prestige ?? 0));
-  const base = 6500;
+  const base = 18000;
   if (p <= 10) return Math.floor(base * Math.pow(2.05, p));
   const p10 = base * Math.pow(2.05, 10);
   return Math.floor(p10 * Math.pow(2.3, p - 10));
