@@ -784,6 +784,26 @@ export function prestigeRequirement(state) {
   return Math.floor(p10 * Math.pow(BALANCE.prestigeLateScale, prestige - 10));
 }
 
+export function getPrestigePreview(state) {
+  const nextPrestige = Math.max(0, Number(state?.prestige ?? 0)) + 1;
+  const keptFragments = Math.max(0, Number(state?.fragments ?? 0));
+  const keptTotalFragments = Math.max(keptFragments, Number(state?.totalFragments ?? keptFragments));
+  const baseReward = Math.floor(
+    4
+    + nextPrestige * 1.6
+    + Math.sqrt(Math.max(0, Number(state?.totalEnergy ?? 0))) / 2200
+    + keptTotalFragments * 0.02,
+  );
+  const minimumReward = 5 + Math.floor(nextPrestige * 1.25);
+  const fragmentReward = Math.max(minimumReward, Math.floor(baseReward * getFragmentGainMultiplier(state)));
+  const starterEnergy = getPrestigeStarterEnergy(nextPrestige, fragmentReward);
+  return { nextPrestige, fragmentReward, starterEnergy };
+}
+
+function getPrestigeStarterEnergy(nextPrestige, fragmentReward) {
+  return Math.floor(60 + nextPrestige * 22 + fragmentReward * 14);
+}
+
 export function doPrestige(state) {
   if (!canPrestige(state)) return { ok: false, reason: 'not_ready' };
   const userId = state.userId;
@@ -797,12 +817,9 @@ export function doPrestige(state) {
   const keptLemegetonToggles = { ...(state.lemegetonToggles ?? {}) };
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
-  // Bonus prestige basé sur totalEnergy (progression globale) et non energy courante.
-  // sqrt(totalEnergy)/2200 : racine carrée pour aplatir la courbe sur les très hautes valeurs.
-  // Diviseur 2200 calibré empiriquement pour ~4-12 fragments/prestige en mid-game.
-  const baseReward = Math.floor(4 + next.prestige * 1.6 + Math.sqrt(Math.max(0, state.totalEnergy)) / 2200 + keptTotalFragments * 0.02);
-  // Résonance fragmentaire (compétence LEMEGETON) amplifie le gain de fragments.
-  const prestigeReward = Math.floor(baseReward * getFragmentGainMultiplier(state));
+  const preview = getPrestigePreview(state);
+  const prestigeReward = preview.fragmentReward;
+  const starterEnergy = preview.starterEnergy;
   next.fragments = keptFragments + prestigeReward;
   next.totalFragments = keptTotalFragments + prestigeReward;
   next.lifetimeEnergy = keptLifetimeEnergy;
@@ -812,5 +829,6 @@ export function doPrestige(state) {
   next.milestones = keptMilestones;
   next.totalClicks = keptTotalClicks;
   recalcDerivedStats(next);
-  return { ok: true, state: next, keptPersistentUpgrades, prestigeReward };
+  addEnergy(next, starterEnergy);
+  return { ok: true, state: next, keptPersistentUpgrades, prestigeReward, starterEnergy };
 }

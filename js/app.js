@@ -12,6 +12,7 @@ import {
   getCoreGrowthLevel,
   getCoreShellInfo,
   getCurrency,
+  getPrestigePreview,
   getScalingLayer,
   getVisibleMilestones,
   canPrestige,
@@ -251,7 +252,7 @@ function renderShell() {
             <button class="upgrade-btn prestige-card" id="prestige-btn" type="button">
               <span class="upgrade-fill" id="prestige-fill"></span>
               <div class="upgrade-head"><span class="upgrade-name">❆ Surcharge contrôlée</span><span class="upgrade-cost" id="prestige-cost"></span></div>
-              <div class="upgrade-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
+              <div class="upgrade-desc" id="prestige-desc">Reset le run, conserve tes fragments, augmente l'échelle et débloque des systèmes.</div>
             </button>
           </div>
         </div>
@@ -459,11 +460,11 @@ function bindStaticEvents() {
     window.NitroLemegeton?.react?.('prestige');
     saveAll(userId, state);
     renderAll(true);
-    spawnSystemWave('PRESTIGE +1');
+    spawnSystemWave(`PRESTIGE ${state.prestige} · +${fmt(result.prestigeReward)}F`);
     lightningStorm(9);
     if (getScalingLayer(state).id !== beforeLayer) spawnScaleShift();
     claimMilestonesAndRender();
-    toast('Prestige activé. Échelle du système recalculée.');
+    toast(`Prestige activé · +${fmt(result.prestigeReward)}F · réserve +${fmt(result.starterEnergy ?? 0)}E.`);
     const earned = (state.fragments ?? 0) - oldFragments;
     if (earned > 0) setTimeout(() => spawnFragmentOrbs(earned), 500);
   });
@@ -1003,12 +1004,14 @@ function renderStats() {
   setMeter('meter-shell', shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio * 0.35) : 0);
 
   const req = prestigeRequirement(state);
+  const preview = getPrestigePreview(state);
   const prestigeRatio = Math.min(1, state.energy / Math.max(1, req));
   setMeter('meter-prestige', prestigeRatio);
   setMeter('prestige-fill', prestigeRatio);
 
   const btn = document.getElementById('prestige-btn');
   setText('prestige-cost', `${fmt(state.energy)} / ${fmt(req)}`);
+  setText('prestige-desc', `Reset le run · +${fmt(preview.fragmentReward)}F · réserve +${fmt(preview.starterEnergy)}E · conserve tes systèmes permanents.`);
   if (btn) {
     btn.disabled = state.energy < req;
     setClassToggle(btn, 'can-buy', state.energy >= req);
