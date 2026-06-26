@@ -73,7 +73,9 @@ let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
 let currentLayout = localStorage.getItem(LAYOUT_KEY) ?? 'nexus';
 if (!LAYOUTS.includes(currentLayout)) currentLayout = 'nexus';
-let lastSubCoreCount = -1;
+let lastSubCoreSignature = '';
+let lastOrbitalCount = 0;
+let lastDupCount = 0;
 let audioCtx = null;
 let lastEnergyPulse = 0;
 const bounceParticles = [];
@@ -210,6 +212,7 @@ function renderShell() {
 
     <section class="game-grid game-grid-wide" id="game-grid" data-layout="${currentLayout}">
       <article class="panel core-panel" id="core-panel">
+        <div class="microscope-lens" aria-hidden="true"></div>
         <div class="scale-radar" id="scale-radar" aria-hidden="true"></div>
         <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
         <div class="core-state-aura" id="core-state-aura" aria-hidden="true"><span></span><i></i><b></b></div>
@@ -748,6 +751,8 @@ function applyCoreZoom() {
   const target = CORE_ZOOM_LEVELS[coreZoomIndex] ?? CORE_ZOOM_LEVELS[0];
   const effective = Math.min(target, lastAutoFitZoom);
   panel.style.setProperty('--panel-zoom', effective.toFixed(4));
+  // Le microscope « se referme » quand on dézoome (système plus large à observer).
+  panel.classList.toggle('microscope-active', effective < 0.62);
   const readout = document.getElementById('core-zoom-readout');
   if (readout) readout.textContent = `${Math.round(target * 100)}%`;
   const ctrl = document.getElementById('core-zoom-control');
@@ -763,93 +768,155 @@ function stepCoreZoom(delta) {
   applyCoreZoom();
 }
 
+const ORBITAL_MIN_REFLECT = 0.10;
+const ORBITAL_MAX_REFLECT = 0.80;
+const MAX_CORE_DUPLICATES = 5;
+
+// Réflexions des noyaux orbitaux (upgrade « Multiplicateur de noyau » / nitroFactory).
+// 1 noyau orbital par tranche de 10 niveaux. Le plus récent grandit DANS sa décade :
+// sa réflexion passe de 10% (niveau X1) à 80% au déblocage du suivant, puis se fige à 80%.
+function orbitalReflections(nitroLvl) {
+  const full = Math.floor(nitroLvl / 10);
+  const partial = nitroLvl % 10;
+  const list = [];
+  for (let i = 0; i < full; i++) list.push(ORBITAL_MAX_REFLECT);
+  if (partial > 0) {
+    list.push(ORBITAL_MIN_REFLECT + ((partial - 1) / 9) * (ORBITAL_MAX_REFLECT - ORBITAL_MIN_REFLECT));
+  }
+  return list;
+}
+
+// Géométrie pure d'un anneau orbital autour d'un noyau de rayon R_center.
+// Sépare le calcul (réutilisé pour pré-mesurer les clones) du rendu DOM.
+function orbitGeometry(reflections, R_center) {
+  if (!reflections.length) return { sizes: [], orbitR: 0, subR: 0, extent: R_center };
+  const sizes = reflections.map(r => Math.max(R_center * 0.34, r * R_center * 1.7));
+  const subR = Math.max(...sizes) / 2;
+  const n = reflections.length;
+  const gap = Math.max(R_center * 0.45, 40);
+  const minTangential = R_center + subR + gap;
+  const minPacking = n > 1 ? subR / Math.sin(Math.PI / n) + gap * 0.6 : 0;
+  const orbitR = Math.max(minTangential, minPacking);
+  return { sizes, orbitR, subR, extent: orbitR + subR };
+}
+
+// Noyau « propre » : sphère Nitro lumineuse, sans aucun texte ni copie locale.
+function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0 } = {}) {
+  const node = document.createElement('div');
+  node.className = 'sub-core'
+    + (dup ? ' is-dup' : '')
+    + (growing ? ' is-growing' : '')
+    + (fresh ? ' just-divided' : '');
+  node.style.setProperty('--sub-size', `${size.toFixed(1)}px`);
+  node.style.setProperty('--eff', reflect.toFixed(3));
+  if (title) node.title = title;
+  node.innerHTML = `
+    <div class="sub-core-inner">
+      <span class="sub-core-plasma" aria-hidden="true"></span>
+      <span class="sub-core-plasma-layer" aria-hidden="true"></span>
+    </div>`;
+  return node;
+}
+
+// Construit un anneau de noyaux orbitaux dans `parent`. Renvoie l'extent du système.
+function buildOrbitalRing(parent, reflections, R_center, { animateLast = false } = {}) {
+  const geo = orbitGeometry(reflections, R_center);
+  reflections.forEach((reflect, idx) => {
+    const size = geo.sizes[idx];
+    const angle = -90 + (idx / reflections.length) * 360;
+    const growing = animateLast && idx === reflections.length - 1 && reflect < ORBITAL_MAX_REFLECT;
+
+    const link = document.createElement('span');
+    link.className = 'sub-core-link';
+    link.style.setProperty('--angle', `${angle}deg`);
+    link.style.setProperty('--orbit-r', `${geo.orbitR.toFixed(1)}px`);
+    link.style.setProperty('--sub-size', `${size.toFixed(1)}px`);
+    link.style.setProperty('--eff', reflect.toFixed(3));
+    parent.appendChild(link);
+
+    const node = makeNucleus(size, {
+      growing,
+      reflect,
+      title: `Noyau orbital ${idx + 1} · réflexion ${Math.round(reflect * 100)}%`,
+    });
+    node.style.setProperty('--angle', `${angle}deg`);
+    node.style.setProperty('--orbit-r', `${geo.orbitR.toFixed(1)}px`);
+    parent.appendChild(node);
+  });
+  return geo.extent;
+}
+
 function renderSubCores() {
   const field = document.getElementById('sub-core-field');
   if (!field) return;
-  const lvl = state.upgrades?.nitroFactory ?? 0;
-  const groupCount = Math.floor(lvl / 10);
-  if (groupCount === lastSubCoreCount) return;
-  lastSubCoreCount = groupCount;
+
+  const nitroLvl = state.upgrades?.nitroFactory ?? 0;
+  const engineLvl = state.upgrades?.enginePlant ?? 0;
+  const reflections = orbitalReflections(nitroLvl);
+  const orbitalCount = reflections.length;
+  const dupCount = Math.min(MAX_CORE_DUPLICATES, Math.floor(engineLvl / 10));
+
+  const signature = `${nitroLvl}:${dupCount}`;
+  if (signature === lastSubCoreSignature) return;
+  const grewDup = dupCount > lastDupCount;
+  lastSubCoreSignature = signature;
+  lastOrbitalCount = orbitalCount;
+  lastDupCount = dupCount;
 
   const panel = document.getElementById('core-panel');
   const coreEl = document.getElementById('click-core');
   const coreRect = coreEl?.getBoundingClientRect();
   const panelRect = panel?.getBoundingClientRect();
-
-  const curZoom = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1;
+  const curZoom = panel ? (parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1) : 1;
   const R_main = coreRect ? (coreRect.width / curZoom) / 2 : 110;
   const panelShort = panelRect ? Math.min(panelRect.width, panelRect.height) : 520;
 
-  const effOf = i => Math.min(0.85, 0.55 + (i - 1) * 0.06);
-  let orbitR = 0;
-  let systemExtent = R_main;
-  if (groupCount > 0) {
-    const maxR_sub  = Math.max(34, effOf(groupCount) * R_main);
-    const gap = Math.max(60, R_main * 0.55);
-    const minTangential = R_main + maxR_sub + gap;
-    const minPacking    = groupCount > 1
-      ? maxR_sub / Math.sin(Math.PI / groupCount) + gap
-      : 0;
-    orbitR      = Math.max(minTangential, minPacking);
-    systemExtent = orbitR + maxR_sub;
+  field.innerHTML = '';
+
+  // ── Noyaux orbitaux autour du noyau principal (réflexion d'énergie) ──
+  const mainExtent = buildOrbitalRing(field, reflections, R_main, { animateLast: true });
+  let totalExtent = mainExtent;
+
+  // ── Duplication du noyau central (placement hexagonal, max 5 clones) ──
+  if (dupCount > 0) {
+    const R_dup = R_main * 0.66;
+    const dupExtent = orbitGeometry(reflections, R_dup).extent;
+    const gap2 = R_main * 0.5;
+    // hexR : assez loin pour que chaque clone (+ ses orbitaux) reste hors du système principal
+    // et ne chevauche pas ses voisins hexagonaux (corde = hexR pour 60° de séparation).
+    const hexR = Math.max(mainExtent + dupExtent + gap2, 2 * dupExtent + gap2);
+
+    for (let k = 0; k < dupCount; k++) {
+      const angle = -90 + k * 60; // sommets d'un hexagone
+      const isNewest = grewDup && k === dupCount - 1;
+      const anchor = document.createElement('div');
+      anchor.className = 'dup-core' + (isNewest ? ' just-divided' : '');
+      anchor.style.setProperty('--angle', `${angle}deg`);
+      anchor.style.setProperty('--orbit-r', `${hexR.toFixed(1)}px`);
+      field.appendChild(anchor);
+
+      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, title: `Noyau dupliqué ${k + 1}` });
+      body.style.setProperty('--angle', '0deg');
+      body.style.setProperty('--orbit-r', '0px');
+      anchor.appendChild(body);
+
+      buildOrbitalRing(anchor, reflections, R_dup, { animateLast: false });
+    }
+    totalExtent = Math.max(totalExtent, hexR + dupExtent);
   }
 
-  lastAutoFitZoom = groupCount > 0
-    ? Math.max(0.32, Math.min(1, (panelShort * 0.80) / (systemExtent * 2)))
+  lastAutoFitZoom = totalExtent > R_main
+    ? Math.max(0.30, Math.min(1, (panelShort * 0.80) / (totalExtent * 2)))
     : 1;
   applyCoreZoom();
 
   const scaleEl = document.getElementById('core-scale-value');
-  if (scaleEl) scaleEl.textContent = formatCoreScale(groupCount);
-
-  field.innerHTML = '';
-  for (let i = 1; i <= groupCount; i++) {
-    const eff     = effOf(i);
-    const subSize = Math.max(60, eff * R_main * 2);
-    const angle   = -90 + ((i - 1) / groupCount) * 360;
-    const localCopies = Math.min(6, i);
-    const link = document.createElement('span');
-    link.className = 'sub-core-link';
-    link.style.setProperty('--angle', `${angle}deg`);
-    link.style.setProperty('--orbit-r', `${orbitR}px`);
-    link.style.setProperty('--sub-size', `${subSize}px`);
-    link.style.setProperty('--eff', String(eff));
-    field.appendChild(link);
-
-    const div = document.createElement('div');
-    div.className = 'sub-core';
-    div.style.setProperty('--angle',   `${angle}deg`);
-    div.style.setProperty('--eff',     String(eff));
-    div.style.setProperty('--orbit-r', `${orbitR}px`);
-    div.style.setProperty('--sub-size',`${subSize}px`);
-    div.style.setProperty('--local-copies', String(localCopies));
-    div.title = `Groupement usine ×${i} · ${localCopies + 1} noyaux locaux · ${Math.round(eff * 100)}% efficacité`;
-    const miniCores = Array.from({ length: localCopies }, (_, idx) => {
-      const miniAngle = -90 + (idx / localCopies) * 360 + i * 11;
-      return `
-        <span class="sub-core-mini" style="--mini-angle:${miniAngle}deg;--mini-delay:${(-idx * 0.22).toFixed(2)}s">
-          <span class="sub-core-plasma" aria-hidden="true"></span>
-          <span class="sub-core-plasma-layer" aria-hidden="true"></span>
-        </span>`;
-    }).join('');
-    div.innerHTML = `
-      <div class="sub-core-cluster">
-        <span class="sub-core-group-ring" aria-hidden="true"></span>
-        <div class="sub-core-inner">
-          <span class="sub-core-plasma" aria-hidden="true"></span>
-          <span class="sub-core-plasma-layer" aria-hidden="true"></span>
-          <span class="sub-core-glyph">G${i}</span>
-          <span class="sub-core-eff">${Math.round(eff * 100)}%</span>
-        </div>
-        ${miniCores}
-      </div>`;
-    field.appendChild(div);
-  }
+  if (scaleEl) scaleEl.textContent = formatCoreScale(orbitalCount + dupCount);
 }
 
 function pulseSubCores() {
   if (!fxEnabled) return;
-  document.querySelectorAll('.sub-core-inner, .sub-core-mini').forEach(inner => {
+  document.querySelectorAll('.sub-core-inner').forEach(inner => {
     inner.classList.remove('pulse-hit');
     void inner.offsetWidth;
     inner.classList.add('pulse-hit');

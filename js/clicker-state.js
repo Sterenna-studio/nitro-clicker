@@ -331,26 +331,29 @@ export const UPGRADES = [
     id: 'nitroFactory', name: 'Multiplicateur de noyau', icon: '⚛️', baseCost: 62000, scale: 1.42, currency: 'energy', tier: 4,
     desc(state) {
       const lvl = state?.upgrades?.nitroFactory ?? 0;
-      const cores = Math.floor(lvl / 10);
-      if (cores === 0) return '+1 groupement de noyaux tous les 10 niveaux · chaque groupement duplique le noyau et ses doubles locaux.';
+      const orbitals = Math.floor(lvl / 10);
+      if (orbitals === 0) return '+1 noyau orbital tous les 10 niveaux · chacun réfléchit l\'énergie du noyau, de 10% à 80% en grandissant.';
       const mult = state?.coreMultiplier ?? 1;
       const nextIn = lvl % 10 === 0 ? 10 : 10 - (lvl % 10);
-      return `${cores} groupement${cores > 1 ? 's' : ''} usine actif${cores > 1 ? 's' : ''} · ×${mult.toFixed(2)} puissance · prochain dans ${nextIn} niveaux.`;
+      return `${orbitals} noyau${orbitals > 1 ? 'x' : ''} orbital${orbitals > 1 ? 'aux' : ''} · ×${mult.toFixed(2)} puissance · le prochain grandit dans ${nextIn} niveaux.`;
     },
     unlock: state => state.prestige >= 10,
-    lockedText: 'Débloqué au Prestige 10 : le noyau devient multiplicable.',
+    lockedText: 'Débloqué au Prestige 10 : des noyaux orbitaux gravitent autour du noyau.',
     apply(_state) { /* effet géré dans recalcDerivedStats via coreMultiplier */ },
   },
   {
-    id: 'enginePlant', name: 'Chaîne de production moteur', icon: '⚙️', baseCost: 900000, scale: 1.38, currency: 'energy', tier: 5,
+    id: 'enginePlant', name: 'Duplication du noyau', icon: '⚙️', baseCost: 900000, scale: 1.38, currency: 'energy', tier: 5,
     desc(state) {
       const lvl = state?.upgrades?.enginePlant ?? 0;
-      if (lvl === 0) return `Allume l'usine : +75 énergie/s industrielle par niveau, amplifiée par tes noyaux dupliqués.`;
+      const clones = Math.min(5, Math.floor(lvl / 10));
+      if (lvl === 0) return 'Duplique le noyau central tous les 10 niveaux (max 5, disposition hexagonale). Chaque clone produit comme le principal.';
       const rate = Math.round(state?.factoryRate ?? 0);
-      return `Usine active · ${rate.toLocaleString('fr-FR')} é/s industrielle · +75 é/s par niveau (×noyaux).`;
+      const nextIn = clones >= 5 ? null : (lvl % 10 === 0 ? 10 : 10 - (lvl % 10));
+      const tail = nextIn ? ` · prochain clone dans ${nextIn} niveaux` : ' · réseau hexagonal complet (5/5)';
+      return `${clones} noyau${clones > 1 ? 'x' : ''} dupliqué${clones > 1 ? 's' : ''} · ${rate.toLocaleString('fr-FR')} é/s${tail}.`;
     },
     unlock: state => state.prestige >= 20,
-    lockedText: 'Débloqué au Prestige 20.',
+    lockedText: 'Débloqué au Prestige 20 : le noyau se duplique en réseau hexagonal.',
     apply(state) { state.clickPower += 140; state.passiveRate += 200; state.factoryRate += 75; },
   },
   {
