@@ -392,14 +392,45 @@
 /* ── Noyau dupliqué (central clone, upgrade « Duplication du noyau ») ────────
    Légère profondeur de champ « microscope » : un peu plus doux/diffus que le
    noyau principal, pour donner l'impression d'un plan focal différent. */
+/* Clone central : aspect translucide « copie fantôme » — verre lumineux semi-transparent
+   qui se distingue du noyau principal opaque. */
 .sub-core.is-dup .sub-core-inner {
-  border-color: rgba(0, 255, 204, 0.62);
-  filter: saturate(1.05) brightness(0.96);
+  border-color: rgba(0, 255, 204, 0.42);
+  opacity: 0.66;
+  background:
+    radial-gradient(circle at 38% 32%, rgba(255,255,255,.30), transparent 32%),
+    radial-gradient(circle, rgba(0,255,204,.22), rgba(0,200,255,.10) 58%, rgba(255,61,242,.07) 88%);
+  filter: saturate(1.02) brightness(1.02);
   box-shadow:
-    0 0 30px rgba(0,255,204,.42),
-    0 0 64px rgba(0,200,255,.18),
-    inset 0 0 24px rgba(255,255,255,.10);
+    0 0 26px rgba(0,255,204,.30),
+    0 0 60px rgba(0,200,255,.14),
+    inset 0 0 26px rgba(255,255,255,.08);
 }
+.sub-core.is-dup .sub-core-plasma { opacity: calc(.22 + var(--eff, .55) * .18); }
+
+/* Clone central : mêmes anneaux tournants que le noyau principal (.core-rings). */
+.sub-core-rings {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 1px solid rgba(0,255,204,.22);
+  pointer-events: none;
+  z-index: 4;
+  animation: ringSpin 9s linear infinite;
+}
+.sub-core-rings::before,
+.sub-core-rings::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  animation: ringSpin 13s linear infinite;
+}
+.sub-core-rings::before { inset: -16%; border: 1px solid rgba(255,204,0,.18); }
+.sub-core-rings::after  { inset: 22%;  border: 1px solid rgba(255,61,242,.2); animation-duration: 5s; }
+
+/* Pulse de réflexion d'éclair sur un clone : flash bref, comme le noyau central. */
+.sub-core.is-dup.clone-pulse { filter: brightness(1.32) saturate(1.1); }
+.sub-core.is-dup.clone-pulse .sub-core-rings { border-color: rgba(255,204,0,.55); }
 
 /* Le plus jeune noyau orbital « se développe » : respiration plus marquée. */
 .sub-core.is-growing .sub-core-inner {
@@ -516,7 +547,79 @@
 .fx-disabled .sub-core.is-growing .sub-core-inner,
 .fx-disabled .sub-core.just-divided,
 .fx-disabled .dup-core.just-divided,
+.fx-disabled .sub-core-rings,
+.fx-disabled .sub-core-rings::before,
+.fx-disabled .sub-core-rings::after,
 .fx-disabled .sub-core-plasma { animation: none; }
+
+/* ── Mode STATS du noyau ──────────────────────────────────────────────────────
+   Affiche la prod directement sur chaque noyau et coupe les animations continues
+   pour alléger la charge. Toggle dans le panneau noyau. */
+.core-stats-toggle {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  font: 600 11px/1 'Share Tech Mono', monospace;
+  letter-spacing: .12em;
+  color: rgba(0,255,204,.7);
+  background: rgba(2,16,20,.62);
+  border: 1px solid rgba(0,255,204,.25);
+  border-radius: 999px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: color .15s, border-color .15s, background .15s;
+}
+.core-stats-toggle:hover { color: var(--nc-primary); border-color: rgba(0,255,204,.5); }
+.core-stats-toggle.active {
+  color: #021014;
+  background: linear-gradient(135deg, var(--nc-primary), #00c8ff);
+  border-color: transparent;
+  box-shadow: 0 0 16px rgba(0,255,204,.4);
+}
+
+/* Tag de prod sur chaque noyau — masqué hors mode stats (vue microscope sans texte). */
+.core-stat-tag {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 7;
+  display: none;
+  padding: 1px 5px;
+  font: 700 max(9px, calc(var(--sub-size, 120px) * .14))/1 'Share Tech Mono', monospace;
+  letter-spacing: .04em;
+  color: #eafcff;
+  text-shadow: 0 0 6px rgba(0,255,204,.9), 0 1px 2px rgba(0,0,0,.8);
+  background: rgba(2,12,16,.55);
+  border-radius: 5px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.core-stat-tag.core-stat-main {
+  font-size: clamp(13px, 1.5vw, 20px);
+  padding: 3px 9px;
+  border: 1px solid rgba(0,255,204,.3);
+}
+.core-panel.core-stats .core-stat-tag { display: block; }
+
+/* Basse conso : on fige toutes les animations continues du champ de noyaux. */
+.core-panel.core-stats .sub-core-field,
+.core-panel.core-stats .sub-core-inner,
+.core-panel.core-stats .sub-core.is-growing .sub-core-inner,
+.core-panel.core-stats .sub-core-plasma,
+.core-panel.core-stats .sub-core-link,
+.core-panel.core-stats .sub-core-rings,
+.core-panel.core-stats .sub-core-rings::before,
+.core-panel.core-stats .sub-core-rings::after,
+.core-panel.core-stats .microscope-lens::after,
+.core-panel.core-stats .core-rings { animation: none; }
+.core-panel.core-stats .sub-core-plasma,
+.core-panel.core-stats .sub-core-plasma-layer { opacity: .12; }
 
 /* Float-pop contained inside click-core (override body inheritance) */
 .float-pop { font-size: clamp(13px, 1.5vw, 19px); }

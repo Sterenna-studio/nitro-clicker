@@ -42,6 +42,7 @@ const BUY_MULTIPLIERS = [1, 5, 10];
 const LAYOUT_KEY = 'nitro-clicker.layout';
 const LAYOUTS = ['nexus', 'orbital', 'command', 'mono'];
 const CORE_ZOOM_KEY = 'nitro-clicker.core.zoom';
+const CORE_STATS_KEY = 'nitro-clicker.core.statsMode';
 const CORE_ZOOM_LEVELS = [0.80, 0.64, 0.50, 0.38, 0.28];
 const CORE_MODULE_GROUPS = [
   { id: 'amplifier', label: 'AMP', color: '#00ffcc', sound: 'module.amplifier', ids: ['clickAmplifier', 'resonance', 'prism', 'fragmentCatalyst'] },
@@ -69,6 +70,7 @@ let lastTendrilSignature = '';
 let lastLayerId = '';
 let lastShellSignature = '';
 let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
+let coreStatsMode = localStorage.getItem(CORE_STATS_KEY) === 'true';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
 let currentLayout = localStorage.getItem(LAYOUT_KEY) ?? 'nexus';
@@ -222,6 +224,7 @@ function renderShell() {
           <button class="core-hit-zone" id="core-hit-zone" type="button" aria-label="Cliquer le noyau Nitro"></button>
           <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro" tabindex="-1">
             <span class="core-rings"></span>
+            <span class="core-stat-tag core-stat-main" id="core-stat-main" aria-hidden="true"></span>
           </button>
         </div>
         <div class="energy-field" id="energy-field" aria-hidden="true"></div>
@@ -235,6 +238,7 @@ function renderShell() {
           <span class="core-zoom-readout" id="core-zoom-readout">80%</span>
           <button class="core-zoom-btn" data-zoom-step="-1" type="button" aria-label="Zoomer">+</button>
         </div>
+        <button class="core-stats-toggle" id="core-stats-toggle" type="button" aria-pressed="${String(coreStatsMode)}" title="Mode stats : affiche la prod des noyaux et allège les effets">⊞ STATS</button>
       </article>
 
       <aside class="panel progression-panel">
@@ -309,6 +313,7 @@ function renderShell() {
   `;
 
   bindStaticEvents();
+  applyCoreStatsMode();
   renderAll();
 }
 
@@ -349,6 +354,7 @@ function handleCoreClick(event) {
     spawnFragmentOrbs(result.fragments);
   }
   if (Math.random() > 0.45) zapToRandomModule();
+  if (Math.random() > 0.55) reflectLightningToClones({ max: 1 });
 
   claimMilestonesAndRender();
   scheduleSave();
@@ -390,6 +396,12 @@ function bindStaticEvents() {
 
   document.querySelectorAll('[data-zoom-step]').forEach(btn => {
     btn.addEventListener('click', () => stepCoreZoom(Number(btn.dataset.zoomStep)));
+  });
+
+  document.getElementById('core-stats-toggle')?.addEventListener('click', () => {
+    coreStatsMode = !coreStatsMode;
+    localStorage.setItem(CORE_STATS_KEY, String(coreStatsMode));
+    applyCoreStatsMode();
   });
 
   document.querySelectorAll('[data-buy-mult]').forEach(btn => {
@@ -768,6 +780,26 @@ function stepCoreZoom(delta) {
   applyCoreZoom();
 }
 
+// Mode stats : affiche la prod sur chaque noyau et coupe les animations continues
+// (anneaux, plasma, spin, scan…) pour alléger la charge GPU/CPU.
+function applyCoreStatsMode() {
+  const panel = document.getElementById('core-panel');
+  if (panel) panel.classList.toggle('core-stats', coreStatsMode);
+  const btn = document.getElementById('core-stats-toggle');
+  if (btn) {
+    btn.classList.toggle('active', coreStatsMode);
+    btn.setAttribute('aria-pressed', String(coreStatsMode));
+  }
+  updateCoreStatTag();
+}
+
+function updateCoreStatTag() {
+  const tag = document.getElementById('core-stat-main');
+  if (!tag || !state) return;
+  const perSec = (state.passiveRate ?? 0) + (state.factoryRate ?? 0);
+  tag.textContent = `${fmt(perSec)}/s`;
+}
+
 const ORBITAL_MIN_REFLECT = 0.10;
 const ORBITAL_MAX_REFLECT = 0.80;
 const MAX_CORE_DUPLICATES = 5;
@@ -801,7 +833,7 @@ function orbitGeometry(reflections, R_center) {
 }
 
 // Noyau « propre » : sphère Nitro lumineuse, sans aucun texte ni copie locale.
-function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0 } = {}) {
+function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0, statText = '' } = {}) {
   const node = document.createElement('div');
   node.className = 'sub-core'
     + (dup ? ' is-dup' : '')
@@ -810,11 +842,17 @@ function makeNucleus(size, { dup = false, growing = false, fresh = false, title 
   node.style.setProperty('--sub-size', `${size.toFixed(1)}px`);
   node.style.setProperty('--eff', reflect.toFixed(3));
   if (title) node.title = title;
+  // Les clones centraux portent le même modèle que le noyau principal : anneaux tournants.
+  const rings = dup ? '<span class="sub-core-rings" aria-hidden="true"></span>' : '';
+  // Tag de prod, masqué par défaut (vue microscope sans texte) ; visible en mode stats.
+  const tag = statText ? `<span class="core-stat-tag" aria-hidden="true">${statText}</span>` : '';
   node.innerHTML = `
+    ${rings}
     <div class="sub-core-inner">
       <span class="sub-core-plasma" aria-hidden="true"></span>
       <span class="sub-core-plasma-layer" aria-hidden="true"></span>
-    </div>`;
+    </div>
+    ${tag}`;
   return node;
 }
 
@@ -837,6 +875,7 @@ function buildOrbitalRing(parent, reflections, R_center, { animateLast = false }
     const node = makeNucleus(size, {
       growing,
       reflect,
+      statText: `${Math.round(reflect * 100)}%`,
       title: `Noyau orbital ${idx + 1} · réflexion ${Math.round(reflect * 100)}%`,
     });
     node.style.setProperty('--angle', `${angle}deg`);
@@ -895,7 +934,7 @@ function renderSubCores() {
       anchor.style.setProperty('--orbit-r', `${hexR.toFixed(1)}px`);
       field.appendChild(anchor);
 
-      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, title: `Noyau dupliqué ${k + 1}` });
+      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, statText: '×1', title: `Noyau dupliqué ${k + 1} · clone complet (×1 prod)` });
       body.style.setProperty('--angle', '0deg');
       body.style.setProperty('--orbit-r', '0px');
       anchor.appendChild(body);
@@ -915,7 +954,7 @@ function renderSubCores() {
 }
 
 function pulseSubCores() {
-  if (!fxEnabled) return;
+  if (!fxEnabled || coreStatsMode) return;
   document.querySelectorAll('.sub-core-inner').forEach(inner => {
     inner.classList.remove('pulse-hit');
     void inner.offsetWidth;
@@ -948,10 +987,10 @@ function makeLightningPath(x1, y1, x2, y2) {
   return points.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
 }
 
-function spawnLightningToElement(element, label = '') {
+function spawnLightningToElement(element, label = '', { silent = false, from = null } = {}) {
   if (!fxEnabled || !element) return;
   const layer = document.getElementById('lightning-layer');
-  const core = getCoreCenter();
+  const core = from ?? getCoreCenter();
   const rect = element.getBoundingClientRect();
   if (!layer || !core || !rect) return;
   const target = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
@@ -960,7 +999,7 @@ function spawnLightningToElement(element, label = '') {
   path.setAttribute('d', makeLightningPath(core.x, core.y, target.x, target.y));
   layer.appendChild(path);
   setTimeout(() => path.remove(), 520);
-  playGameSound('ui.zap', { volume: 0.65 }, 'zap');
+  if (!silent) playGameSound('ui.zap', { volume: 0.65 }, 'zap');
 
   if (label) {
     const tag = document.createElement('div');
@@ -982,6 +1021,43 @@ function zapToRandomModule() {
 function lightningStorm(count = 5) {
   const targets = [...document.querySelectorAll('.upgrade-btn:not(.locked), .shell-break-card, .prestige-card, .spawned-module, .factory-node')].sort(() => Math.random() - 0.5).slice(0, count);
   targets.forEach((target, i) => setTimeout(() => spawnLightningToElement(target), i * 70));
+  reflectLightningToClones();
+}
+
+function elementCenter(el) {
+  const r = el?.getBoundingClientRect();
+  if (!r || !r.width) return null;
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+function pulseClone(cloneBody) {
+  const inner = cloneBody?.querySelector('.sub-core-inner');
+  if (inner) {
+    inner.classList.remove('pulse-hit');
+    void inner.offsetWidth;
+    inner.classList.add('pulse-hit');
+    setTimeout(() => inner.classList.remove('pulse-hit'), 430);
+  }
+  cloneBody?.classList.remove('clone-pulse');
+  void cloneBody?.offsetWidth;
+  cloneBody?.classList.add('clone-pulse');
+  setTimeout(() => cloneBody?.classList.remove('clone-pulse'), 380);
+}
+
+// Réflexion des éclairs : le noyau principal envoie un éclair vers chaque clone,
+// que le clone renvoie ensuite à ses propres orbitaux (réflexion en cascade).
+function reflectLightningToClones({ max = Infinity } = {}) {
+  if (!fxEnabled || coreStatsMode) return;
+  let clones = [...document.querySelectorAll('.dup-core > .sub-core.is-dup')];
+  if (!clones.length) return;
+  if (max < clones.length) clones = clones.sort(() => Math.random() - 0.5).slice(0, max);
+  clones.forEach((clone, i) => setTimeout(() => {
+    spawnLightningToElement(clone, '', { silent: i > 0 });
+    pulseClone(clone);
+    const center = elementCenter(clone);
+    clone.parentElement?.querySelectorAll('.sub-core:not(.is-dup)').forEach(orb =>
+      spawnLightningToElement(orb, '', { silent: true, from: center }));
+  }, i * 55));
 }
 
 function renderAll(force = false) {
@@ -1039,6 +1115,7 @@ function renderStats() {
     corePanel.style.setProperty('--core-surcharge-ratio', surchargeRatio.toFixed(4));
     corePanel.style.setProperty('--core-fragment-ratio', fragmentRatio.toFixed(4));
   }
+  if (coreStatsMode) updateCoreStatTag();
   window.NitroSound?.updateCoreAmbience?.({
     energyRatio,
     passiveRatio,
