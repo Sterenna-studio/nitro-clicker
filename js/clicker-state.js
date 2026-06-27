@@ -41,9 +41,10 @@ export const BALANCE = {
   autoClickMaxBurstsPerTick: 12,
   // Limite haute pour les achats en lot — au-delà, coût cumulatif trop long à calculer
   maxBulkBuy: 10000,
-  // Coût en énergie de la fusion des 5 clones → noyau Tier II (≈ 5 « bonbonnes »)
-  fusionCost: 50_000_000,
-  // Multiplicateur global apporté par le noyau Tier II (appliqué à tout : clic, passif, usine)
+  // Coût en énergie par fusion (≈ 5 « bonbonnes »), identique à chaque tier
+  fusionCost: 50_000_000_000,
+  // Multiplicateur global PAR TIER — appliqué de façon multiplicative : tier N = fusionTierBonus^N
+  // tier1=×3 · tier2=×9 · tier3=×27 · tier4=×81 · tier5=×243
   fusionTierBonus: 3.0,
 };
 
@@ -385,6 +386,7 @@ export const MILESTONES = [
   { id: 'prestige_3', label: 'Baie moteur', desc: 'Atteindre le Prestige 3.', test: s => s.prestige >= 3, reward: { fragments: 8 } },
   { id: 'prestige_10', label: 'Dézoom industriel', desc: 'Atteindre le Prestige 10.', test: s => s.prestige >= 10, reward: { fragments: 26, energy: 70000 } },
   { id: 'prestige_25', label: 'District énergétique', desc: 'Atteindre le Prestige 25.', test: s => s.prestige >= 25, reward: { fragments: 70 } },
+  { id: 'first_fusion', label: 'Résonance quantique', desc: 'Cinq clones entrent en résonance — le noyau atteint le Tier II.', hidden: true, test: s => Number(s.coreTier ?? 0) >= 1, reward: { fragments: 25 } },
 ];
 
 export function getScalingLayer(state) {
@@ -473,6 +475,7 @@ export function hydrateState(raw, userId = null) {
 }
 
 export const MAX_CORE_CLONES = 5;
+export const MAX_FUSION_TIER = 5;
 
 // Réflexion d'un noyau orbital donné par son rang (1-based) et le niveau nitroFactory.
 // Les orbitaux d'index < décade courante sont figés à 80% ; le plus récent monte 10→80%.
@@ -497,9 +500,10 @@ export function getCoreCount(state) {
 
 export function canFuseCore(state) {
   return (
+    Number(state?.prestige ?? 0) >= 10 &&
     getCoreCloneCount(state) >= MAX_CORE_CLONES &&
     Number(state?.energy ?? 0) >= BALANCE.fusionCost &&
-    Number(state?.coreTier ?? 0) === 0
+    Number(state?.coreTier ?? 0) < MAX_FUSION_TIER
   );
 }
 
@@ -515,7 +519,7 @@ export function doFuseCore(state) {
 
 export function getCoreTierBonus(state) {
   const tier = Math.max(0, Number(state?.coreTier ?? 0));
-  return tier === 0 ? 1 : BALANCE.fusionTierBonus;
+  return tier === 0 ? 1 : Math.pow(BALANCE.fusionTierBonus, tier);
 }
 
 export function recalcDerivedStats(state) {
@@ -816,7 +820,10 @@ export function checkAndClaimMilestones(state) {
 }
 
 export function getVisibleMilestones(state) {
-  return MILESTONES.filter(m => state.milestones[m.id] || m.test(state) || visibleSoon(state, m));
+  return MILESTONES.filter(m => {
+    if (m.hidden) return !!state.milestones[m.id]; // succès secret : invisible jusqu'à l'accomplissement
+    return state.milestones[m.id] || m.test(state) || visibleSoon(state, m);
+  });
 }
 
 function visibleSoon(state, milestone) {

@@ -34,6 +34,7 @@ import {
   canFuseCore,
   doFuseCore,
   BALANCE,
+  MAX_FUSION_TIER,
 } from './engine/clicker-state.js';
 import { loadSave, saveAll, readSaveError, readMigrationNotice } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
@@ -1227,10 +1228,13 @@ function renderStats() {
     if (fusionBtn) {
       const tier = Number(state.coreTier ?? 0);
       const canFuse = canFuseCore(state);
+      const atMax = tier >= MAX_FUSION_TIER;
       fusionBtn.style.display = (canFuse || tier > 0) ? '' : 'none';
       fusionBtn.disabled = !canFuse;
       if (canFuse) {
-        fusionBtn.textContent = `⚛ FUSION TIER II — ${fmt(BALANCE.fusionCost)} é`;
+        fusionBtn.textContent = `⚛ FUSION TIER ${tier + 1} — ${fmt(BALANCE.fusionCost)} é`;
+      } else if (atMax) {
+        fusionBtn.textContent = `TIER ${tier} ⚛ MAX`;
       } else if (tier > 0) {
         fusionBtn.textContent = `TIER ${tier} ⚛`;
       }
