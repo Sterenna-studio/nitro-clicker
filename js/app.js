@@ -793,10 +793,12 @@ function applyCoreStatsMode() {
   if (coreStatsMode) updateCoreStatTags();
 }
 
-// é/s d'un noyau « nu » : la prod totale du système principal, dégrevée des orbitaux.
+// é/s d'un noyau « nu » : prod totale dégrevée des orbitaux (coreMultiplier) ET du
+// nombre de noyaux (coreCount), pour que la somme de tous les tags = prod réelle.
 function getCoreBaseRate() {
   const total = (state?.passiveRate ?? 0) + (state?.factoryRate ?? 0);
-  return total / Math.max(1, state?.coreMultiplier ?? 1);
+  const div = Math.max(1, state?.coreMultiplier ?? 1) * Math.max(1, state?.coreCount ?? 1);
+  return total / div;
 }
 
 // Remplit chaque tag avec sa part de prod en é/s (live). share=1 → noyau complet.

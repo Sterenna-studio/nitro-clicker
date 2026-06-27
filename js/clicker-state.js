@@ -350,7 +350,7 @@ export const UPGRADES = [
       const rate = Math.round(state?.factoryRate ?? 0);
       const nextIn = clones >= 5 ? null : (lvl % 10 === 0 ? 10 : 10 - (lvl % 10));
       const tail = nextIn ? ` · prochain clone dans ${nextIn} niveaux` : ' · réseau hexagonal complet (5/5)';
-      return `${clones} noyau${clones > 1 ? 'x' : ''} dupliqué${clones > 1 ? 's' : ''} · ${rate.toLocaleString('fr-FR')} é/s${tail}.`;
+      return `${clones} clone${clones > 1 ? 's' : ''} · ×${clones + 1} prod globale · ${rate.toLocaleString('fr-FR')} é/s${tail}.`;
     },
     unlock: state => state.prestige >= 20,
     lockedText: 'Débloqué au Prestige 20 : le noyau se duplique en réseau hexagonal.',
@@ -467,6 +467,29 @@ export function hydrateState(raw, userId = null) {
   return merged;
 }
 
+export const MAX_CORE_CLONES = 5;
+
+// Réflexion d'un noyau orbital donné par son rang (1-based) et le niveau nitroFactory.
+// Les orbitaux d'index < décade courante sont figés à 80% ; le plus récent monte 10→80%.
+export function getCoreMultiplier(state) {
+  const nitroLvl = Math.max(0, Number(state?.upgrades?.nitroFactory ?? 0));
+  const fullOrbitals = Math.floor(nitroLvl / 10);
+  const partial = nitroLvl % 10;
+  let coreMult = 1 + fullOrbitals * 0.80;
+  if (partial > 0) coreMult += 0.10 + ((partial - 1) / 9) * 0.70;
+  return coreMult;
+}
+
+// Nombre de noyaux centraux = principal (1) + clones (1 par 10 niveaux d'enginePlant, max 5).
+export function getCoreCloneCount(state) {
+  const engineLvl = Math.max(0, Number(state?.upgrades?.enginePlant ?? 0));
+  return Math.min(MAX_CORE_CLONES, Math.floor(engineLvl / 10));
+}
+
+export function getCoreCount(state) {
+  return 1 + getCoreCloneCount(state);
+}
+
 export function recalcDerivedStats(state) {
   const layer = getScalingLayer(state);
   state.clickPower = (1 + state.prestige) * layer.mult;
@@ -488,22 +511,26 @@ export function recalcDerivedStats(state) {
     for (let i = 0; i < level; i++) upgrade.apply(state);
   }
 
-  // ── Multiplicateur de noyau (nitroFactory) ──────────────────────────────
-  // +1 noyau par tranche de 10 niveaux. Noyau i : min(i×10%, 80%) du principal.
-  const nitroLvl = state.upgrades?.nitroFactory ?? 0;
-  let coreMult = 1;
-  for (let i = 10; i <= nitroLvl; i += 10) {
-    coreMult += Math.min(0.80, (i / 10) * 0.10);
-  }
+  // ── Multiplicateur de noyau (nitroFactory) : réflexion orbitale ─────────────
+  // 1 noyau orbital / 10 niveaux. Le plus récent grandit DANS sa décade : sa
+  // réflexion passe de 10% (niveau X1) à 80% au déblocage du suivant, puis se fige
+  // à 80%. coreMult = 1 + somme des réflexions. (Aligné sur orbitalReflections() côté UI.)
+  const coreMult = getCoreMultiplier(state);
   state.coreMultiplier = coreMult;
 
+  // ── Duplication du noyau (enginePlant) : clones centraux ────────────────────
+  // 1 clone / 10 niveaux (max 5, hexagone). Chaque clone est une copie complète
+  // qui produit ×1 du système. coreCount = noyau principal + clones.
+  const coreCount = getCoreCount(state);
+  state.coreCount = coreCount;
+
   const reflectMultiplier = 1 + Math.min(1.35, state.coreShellReflect ?? 0);
-  state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult;
-  state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult;
+  state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount;
+  state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount;
   state.autoClickRate *= state.permanentMultiplier;
   // Production industrielle : source d'énergie/s réelle (tickPassive + offline).
-  // Boostée par le mult permanent, l'essaim orbital (factoryMult) et les noyaux.
-  state.factoryRate   *= state.permanentMultiplier * (state.factoryMult ?? 1) * coreMult;
+  // Boostée par le mult permanent, l'essaim orbital (factoryMult), la réflexion et les clones.
+  state.factoryRate   *= state.permanentMultiplier * (state.factoryMult ?? 1) * coreMult * coreCount;
 
   // Surcadence (compétence LEMEGETON) : +% production globale, persistant.
   const lemeProd = getLemegetonProdMultiplier(state);
