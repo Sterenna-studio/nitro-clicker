@@ -224,7 +224,7 @@ function renderShell() {
           <button class="core-hit-zone" id="core-hit-zone" type="button" aria-label="Cliquer le noyau Nitro"></button>
           <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro" tabindex="-1">
             <span class="core-rings"></span>
-            <span class="core-stat-tag core-stat-main" id="core-stat-main" aria-hidden="true"></span>
+            <span class="core-stat-tag core-stat-main" id="core-stat-main" data-stat-share="1" aria-hidden="true"></span>
           </button>
         </div>
         <div class="energy-field" id="energy-field" aria-hidden="true"></div>
@@ -790,14 +790,23 @@ function applyCoreStatsMode() {
     btn.classList.toggle('active', coreStatsMode);
     btn.setAttribute('aria-pressed', String(coreStatsMode));
   }
-  updateCoreStatTag();
+  if (coreStatsMode) updateCoreStatTags();
 }
 
-function updateCoreStatTag() {
-  const tag = document.getElementById('core-stat-main');
-  if (!tag || !state) return;
-  const perSec = (state.passiveRate ?? 0) + (state.factoryRate ?? 0);
-  tag.textContent = `${fmt(perSec)}/s`;
+// é/s d'un noyau « nu » : la prod totale du système principal, dégrevée des orbitaux.
+function getCoreBaseRate() {
+  const total = (state?.passiveRate ?? 0) + (state?.factoryRate ?? 0);
+  return total / Math.max(1, state?.coreMultiplier ?? 1);
+}
+
+// Remplit chaque tag avec sa part de prod en é/s (live). share=1 → noyau complet.
+function updateCoreStatTags() {
+  if (!state) return;
+  const base = getCoreBaseRate();
+  document.querySelectorAll('.core-stat-tag[data-stat-share]').forEach(tag => {
+    const share = Number(tag.dataset.statShare) || 0;
+    tag.textContent = `${fmt(share * base)}/s`;
+  });
 }
 
 const ORBITAL_MIN_REFLECT = 0.10;
@@ -833,7 +842,8 @@ function orbitGeometry(reflections, R_center) {
 }
 
 // Noyau « propre » : sphère Nitro lumineuse, sans aucun texte ni copie locale.
-function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0, statText = '' } = {}) {
+// `statShare` = part de coreBase que ce noyau produit (1 = noyau complet, réflexion sinon).
+function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0, statShare = null } = {}) {
   const node = document.createElement('div');
   node.className = 'sub-core'
     + (dup ? ' is-dup' : '')
@@ -844,8 +854,8 @@ function makeNucleus(size, { dup = false, growing = false, fresh = false, title 
   if (title) node.title = title;
   // Les clones centraux portent le même modèle que le noyau principal : anneaux tournants.
   const rings = dup ? '<span class="sub-core-rings" aria-hidden="true"></span>' : '';
-  // Tag de prod, masqué par défaut (vue microscope sans texte) ; visible en mode stats.
-  const tag = statText ? `<span class="core-stat-tag" aria-hidden="true">${statText}</span>` : '';
+  // Tag de prod, masqué par défaut (vue microscope sans texte) ; valeur live remplie en mode stats.
+  const tag = statShare != null ? `<span class="core-stat-tag" data-stat-share="${statShare}" aria-hidden="true"></span>` : '';
   node.innerHTML = `
     ${rings}
     <div class="sub-core-inner">
@@ -875,7 +885,7 @@ function buildOrbitalRing(parent, reflections, R_center, { animateLast = false }
     const node = makeNucleus(size, {
       growing,
       reflect,
-      statText: `${Math.round(reflect * 100)}%`,
+      statShare: reflect,
       title: `Noyau orbital ${idx + 1} · réflexion ${Math.round(reflect * 100)}%`,
     });
     node.style.setProperty('--angle', `${angle}deg`);
@@ -934,7 +944,7 @@ function renderSubCores() {
       anchor.style.setProperty('--orbit-r', `${hexR.toFixed(1)}px`);
       field.appendChild(anchor);
 
-      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, statText: '×1', title: `Noyau dupliqué ${k + 1} · clone complet (×1 prod)` });
+      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, statShare: 1, title: `Noyau dupliqué ${k + 1} · clone complet (×1 prod)` });
       body.style.setProperty('--angle', '0deg');
       body.style.setProperty('--orbit-r', '0px');
       anchor.appendChild(body);
@@ -1115,7 +1125,7 @@ function renderStats() {
     corePanel.style.setProperty('--core-surcharge-ratio', surchargeRatio.toFixed(4));
     corePanel.style.setProperty('--core-fragment-ratio', fragmentRatio.toFixed(4));
   }
-  if (coreStatsMode) updateCoreStatTag();
+  if (coreStatsMode) updateCoreStatTags();
   window.NitroSound?.updateCoreAmbience?.({
     energyRatio,
     passiveRatio,
