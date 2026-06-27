@@ -31,6 +31,9 @@ import {
   isAutoPurchaseEnabled,
   isLemegetonSkillActive,
   toggleLemegetonSkill,
+  canFuseCore,
+  doFuseCore,
+  BALANCE,
 } from './engine/clicker-state.js';
 import { loadSave, saveAll, readSaveError, readMigrationNotice } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
@@ -239,6 +242,7 @@ function renderShell() {
           <button class="core-zoom-btn" data-zoom-step="-1" type="button" aria-label="Zoomer">+</button>
         </div>
         <button class="core-stats-toggle" id="core-stats-toggle" type="button" aria-pressed="${String(coreStatsMode)}" title="Mode stats : affiche la prod des noyaux et allège les effets">⊞ STATS</button>
+        <button class="core-fusion-btn" id="core-fusion-btn" type="button" style="display:none" title="Les 5 clones entrent en résonance et fusionnent — Noyau Tier II">⚛ FUSION</button>
       </article>
 
       <aside class="panel progression-panel">
@@ -397,6 +401,8 @@ function bindStaticEvents() {
   document.querySelectorAll('[data-zoom-step]').forEach(btn => {
     btn.addEventListener('click', () => stepCoreZoom(Number(btn.dataset.zoomStep)));
   });
+
+  document.getElementById('core-fusion-btn')?.addEventListener('click', triggerCoreFusion);
 
   document.getElementById('core-stats-toggle')?.addEventListener('click', () => {
     coreStatsMode = !coreStatsMode;
@@ -780,6 +786,47 @@ function stepCoreZoom(delta) {
   applyCoreZoom();
 }
 
+let fusionInProgress = false;
+
+async function triggerCoreFusion() {
+  if (fusionInProgress || !canFuseCore(state)) return;
+  fusionInProgress = true;
+
+  const btn = document.getElementById('core-fusion-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⚛ RÉSONANCE…'; }
+
+  const clones = [...document.querySelectorAll('.dup-core > .sub-core.is-dup')];
+
+  // Phase 1 : les clones entrent en résonance (glow ambre)
+  clones.forEach(c => c.classList.add('fusion-resonating'));
+  await new Promise(r => setTimeout(r, 950));
+
+  // Phase 2 : absorption séquentielle — chaque clone s'effondre
+  for (let i = 0; i < clones.length; i++) {
+    clones[i].classList.remove('fusion-resonating');
+    clones[i].classList.add('fusion-absorbing');
+    if (fxEnabled) playGameSound('ui.zap', { volume: 0.85 }, 'zap');
+    await new Promise(r => setTimeout(r, 270));
+  }
+  await new Promise(r => setTimeout(r, 400));
+
+  // Phase 3 : fusion — mutation de l'état
+  const result = doFuseCore(state);
+  if (!result.ok) { fusionInProgress = false; return; }
+  saveAll(userId, state);
+
+  // Phase 4 : émergence du noyau Tier II
+  const coreEl = document.getElementById('click-core');
+  if (coreEl) {
+    coreEl.classList.add('core-tier-2', 'tier2-emerge');
+    setTimeout(() => coreEl.classList.remove('tier2-emerge'), 1400);
+  }
+  spawnSystemWave('⚛ NOYAU TIER II');
+
+  renderAll(true);
+  fusionInProgress = false;
+}
+
 // Mode stats : affiche la prod sur chaque noyau et coupe les animations continues
 // (anneaux, plasma, spin, scan…) pour alléger la charge GPU/CPU.
 function applyCoreStatsMode() {
@@ -963,6 +1010,8 @@ function renderSubCores() {
 
   const scaleEl = document.getElementById('core-scale-value');
   if (scaleEl) scaleEl.textContent = formatCoreScale(orbitalCount + dupCount);
+
+  document.getElementById('click-core')?.classList.toggle('core-tier-2', (state.coreTier ?? 0) >= 1);
 }
 
 function pulseSubCores() {
@@ -1171,6 +1220,21 @@ function renderStats() {
   if (btn) {
     btn.disabled = state.energy < req;
     setClassToggle(btn, 'can-buy', state.energy >= req);
+  }
+
+  if (!fusionInProgress) {
+    const fusionBtn = document.getElementById('core-fusion-btn');
+    if (fusionBtn) {
+      const tier = Number(state.coreTier ?? 0);
+      const canFuse = canFuseCore(state);
+      fusionBtn.style.display = (canFuse || tier > 0) ? '' : 'none';
+      fusionBtn.disabled = !canFuse;
+      if (canFuse) {
+        fusionBtn.textContent = `⚛ FUSION TIER II — ${fmt(BALANCE.fusionCost)} é`;
+      } else if (tier > 0) {
+        fusionBtn.textContent = `TIER ${tier} ⚛`;
+      }
+    }
   }
 }
 

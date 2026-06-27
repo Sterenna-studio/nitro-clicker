@@ -621,6 +621,88 @@
 .core-panel.core-stats .sub-core-plasma,
 .core-panel.core-stats .sub-core-plasma-layer { opacity: .12; }
 
+/* ── Fusion Tier II ───────────────────────────────────────────────────────────
+   Phase 1 : résonance — les clones vibrent en ambre avant absorption.
+   Phase 2 : absorption — chaque clone s'effondre sur lui-même.
+   Phase 3 : émergence — le noyau central vire à l'ambre/or. */
+
+@keyframes fusionResonance {
+  0%, 100% { filter: brightness(1)   drop-shadow(0 0  6px rgba(255,183,0,.35)); }
+  45%       { filter: brightness(1.8) drop-shadow(0 0 24px rgba(255,183,0,.90)) drop-shadow(0 0 48px rgba(255,100,0,.55)); }
+}
+
+.sub-core.fusion-resonating .sub-core-inner {
+  animation: fusionResonance 0.26s ease-in-out infinite, subCoreCounterSpin 50s linear infinite !important;
+  border-color: rgba(255,183,0,.90) !important;
+  box-shadow:
+    0 0 30px rgba(255,183,0,.60),
+    0 0 64px rgba(255,100,0,.38),
+    inset 0 0 18px rgba(255,220,0,.22) !important;
+}
+
+@keyframes fusionAbsorb {
+  0%   { transform: translate(-50%,-50%) scale(1); opacity: 1; filter: brightness(1); }
+  55%  { filter: brightness(3.5) drop-shadow(0 0 44px #ffd700); }
+  100% { transform: translate(-50%,-50%) scale(0); opacity: 0; filter: brightness(7); }
+}
+
+.sub-core.fusion-absorbing .sub-core-inner {
+  animation: fusionAbsorb 0.42s cubic-bezier(.6,0,1,.75) forwards !important;
+  pointer-events: none;
+}
+
+@keyframes tier2Emerge {
+  0%   { filter: brightness(1); }
+  18%  { filter: brightness(5) hue-rotate(45deg); box-shadow: 0 0 90px rgba(255,183,0,.95), 0 0 200px rgba(255,100,0,.6); }
+  55%  { filter: brightness(2.5) hue-rotate(20deg); }
+  100% { filter: brightness(1); }
+}
+
+.click-core.tier2-emerge {
+  animation: tier2Emerge 1.4s ease-out forwards !important;
+}
+
+/* Noyau Tier II : teinte ambre/or persistante */
+.click-core.core-tier-2 {
+  filter:
+    drop-shadow(0 0 18px rgba(255,183,0,.65))
+    drop-shadow(0 0 44px rgba(255,100,0,.40));
+}
+
+.click-core.core-tier-2 .core-rings {
+  border-color: rgba(255,183,0,.38);
+}
+.click-core.core-tier-2 .core-rings::before { border-color: rgba(255,110,0,.30); }
+.click-core.core-tier-2 .core-rings::after  { border-color: rgba(255,220,60,.24); }
+
+/* Bouton de fusion — coin bas-droit du panneau noyau */
+.core-fusion-btn {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 20;
+  padding: 0.32em 0.82em;
+  border: 1px solid rgba(255,183,0,.48);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255,130,0,.10), rgba(255,183,0,.16));
+  color: #ffb830;
+  font: 600 clamp(9px,1.05vw,11px)/1 var(--font-mono, 'Share Tech Mono', monospace);
+  letter-spacing: .07em;
+  cursor: pointer;
+  text-shadow: 0 0 10px rgba(255,183,0,.55);
+  transition: background .18s, border-color .18s, box-shadow .18s;
+  backdrop-filter: blur(4px);
+}
+.core-fusion-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(255,130,0,.22), rgba(255,183,0,.32));
+  border-color: rgba(255,183,0,.78);
+  box-shadow: 0 0 18px rgba(255,183,0,.38);
+}
+.core-fusion-btn:disabled {
+  opacity: .52;
+  cursor: default;
+}
+
 /* Float-pop contained inside click-core (override body inheritance) */
 .float-pop { font-size: clamp(13px, 1.5vw, 19px); }
 

@@ -41,6 +41,10 @@ export const BALANCE = {
   autoClickMaxBurstsPerTick: 12,
   // Limite haute pour les achats en lot — au-delà, coût cumulatif trop long à calculer
   maxBulkBuy: 10000,
+  // Coût en énergie de la fusion des 5 clones → noyau Tier II (≈ 5 « bonbonnes »)
+  fusionCost: 50_000_000,
+  // Multiplicateur global apporté par le noyau Tier II (appliqué à tout : clic, passif, usine)
+  fusionTierBonus: 3.0,
 };
 
 export const SCALING_LAYERS = [
@@ -78,6 +82,7 @@ export function createDefaultState(userId = null) {
     coreShellReflect: 0,
     coreShellBreakBonus: 0,
     coreShell: { storedFragments: 0, cracks: 0, lastBreakAt: 0, failedBreaks: 0 },
+    coreTier: 0,
     upgrades: {
       clickAmplifier: 0,
       autoCore: 0,
@@ -490,6 +495,29 @@ export function getCoreCount(state) {
   return 1 + getCoreCloneCount(state);
 }
 
+export function canFuseCore(state) {
+  return (
+    getCoreCloneCount(state) >= MAX_CORE_CLONES &&
+    Number(state?.energy ?? 0) >= BALANCE.fusionCost &&
+    Number(state?.coreTier ?? 0) === 0
+  );
+}
+
+export function doFuseCore(state) {
+  if (!canFuseCore(state)) return { ok: false };
+  state.energy -= BALANCE.fusionCost;
+  state.upgrades.enginePlant = 0;
+  state.coreTier = (Number(state.coreTier ?? 0)) + 1;
+  recalcDerivedStats(state);
+  state.updatedAt = Date.now();
+  return { ok: true, tier: state.coreTier };
+}
+
+export function getCoreTierBonus(state) {
+  const tier = Math.max(0, Number(state?.coreTier ?? 0));
+  return tier === 0 ? 1 : BALANCE.fusionTierBonus;
+}
+
 export function recalcDerivedStats(state) {
   const layer = getScalingLayer(state);
   state.clickPower = (1 + state.prestige) * layer.mult;
@@ -524,13 +552,15 @@ export function recalcDerivedStats(state) {
   const coreCount = getCoreCount(state);
   state.coreCount = coreCount;
 
+  const tierBonus = getCoreTierBonus(state);
+  state.coreTierBonus = tierBonus;
   const reflectMultiplier = 1 + Math.min(1.35, state.coreShellReflect ?? 0);
-  state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount;
-  state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount;
+  state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount * tierBonus;
+  state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount * tierBonus;
   state.autoClickRate *= state.permanentMultiplier;
   // Production industrielle : source d'énergie/s réelle (tickPassive + offline).
-  // Boostée par le mult permanent, l'essaim orbital (factoryMult), la réflexion et les clones.
-  state.factoryRate   *= state.permanentMultiplier * (state.factoryMult ?? 1) * coreMult * coreCount;
+  // Boostée par le mult permanent, l'essaim orbital (factoryMult), la réflexion, les clones et le tier.
+  state.factoryRate   *= state.permanentMultiplier * (state.factoryMult ?? 1) * coreMult * coreCount * tierBonus;
 
   // Surcadence (compétence LEMEGETON) : +% production globale, persistant.
   const lemeProd = getLemegetonProdMultiplier(state);
