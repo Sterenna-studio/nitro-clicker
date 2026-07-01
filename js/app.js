@@ -67,6 +67,7 @@ let lastUpgradeSignature = '';
 let lastLemegetonSignature = '';
 let coreZoomIndex = Math.min(CORE_ZOOM_LEVELS.length - 1, Math.max(0, Math.floor(Number(localStorage.getItem(CORE_ZOOM_KEY) ?? 0)) || 0));
 let lastAutoFitZoom = 1;
+let lastKnownRMain = 110;
 let lastScaleSignature = '';
 let lastMilestoneSignature = '';
 let lastModuleSignature = '';
@@ -221,9 +222,9 @@ function renderShell() {
           <button class="core-hit-zone" id="core-hit-zone" type="button" aria-label="Cliquer le noyau Nitro"></button>
           <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro" tabindex="-1">
             <span class="core-rings"></span>
-            <span class="core-stat-tag core-stat-main" id="core-stat-main" data-stat-share="1" aria-hidden="true"></span>
           </button>
         </div>
+        <div class="core-terminal" id="core-terminal" aria-hidden="true"></div>
         <div class="energy-field" id="energy-field" aria-hidden="true"></div>
         <div class="module-orbit" id="module-orbit" aria-hidden="true"></div>
         <div class="core-scale-indicator" id="core-scale-indicator">
@@ -235,7 +236,7 @@ function renderShell() {
           <span class="core-zoom-readout" id="core-zoom-readout">80%</span>
           <button class="core-zoom-btn" data-zoom-step="-1" type="button" aria-label="Zoomer">+</button>
         </div>
-        <button class="core-stats-toggle" id="core-stats-toggle" type="button" aria-pressed="${String(coreStatsMode)}" title="Mode stats : affiche la prod des noyaux et allège les effets">⊞ STATS</button>
+        <button class="core-stats-toggle" id="core-stats-toggle" type="button" aria-pressed="${String(coreStatsMode)}" title="Mode stats : vue tableur, cache les noyaux et allège les effets">⊞ STATS</button>
         <button class="core-fusion-btn" id="core-fusion-btn" type="button" style="display:none" title="Les 5 clones entrent en résonance et fusionnent — Noyau Tier II">⚛ FUSION</button>
       </article>
 
@@ -460,8 +461,12 @@ function bindStaticEvents() {
       const grid = document.getElementById('game-grid');
       if (grid) grid.dataset.layout = currentLayout;
       document.querySelectorAll('[data-layout-btn]').forEach(b => setClassToggle(b, 'active', b.dataset.layoutBtn === currentLayout));
+      // Le panneau noyau change de dimensions selon la disposition — recaper le zoom.
+      requestAnimationFrame(() => recalcAutoFitZoom());
     });
   });
+
+  window.addEventListener('resize', scheduleAutoFitRecalc);
 
   document.getElementById('save-btn').addEventListener('click', () => {
     const ok = saveAll(userId, state);
@@ -773,7 +778,9 @@ function applyCoreZoom() {
   // Le microscope « se referme » quand on dézoome (système plus large à observer).
   panel.classList.toggle('microscope-active', effective < 0.62);
   const readout = document.getElementById('core-zoom-readout');
-  if (readout) readout.textContent = `${Math.round(target * 100)}%`;
+  // Affiche le zoom réellement appliqué (capé), pas le niveau visé — sinon le
+  // readout ment dès que la structure est trop grande pour le niveau sélectionné.
+  if (readout) readout.textContent = `${Math.round(effective * 100)}%`;
   const ctrl = document.getElementById('core-zoom-control');
   if (ctrl) {
     ctrl.querySelector('[data-zoom-step="-1"]')?.toggleAttribute('disabled', coreZoomIndex <= 0);
@@ -785,6 +792,58 @@ function stepCoreZoom(delta) {
   coreZoomIndex = Math.min(CORE_ZOOM_LEVELS.length - 1, Math.max(0, coreZoomIndex + delta));
   localStorage.setItem(CORE_ZOOM_KEY, String(coreZoomIndex));
   applyCoreZoom();
+}
+
+// Formule de cap de zoom, isolée pour être appelable depuis le rendu complet
+// (renderSubCores, mesure DOM fraîche) et le recalcul léger (resize/layout).
+function setAutoFitZoom(R_main, panelShort, totalExtent) {
+  lastAutoFitZoom = totalExtent > R_main
+    ? Math.max(0.30, Math.min(1, (panelShort * 0.80) / (totalExtent * 2)))
+    : 1;
+}
+
+// Géométrie pure (sans DOM) de l'extension totale du champ de noyaux pour un
+// R_main donné — doit rester en phase avec la construction réelle dans
+// renderSubCores (mêmes formules mainExtent/hexR/dupExtent).
+function computeTotalExtent(R_main) {
+  const nitroLvl = state.upgrades?.nitroFactory ?? 0;
+  const engineLvl = state.upgrades?.enginePlant ?? 0;
+  const reflections = orbitalReflections(nitroLvl);
+  const dupCount = Math.min(MAX_CORE_DUPLICATES, Math.floor(engineLvl / 10));
+  const mainExtent = orbitGeometry(reflections, R_main).extent;
+  let totalExtent = mainExtent;
+  if (dupCount > 0) {
+    const R_dup = R_main * 0.66;
+    const dupExtent = orbitGeometry(reflections, R_dup).extent;
+    const gap2 = R_main * 0.5;
+    const hexR = Math.max(mainExtent + dupExtent + gap2, 2 * dupExtent + gap2);
+    totalExtent = Math.max(totalExtent, hexR + dupExtent);
+  }
+  return totalExtent;
+}
+
+// Recalcule le cap de zoom sans reconstruire le DOM des noyaux — utilisé quand
+// la taille du panneau change (resize, changement de layout, sortie du mode
+// STATS) sans que le niveau nitroFactory/enginePlant n'ait bougé.
+function recalcAutoFitZoom() {
+  const panel = document.getElementById('core-panel');
+  const coreEl = document.getElementById('click-core');
+  if (!panel || !coreEl) return;
+  const coreRect = coreEl.getBoundingClientRect();
+  const panelRect = panel.getBoundingClientRect();
+  if (coreRect.width <= 0 || panelRect.width <= 0) return; // caché (mode stats) ou pas encore monté
+  const curZoom = parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1;
+  const R_main = (coreRect.width / curZoom) / 2;
+  lastKnownRMain = R_main;
+  const panelShort = Math.min(panelRect.width, panelRect.height);
+  setAutoFitZoom(R_main, panelShort, computeTotalExtent(R_main));
+  applyCoreZoom();
+}
+
+let resizeRecalcTimer = null;
+function scheduleAutoFitRecalc() {
+  clearTimeout(resizeRecalcTimer);
+  resizeRecalcTimer = setTimeout(recalcAutoFitZoom, 150);
 }
 
 let fusionInProgress = false;
@@ -828,8 +887,9 @@ async function triggerCoreFusion() {
   fusionInProgress = false;
 }
 
-// Mode stats : affiche la prod sur chaque noyau et coupe les animations continues
-// (anneaux, plasma, spin, scan…) pour alléger la charge GPU/CPU.
+// Mode stats : bascule vers une vue « tableur/terminal » — cache les noyaux et
+// leurs FX continus (anneaux, plasma, spin, scan…), affiche toutes les stats en
+// texte façon vieux terminal de code.
 function applyCoreStatsMode() {
   const panel = document.getElementById('core-panel');
   if (panel) panel.classList.toggle('core-stats', coreStatsMode);
@@ -838,25 +898,63 @@ function applyCoreStatsMode() {
     btn.classList.toggle('active', coreStatsMode);
     btn.setAttribute('aria-pressed', String(coreStatsMode));
   }
-  if (coreStatsMode) updateCoreStatTags();
+  if (coreStatsMode) {
+    renderCoreTerminal();
+  } else {
+    // Le viewport redevient visible : les mesures DOM (R_main) étaient invalides
+    // pendant qu'il était caché (display:none), il faut recaper le zoom.
+    requestAnimationFrame(() => recalcAutoFitZoom());
+  }
 }
 
 // é/s d'un noyau « nu » : prod totale dégrevée des orbitaux (coreMultiplier) ET du
-// nombre de noyaux (coreCount), pour que la somme de tous les tags = prod réelle.
+// nombre de noyaux (coreCount), pour que la somme des noyaux affichés = prod réelle.
 function getCoreBaseRate() {
   const total = (state?.passiveRate ?? 0) + (state?.factoryRate ?? 0);
   const div = Math.max(1, state?.coreMultiplier ?? 1) * Math.max(1, state?.coreCount ?? 1);
   return total / div;
 }
 
-// Remplit chaque tag avec sa part de prod en é/s (live). share=1 → noyau complet.
-function updateCoreStatTags() {
-  if (!state) return;
+// Vue tableur du noyau : une ligne par noyau (principal + orbitaux + clones) avec
+// sa réflexion et sa prod, plus un récapitulatif des stats globales. Remplace
+// entièrement l'affichage visuel des sphères en mode STATS.
+function renderCoreTerminal() {
+  if (!state || !coreStatsMode) return;
+  const root = document.getElementById('core-terminal');
+  if (!root) return;
+
   const base = getCoreBaseRate();
-  document.querySelectorAll('.core-stat-tag[data-stat-share]').forEach(tag => {
-    const share = Number(tag.dataset.statShare) || 0;
-    tag.textContent = `${fmt(share * base)}/s`;
-  });
+  const nitroLvl = state.upgrades?.nitroFactory ?? 0;
+  const engineLvl = state.upgrades?.enginePlant ?? 0;
+  const reflections = orbitalReflections(nitroLvl);
+  const dupCount = Math.min(MAX_CORE_DUPLICATES, Math.floor(engineLvl / 10));
+
+  const rows = [{ id: 'CORE', type: 'principal', reflect: 1, prod: base }];
+  reflections.forEach((r, i) => rows.push({ id: `ORB-${i + 1}`, type: 'orbital', reflect: r, prod: r * base }));
+  for (let k = 0; k < dupCount; k++) rows.push({ id: `CLN-${k + 1}`, type: 'clone', reflect: 1, prod: base });
+  const total = rows.reduce((sum, r) => sum + r.prod, 0);
+
+  const shell = getCoreShellInfo(state);
+  const req = prestigeRequirement(state);
+
+  setHtml(root, `
+    <div class="terminal-head">// NITRO CORE — STATUS REPORT</div>
+    <table class="terminal-table">
+      <thead><tr><th>ID</th><th>TYPE</th><th>REFL</th><th>PROD/S</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${r.id}</td><td>${r.type}</td><td>${Math.round(r.reflect * 100)}%</td><td>${fmt(r.prod)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="3">TOTAL · ${rows.length} noyau${rows.length > 1 ? 'x' : ''}</td><td>${fmt(total)}</td></tr></tfoot>
+    </table>
+    <div class="terminal-summary">
+      <div><span>ÉNERGIE</span><strong>${fmt(state.energy)}</strong></div>
+      <div><span>ÉNERGIE TOTALE</span><strong>${fmt(state.totalEnergy)}</strong></div>
+      <div><span>FRAGMENTS</span><strong>${fmt(state.fragments)}</strong></div>
+      <div><span>PAR CLIC</span><strong>${fmt(state.clickPower)}</strong></div>
+      <div><span>PRESTIGE</span><strong>${fmt(state.prestige)} · ${fmt(state.energy)}/${fmt(req)}</strong></div>
+      <div><span>SURCHARGE</span><strong>${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%</strong></div>
+      <div><span>COQUE</span><strong>${shell.unlocked ? `${shell.storedFragments}/${shell.capacity}F · ${shell.cracks}/${shell.requiredHits} fissures` : 'VERROUILLÉE'}</strong></div>
+      <div><span>MULT. NOYAU</span><strong>×${(state.coreMultiplier ?? 1).toFixed(2)} · ×${state.coreCount ?? 1} noyaux</strong></div>
+    </div>
+  `);
 }
 
 const ORBITAL_MIN_REFLECT = 0.10;
@@ -892,8 +990,7 @@ function orbitGeometry(reflections, R_center) {
 }
 
 // Noyau « propre » : sphère Nitro lumineuse, sans aucun texte ni copie locale.
-// `statShare` = part de coreBase que ce noyau produit (1 = noyau complet, réflexion sinon).
-function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0, statShare = null } = {}) {
+function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0 } = {}) {
   const node = document.createElement('div');
   node.className = 'sub-core'
     + (dup ? ' is-dup' : '')
@@ -904,15 +1001,12 @@ function makeNucleus(size, { dup = false, growing = false, fresh = false, title 
   if (title) node.title = title;
   // Les clones centraux portent le même modèle que le noyau principal : anneaux tournants.
   const rings = dup ? '<span class="sub-core-rings" aria-hidden="true"></span>' : '';
-  // Tag de prod, masqué par défaut (vue microscope sans texte) ; valeur live remplie en mode stats.
-  const tag = statShare != null ? `<span class="core-stat-tag" data-stat-share="${statShare}" aria-hidden="true"></span>` : '';
   node.innerHTML = `
     ${rings}
     <div class="sub-core-inner">
       <span class="sub-core-plasma" aria-hidden="true"></span>
       <span class="sub-core-plasma-layer" aria-hidden="true"></span>
-    </div>
-    ${tag}`;
+    </div>`;
   return node;
 }
 
@@ -935,7 +1029,6 @@ function buildOrbitalRing(parent, reflections, R_center, { animateLast = false }
     const node = makeNucleus(size, {
       growing,
       reflect,
-      statShare: reflect,
       title: `Noyau orbital ${idx + 1} · réflexion ${Math.round(reflect * 100)}%`,
     });
     node.style.setProperty('--angle', `${angle}deg`);
@@ -967,8 +1060,11 @@ function renderSubCores() {
   const coreRect = coreEl?.getBoundingClientRect();
   const panelRect = panel?.getBoundingClientRect();
   const curZoom = panel ? (parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1) : 1;
-  const R_main = coreRect ? (coreRect.width / curZoom) / 2 : 110;
-  const panelShort = panelRect ? Math.min(panelRect.width, panelRect.height) : 520;
+  // coreRect.width peut être 0 si le noyau est caché (mode STATS) — dans ce cas
+  // on réutilise la dernière mesure valide plutôt que de tomber à R_main=0.
+  const R_main = (coreRect && coreRect.width > 0) ? (coreRect.width / curZoom) / 2 : lastKnownRMain;
+  if (coreRect && coreRect.width > 0) lastKnownRMain = R_main;
+  const panelShort = (panelRect && panelRect.width > 0) ? Math.min(panelRect.width, panelRect.height) : 520;
 
   field.innerHTML = '';
 
@@ -994,7 +1090,7 @@ function renderSubCores() {
       anchor.style.setProperty('--orbit-r', `${hexR.toFixed(1)}px`);
       field.appendChild(anchor);
 
-      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, statShare: 1, title: `Noyau dupliqué ${k + 1} · clone complet (×1 prod)` });
+      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, title: `Noyau dupliqué ${k + 1} · clone complet (×1 prod)` });
       body.style.setProperty('--angle', '0deg');
       body.style.setProperty('--orbit-r', '0px');
       anchor.appendChild(body);
@@ -1004,9 +1100,7 @@ function renderSubCores() {
     totalExtent = Math.max(totalExtent, hexR + dupExtent);
   }
 
-  lastAutoFitZoom = totalExtent > R_main
-    ? Math.max(0.30, Math.min(1, (panelShort * 0.80) / (totalExtent * 2)))
-    : 1;
+  setAutoFitZoom(R_main, panelShort, totalExtent);
   applyCoreZoom();
 
   const scaleEl = document.getElementById('core-scale-value');
@@ -1177,7 +1271,7 @@ function renderStats() {
     corePanel.style.setProperty('--core-surcharge-ratio', surchargeRatio.toFixed(4));
     corePanel.style.setProperty('--core-fragment-ratio', fragmentRatio.toFixed(4));
   }
-  if (coreStatsMode) updateCoreStatTags();
+  if (coreStatsMode) renderCoreTerminal();
   window.NitroSound?.updateCoreAmbience?.({
     energyRatio,
     passiveRatio,

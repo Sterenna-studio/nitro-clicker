@@ -582,44 +582,96 @@
   box-shadow: 0 0 16px rgba(0,255,204,.4);
 }
 
-/* Tag de prod sur chaque noyau — masqué hors mode stats (vue microscope sans texte). */
-.core-stat-tag {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 7;
+/* ── Mode STATS : vue tableur/terminal ───────────────────────────────────────
+   Remplace entièrement l'affichage visuel des noyaux par un panneau texte —
+   plus de sphères à animer, donc charge GPU/CPU minimale. */
+
+.core-panel.core-stats #core-viewport,
+.core-panel.core-stats .microscope-lens,
+.core-panel.core-stats .core-state-aura,
+.core-panel.core-stats .tendril-layer,
+.core-panel.core-stats .energy-field,
+.core-panel.core-stats .module-orbit,
+.core-panel.core-stats .scale-radar,
+.core-panel.core-stats .core-zoom-control,
+.core-panel.core-stats .core-scale-indicator { display: none; }
+
+.core-terminal {
   display: none;
-  padding: 1px 5px;
-  font: 700 max(9px, calc(var(--sub-size, 120px) * .14))/1 'Share Tech Mono', monospace;
-  letter-spacing: .04em;
-  color: #eafcff;
-  text-shadow: 0 0 6px rgba(0,255,204,.9), 0 1px 2px rgba(0,0,0,.8);
-  background: rgba(2,12,16,.55);
-  border-radius: 5px;
-  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  padding: clamp(14px, 2.4vw, 26px);
+  overflow-y: auto;
+  font-family: var(--font-mono, 'Share Tech Mono', monospace);
+  color: rgba(120,255,190,.92);
+  background:
+    repeating-linear-gradient(0deg, rgba(0,255,150,.025) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 50% 0%, rgba(0,255,204,.07), transparent 60%),
+    #030a08;
+}
+.core-panel.core-stats .core-terminal { display: block; }
+
+.terminal-head {
+  margin-bottom: 10px;
+  color: var(--nc-primary);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-shadow: 0 0 8px rgba(0,255,204,.5);
+}
+
+.terminal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+.terminal-table th,
+.terminal-table td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0,255,150,.14);
   white-space: nowrap;
 }
-.core-stat-tag.core-stat-main {
-  font-size: clamp(13px, 1.5vw, 20px);
-  padding: 3px 9px;
-  border: 1px solid rgba(0,255,204,.3);
+.terminal-table th {
+  color: rgba(120,255,190,.55);
+  font-weight: 400;
+  letter-spacing: .08em;
+  font-size: 10px;
+  text-transform: uppercase;
 }
-.core-panel.core-stats .core-stat-tag { display: block; }
+.terminal-table tbody tr:hover { background: rgba(0,255,150,.05); }
+.terminal-table tfoot td {
+  border-top: 1px solid rgba(0,255,204,.4);
+  border-bottom: none;
+  color: #eafcff;
+  font-weight: 700;
+}
 
-/* Basse conso : on fige toutes les animations continues du champ de noyaux. */
-.core-panel.core-stats .sub-core-field,
-.core-panel.core-stats .sub-core-inner,
-.core-panel.core-stats .sub-core.is-growing .sub-core-inner,
-.core-panel.core-stats .sub-core-plasma,
-.core-panel.core-stats .sub-core-link,
-.core-panel.core-stats .sub-core-rings,
-.core-panel.core-stats .sub-core-rings::before,
-.core-panel.core-stats .sub-core-rings::after,
-.core-panel.core-stats .microscope-lens::after,
-.core-panel.core-stats .core-rings { animation: none; }
-.core-panel.core-stats .sub-core-plasma,
-.core-panel.core-stats .sub-core-plasma-layer { opacity: .12; }
+.terminal-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.terminal-summary div {
+  padding: 8px 10px;
+  border: 1px solid rgba(0,255,150,.14);
+  border-radius: 6px;
+  background: rgba(0,255,150,.03);
+}
+.terminal-summary span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: rgba(120,255,190,.5);
+  margin-bottom: 3px;
+}
+.terminal-summary strong {
+  display: block;
+  color: #eafcff;
+  font-size: 13px;
+  font-weight: 400;
+}
 
 /* ── Fusion Tier II ───────────────────────────────────────────────────────────
    Phase 1 : résonance — les clones vibrent en ambre avant absorption.
