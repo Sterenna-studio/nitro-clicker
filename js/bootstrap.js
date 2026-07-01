@@ -14,6 +14,7 @@ import './ui/upgrade-ux.js';
 import './ui/current-objective.js';
 import './ui/save-migration-notice.js';
 import './audio/sound-panel.js';
+import './ui/settings-panel.js';
 
 import './engine/core-controls.js';
 import './fx/overdrive.js';

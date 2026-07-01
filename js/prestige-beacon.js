@@ -10,6 +10,7 @@ import {
   hydrateState,
   prestigeRequirement,
 } from './clicker-state.js';
+import { formatValue as fmt } from './ui/value-format.js';
 
 const SNAPSHOT_PREFIX = 'nitro-clicker.save.';
 
@@ -24,14 +25,6 @@ function readSnapshot() {
     } catch {}
   }
   return best ?? {};
-}
-
-function fmt(n) {
-  const v = Math.floor(Number(n ?? 0));
-  if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(2)}B`;
-  if (v >= 1_000_000)     return `${(v / 1_000_000).toFixed(2)}M`;
-  if (v >= 100_000)       return `${(v / 1_000).toFixed(1)}K`;
-  return v.toLocaleString('fr-FR');
 }
 
 function safeState(raw) {

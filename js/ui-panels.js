@@ -9,6 +9,7 @@ import {
   prestigeRequirement,
   upgradeCost,
 } from './clicker-state.js';
+import { formatValue as fmt } from './ui/value-format.js';
 
 const SNAPSHOT_PREFIX = 'nitro-clicker.save.';
 const EXPORT_VERSION = 1;
@@ -23,14 +24,6 @@ let _liveStateCache = null;
 export function setLiveState(state) { _liveStateCache = state; }
 function getLiveState() { return _liveStateCache; }
 // ─────────────────────────────────────────────────────────────────────────────
-
-function fmt(value) {
-  const n = Math.floor(Number(value ?? 0));
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 100_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString('fr-FR');
-}
 
 function getSaveKeys() {
   return Object.keys(localStorage).filter(k => k.startsWith(SNAPSHOT_PREFIX));

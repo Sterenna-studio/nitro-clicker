@@ -1,3 +1,5 @@
+import { formatValue as format } from './value-format.js';
+
 const SAVE_PREFIX = 'nitro-clicker.save.';
 
 let mounted = false;
@@ -176,14 +178,6 @@ function setScale(id, value) {
   const node = document.getElementById(id);
   const next = `scaleX(${Math.max(0, Math.min(1, Number(value) || 0))})`;
   if (node && node.style.transform !== next) node.style.transform = next;
-}
-
-function format(value) {
-  const n = Math.floor(Number(value ?? 0));
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 100_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString('fr-FR');
 }
 
 const boot = setInterval(() => {

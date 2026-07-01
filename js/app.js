@@ -38,6 +38,7 @@ import {
 } from './engine/clicker-state.js';
 import { loadSave, saveAll, readSaveError, readMigrationNotice } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
+import { formatValue as fmt } from './ui/value-format.js';
 
 const app = document.getElementById('app');
 const FX_KEY = 'nitro-clicker.fx.enabled';
@@ -151,14 +152,6 @@ function syncSoundFxToggle() {
   const hasEngine = !!window.NitroSound?.settings;
   btn.disabled = !hasEngine;
   syncToggleButton('sound-fx-toggle', 'FX SOUND', hasEngine && getSoundFxEnabled());
-}
-
-function fmt(value) {
-  const n = Math.floor(Number(value ?? 0));
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 100_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString('fr-FR');
 }
 
 function currencyLabel(currency) {
@@ -369,6 +362,7 @@ function bindStaticEvents() {
   syncUiFxToggle();
   syncSoundFxToggle();
   window.addEventListener('nitro:sound-settings-changed', syncSoundFxToggle);
+  window.addEventListener('nitro:value-settings-changed', () => renderAll(true));
 
   document.getElementById('fx-toggle').addEventListener('click', () => {
     fxEnabled = !fxEnabled;

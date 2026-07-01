@@ -1,3 +1,5 @@
+import { formatValue as formatEnergy } from './ui/value-format.js';
+
 const SAVE_PREFIX = 'nitro-clicker.save.';
 const TANK_STEP = 100_000_000;
 const TANK_COUNT = 10;
@@ -413,14 +415,6 @@ function dispatchLoreWave(text) {
   node.textContent = text;
   panel.appendChild(node);
   setTimeout(() => node.remove(), 2200);
-}
-
-function formatEnergy(value) {
-  const n = Math.floor(Number(value ?? 0));
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return `${n}`;
 }
 
 const boot = setInterval(() => {
