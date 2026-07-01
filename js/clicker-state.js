@@ -54,6 +54,20 @@ export const BALANCE = {
   // Multiplicateur global PAR TIER — appliqué de façon multiplicative : tier N = fusionTierBonus^N
   // tier1=×3 · tier2=×9 · tier3=×27 · tier4=×81 · tier5=×243
   fusionTierBonus: 3.0,
+  // Durée de base d'une activation de boost LEMEGETON (ms)
+  boostBaseDurationMs: 60_000,
+  // Durée ajoutée par niveau d'amélioration du boost (ms)
+  boostDurationPerLevel: 12_000,
+  // Magnitude de base de l'effet d'un boost (interprétation dépend du boost)
+  boostMagnitudeBase: 1.0,
+  // Magnitude ajoutée par niveau d'amélioration
+  boostMagnitudePerLevel: 0.15,
+  // Coût en fragments du premier niveau d'amélioration d'un boost
+  boostUpgradeBaseCost: 20,
+  // Facteur d'échelle du coût d'amélioration par niveau
+  boostUpgradeScale: 1.6,
+  // Niveau max d'amélioration par boost
+  boostUpgradeMaxLevel: 10,
 };
 
 export const SCALING_LAYERS = [
@@ -92,6 +106,8 @@ export function createDefaultState(userId = null) {
     coreShellBreakBonus: 0,
     coreShell: { storedFragments: 0, cracks: 0, lastBreakAt: 0, failedBreaks: 0 },
     coreTier: 0,
+    activeBoosts: {},
+    boostLevels: {},
     upgrades: {
       clickAmplifier: 0,
       autoCore: 0,
@@ -249,6 +265,113 @@ export function getCritOverdriveMultiplier(state) {
 }
 export function getOfflineCapHours(state) {
   return lemegetonSkillLevel(state, 'offlineGrid') >= 1 ? 24 : BALANCE.passiveOfflineCapHours;
+}
+
+// ── Boutique de boosts LEMEGETON ─────────────────────────────────────────
+// Effets temporaires achetés en fragments (cher, à usage unique par activation),
+// chacun teinte le noyau différemment le temps de la durée. Chaque boost a sa
+// propre amélioration permanente (niveau) qui augmente durée + magnitude —
+// survit au prestige comme les compétences LEMEGETON, mais indépendante d'elles.
+export const BOOSTS = [
+  {
+    id: 'ionicSurge', name: 'Surcharge Ionique', icon: '⚡', tint: 'violet',
+    activateCost: 40,
+    desc: 'Multiplie la production globale (clic, passif, usine) pendant la durée. Le noyau vire au violet électrique.',
+  },
+  {
+    id: 'crystalResonance', name: 'Résonance Cristalline', icon: '💎', tint: 'cyan',
+    activateCost: 45,
+    desc: 'Fait grimper fortement la chance de drop de fragments (Overdrive + coque) pendant la durée. Le noyau devient cristallin.',
+  },
+  {
+    id: 'overtension', name: 'Surtension', icon: '🔥', tint: 'ember',
+    activateCost: 35,
+    desc: "Accélère fortement la charge de surcharge : les Overdrive s'enchaînent. Le noyau crépite en rouge-orangé.",
+  },
+];
+
+export function getBoostLevel(state, boostId) {
+  return Math.max(0, Math.floor(Number(state?.boostLevels?.[boostId] ?? 0)));
+}
+
+export function getBoostUpgradeCost(state, boostId) {
+  const level = getBoostLevel(state, boostId);
+  return Math.floor(BALANCE.boostUpgradeBaseCost * Math.pow(BALANCE.boostUpgradeScale, level));
+}
+
+export function isBoostUpgradeMaxed(state, boostId) {
+  return getBoostLevel(state, boostId) >= BALANCE.boostUpgradeMaxLevel;
+}
+
+export function getBoostDurationMs(state, boostId) {
+  return BALANCE.boostBaseDurationMs + getBoostLevel(state, boostId) * BALANCE.boostDurationPerLevel;
+}
+
+export function getBoostMagnitude(state, boostId) {
+  return BALANCE.boostMagnitudeBase + getBoostLevel(state, boostId) * BALANCE.boostMagnitudePerLevel;
+}
+
+export function buyBoostUpgrade(state, boostId) {
+  if (!isLemegetonOnline(state)) return { ok: false, reason: 'locked' };
+  if (!BOOSTS.some(b => b.id === boostId)) return { ok: false, reason: 'unknown' };
+  if (isBoostUpgradeMaxed(state, boostId)) return { ok: false, reason: 'maxed' };
+  const cost = getBoostUpgradeCost(state, boostId);
+  if (Number(state.fragments ?? 0) < cost) return { ok: false, reason: 'not_enough_fragments', cost };
+
+  state.fragments -= cost;
+  if (!state.boostLevels) state.boostLevels = {};
+  state.boostLevels[boostId] = getBoostLevel(state, boostId) + 1;
+  state.updatedAt = Date.now();
+  return { ok: true, cost, level: state.boostLevels[boostId] };
+}
+
+export function isBoostActive(state, boostId) {
+  return Number(state?.activeBoosts?.[boostId] ?? 0) > Date.now();
+}
+
+export function getBoostRemainingMs(state, boostId) {
+  return Math.max(0, Number(state?.activeBoosts?.[boostId] ?? 0) - Date.now());
+}
+
+export function activateBoost(state, boostId) {
+  if (!isLemegetonOnline(state)) return { ok: false, reason: 'locked' };
+  const boost = BOOSTS.find(b => b.id === boostId);
+  if (!boost) return { ok: false, reason: 'unknown' };
+  if (Number(state.fragments ?? 0) < boost.activateCost) return { ok: false, reason: 'not_enough_fragments', cost: boost.activateCost };
+
+  state.fragments -= boost.activateCost;
+  if (!state.activeBoosts) state.activeBoosts = {};
+  const expiresAt = Date.now() + getBoostDurationMs(state, boostId);
+  state.activeBoosts[boostId] = expiresAt;
+  state.updatedAt = Date.now();
+  recalcDerivedStats(state);
+  return { ok: true, expiresAt };
+}
+
+// Purge les boosts expirés et déclenche un recalc si l'ensemble actif a changé
+// (les stats dérivées ne sont sinon recalculées que réactivement, sur achat).
+export function tickBoosts(state) {
+  let changed = false;
+  for (const id of Object.keys(state.activeBoosts ?? {})) {
+    if (Number(state.activeBoosts[id]) <= Date.now()) {
+      delete state.activeBoosts[id];
+      changed = true;
+    }
+  }
+  if (changed) recalcDerivedStats(state);
+  return changed;
+}
+
+export function getBoostProdMultiplier(state) {
+  return isBoostActive(state, 'ionicSurge') ? 1 + getBoostMagnitude(state, 'ionicSurge') : 1;
+}
+
+export function getBoostFragmentBonus(state) {
+  return isBoostActive(state, 'crystalResonance') ? getBoostMagnitude(state, 'crystalResonance') : 0;
+}
+
+export function getBoostSurchargeMultiplier(state) {
+  return isBoostActive(state, 'overtension') ? 1 + getBoostMagnitude(state, 'overtension') : 1;
 }
 
 export const UPGRADES = [
@@ -457,6 +580,8 @@ export function hydrateState(raw, userId = null) {
   merged.milestones = { ...base.milestones, ...(raw?.milestones ?? {}) };
   merged.lemegetonSkills = { ...base.lemegetonSkills, ...(raw?.lemegetonSkills ?? {}) };
   merged.lemegetonToggles = { ...base.lemegetonToggles, ...(raw?.lemegetonToggles ?? {}) };
+  merged.boostLevels = { ...base.boostLevels, ...(raw?.boostLevels ?? {}) };
+  merged.activeBoosts = { ...(raw?.activeBoosts ?? {}) };
   merged.coreShell = { ...base.coreShell, ...(raw?.coreShell ?? {}) };
   merged.fragments = Number(merged.fragments ?? 0);
   merged.totalFragments = Number(merged.totalFragments ?? merged.fragments ?? 0);
@@ -583,6 +708,15 @@ export function recalcDerivedStats(state) {
     state.factoryRate   *= lemeProd;
   }
 
+  // Boost temporaire « Surcharge Ionique » : multiplicateur de prod, actif un temps limité.
+  const boostProd = getBoostProdMultiplier(state);
+  if (boostProd !== 1) {
+    state.clickPower    *= boostProd;
+    state.passiveRate   *= boostProd;
+    state.autoClickRate *= boostProd;
+    state.factoryRate   *= boostProd;
+  }
+
   state.surcharge = Math.min(state.surcharge ?? 0, state.maxSurcharge);
 }
 
@@ -657,7 +791,8 @@ export function getFragmentDropChanceOnOverdrive(state) {
     BALANCE.fragmentBaseChance
       + state.prestige * BALANCE.fragmentPrestigeChance
       + state.overdriveLevel * BALANCE.fragmentOverdriveChance
-      + shellBonus,
+      + shellBonus
+      + getBoostFragmentBonus(state),
     BALANCE.fragmentChanceCap,
   );
 }
@@ -762,7 +897,8 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
   let fragments = 0;
   let fragmentsStored = 0;
 
-  state.surcharge = Math.min(state.maxSurcharge, (state.surcharge ?? 0) + state.surchargeGain * surchargeRatio);
+  // Boost temporaire « Surtension » : accélère la charge de surcharge, donc la fréquence d'Overdrive.
+  state.surcharge = Math.min(state.maxSurcharge, (state.surcharge ?? 0) + state.surchargeGain * surchargeRatio * getBoostSurchargeMultiplier(state));
   if (state.surcharge >= state.maxSurcharge) {
     overdrive = true;
     state.surcharge = 0;
@@ -932,6 +1068,7 @@ export function doPrestige(state) {
   const keptPersistentUpgrades = getPersistentUpgradeLevels(state);
   const keptLemegetonSkills = { ...(state.lemegetonSkills ?? {}) };
   const keptLemegetonToggles = { ...(state.lemegetonToggles ?? {}) };
+  const keptBoostLevels = { ...(state.boostLevels ?? {}) };
   const next = createDefaultState(userId);
   next.prestige = state.prestige + 1;
   const preview = getPrestigePreview(state);
@@ -943,6 +1080,7 @@ export function doPrestige(state) {
   next.upgrades = { ...next.upgrades, ...keptPersistentUpgrades };
   next.lemegetonSkills = keptLemegetonSkills;
   next.lemegetonToggles = keptLemegetonToggles;
+  next.boostLevels = keptBoostLevels;
   next.milestones = keptMilestones;
   next.totalClicks = keptTotalClicks;
   recalcDerivedStats(next);

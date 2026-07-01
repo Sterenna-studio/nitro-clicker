@@ -35,6 +35,17 @@ import {
   doFuseCore,
   BALANCE,
   MAX_FUSION_TIER,
+  BOOSTS,
+  getBoostLevel,
+  getBoostUpgradeCost,
+  isBoostUpgradeMaxed,
+  getBoostDurationMs,
+  getBoostMagnitude,
+  buyBoostUpgrade,
+  isBoostActive,
+  getBoostRemainingMs,
+  activateBoost,
+  tickBoosts,
 } from './engine/clicker-state.js';
 import { loadSave, saveAll, readSaveError, readMigrationNotice } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
@@ -244,6 +255,7 @@ function renderShell() {
         <div class="shop-tabs" role="tablist" aria-label="Boutiques">
           <button class="shop-tab active" data-shop-tab="upgrades" role="tab" aria-selected="true" type="button">UPGRADES</button>
           <button class="shop-tab" data-shop-tab="lemegeton" role="tab" aria-selected="false" type="button">⬡ LEMEGETON</button>
+          <button class="shop-tab" data-shop-tab="boosts" role="tab" aria-selected="false" type="button">⚡ BOOSTS</button>
         </div>
 
         <div class="shop-pane" data-shop-pane="upgrades">
@@ -266,6 +278,11 @@ function renderShell() {
         <div class="shop-pane" data-shop-pane="lemegeton" hidden>
           <p class="lemegeton-skill-hint" id="lemegeton-skill-hint">Compétences permanentes · payées en fragments · survivent au prestige.</p>
           <div class="lemegeton-skill-list" id="lemegeton-skill-list"></div>
+        </div>
+
+        <div class="shop-pane" data-shop-pane="boosts" hidden>
+          <p class="lemegeton-skill-hint" id="boost-shop-hint">Effets temporaires · payés en fragments · le noyau change d'aspect pendant la durée.</p>
+          <div class="lemegeton-skill-list" id="boost-shop-list"></div>
         </div>
       </aside>
 
@@ -396,6 +413,7 @@ function bindStaticEvents() {
         pane.hidden = pane.dataset.shopPane !== target;
       });
       if (target === 'lemegeton') renderLemegetonSkills(true);
+      else if (target === 'boosts') renderBoostShop(true);
       else renderUpgrades(true);
     });
   });
@@ -1226,6 +1244,8 @@ function renderAll(force = false) {
   renderTendrils(force);
   renderSubCores();
   renderLemegetonSkills(force);
+  renderBoostShop(force);
+  applyBoostCoreTint();
 }
 
 function renderLive() {
@@ -1233,6 +1253,8 @@ function renderLive() {
   renderCoreShell();
   renderUpgradesLive();
   renderLemegetonSkills();
+  renderBoostShop();
+  applyBoostCoreTint();
 }
 
 function getNextAffordableCost() {
@@ -1615,6 +1637,119 @@ function bindLemegetonButtons() {
   });
 }
 
+// ── Boutique de boosts LEMEGETON ─────────────────────────────────────────
+let lastBoostSignature = '';
+
+function getBoostSignature() {
+  return BOOSTS.map(b => `${b.id}:${getBoostLevel(state, b.id)}:${isBoostActive(state, b.id) ? 1 : 0}`).join('|')
+    + `|f${Math.floor(state.fragments ?? 0)}`;
+}
+
+function renderBoostShop(force = false) {
+  const root = document.getElementById('boost-shop-list');
+  if (!root) return;
+  const online = isLemegetonOnline(state);
+  const pane = document.querySelector('[data-shop-pane="boosts"]');
+  if (pane) pane.classList.toggle('locked', !online);
+
+  const hint = document.getElementById('boost-shop-hint');
+  if (hint) {
+    hint.textContent = online
+      ? "Effets temporaires · payés en fragments · le noyau change d'aspect pendant la durée."
+      : `LEMEGETON hors-ligne · atteins 1 Md d'énergie cumulée ou le Prestige 10 pour débloquer.`;
+  }
+
+  const signature = getBoostSignature();
+  if (!force && signature === lastBoostSignature && root.children.length) {
+    updateBoostTimers();
+    return;
+  }
+  lastBoostSignature = signature;
+  setHtml(root, online ? BOOSTS.map(renderBoostCard).join('') : `<div class="lemegeton-skill locked"><div class="lemegeton-skill-desc">Verrouillé — nécessite LEMEGETON en ligne.</div></div>`);
+  bindBoostButtons();
+  updateBoostTimers();
+}
+
+function renderBoostCard(boost) {
+  const level = getBoostLevel(state, boost.id);
+  const maxed = isBoostUpgradeMaxed(state, boost.id);
+  const upgradeCost = getBoostUpgradeCost(state, boost.id);
+  const active = isBoostActive(state, boost.id);
+  const held = Math.floor(state.fragments ?? 0);
+  const canActivate = !active && held >= boost.activateCost;
+  const canUpgrade = !maxed && held >= upgradeCost;
+  const durationS = Math.round(getBoostDurationMs(state, boost.id) / 1000);
+  const magnitudePct = Math.round(getBoostMagnitude(state, boost.id) * 100);
+
+  return `
+    <div class="boost-card boost-tint-${boost.tint} ${active ? 'active' : ''}" data-boost="${boost.id}">
+      <div class="lemegeton-skill-head">
+        <span class="lemegeton-skill-name">${boost.icon} ${boost.name} <small>Nv.${level}${maxed ? ' MAX' : ''}</small></span>
+        <span class="lemegeton-skill-cost" id="boost-timer-${boost.id}">${active ? 'ACTIF' : 'INACTIF'}</span>
+      </div>
+      <div class="lemegeton-skill-desc">${boost.desc}</div>
+      <div class="boost-card-stats">+${magnitudePct}% · ${durationS}s${level > 0 ? ` (Nv.${level})` : ''}</div>
+      <div class="boost-card-actions">
+        <button class="boost-activate-btn ${canActivate ? 'can-buy' : ''}" data-boost-activate="${boost.id}" ${canActivate ? '' : 'disabled'} type="button">ACTIVER · ${fmt(boost.activateCost)} F</button>
+        <button class="boost-upgrade-btn ${canUpgrade ? 'can-buy' : ''}" data-boost-upgrade="${boost.id}" ${(canUpgrade && !maxed) ? '' : 'disabled'} type="button">${maxed ? 'MAX' : `AMÉLIORER · ${fmt(upgradeCost)} F`}</button>
+      </div>
+    </div>`;
+}
+
+function updateBoostTimers() {
+  BOOSTS.forEach(boost => {
+    const el = document.getElementById(`boost-timer-${boost.id}`);
+    if (!el) return;
+    if (isBoostActive(state, boost.id)) {
+      const remaining = Math.ceil(getBoostRemainingMs(state, boost.id) / 1000);
+      el.textContent = `ACTIF · ${remaining}s`;
+    }
+  });
+}
+
+function applyBoostCoreTint() {
+  const core = document.getElementById('click-core');
+  if (!core) return;
+  BOOSTS.forEach(b => core.classList.toggle(`boost-tint-${b.tint}-fx`, isBoostActive(state, b.id)));
+}
+
+function bindBoostButtons() {
+  document.querySelectorAll('[data-boost-activate]:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', event => {
+      const id = btn.dataset.boostActivate;
+      const result = activateBoost(state, id);
+      if (!result.ok) {
+        playGameSound('upgrade.locked', { volume: 0.68 });
+        return toast(result.reason === 'not_enough_fragments' ? 'Fragments insuffisants.' : 'Boost verrouillé.');
+      }
+      const boost = BOOSTS.find(b => b.id === id);
+      playGameSound('overdrive.trigger', { volume: 0.85 }, 'overdrive');
+      applyBoostCoreTint();
+      spawnEnergyBurst(event.clientX, event.clientY, 24);
+      spawnSystemWave(`${boost.icon} ${boost.name} ACTIVÉ`);
+      lastBoostSignature = '';
+      renderBoostShop(true);
+      renderUpgrades(true);
+      scheduleSave();
+    });
+  });
+  document.querySelectorAll('[data-boost-upgrade]:not(:disabled)').forEach(btn => {
+    btn.addEventListener('click', event => {
+      const id = btn.dataset.boostUpgrade;
+      const result = buyBoostUpgrade(state, id);
+      if (!result.ok) {
+        playGameSound('upgrade.locked', { volume: 0.68 });
+        return toast(result.reason === 'not_enough_fragments' ? 'Fragments insuffisants.' : 'Déjà au niveau max.');
+      }
+      playGameSound('upgrade.buy', { volume: 0.78 }, 'buy');
+      spawnLightningToElement(event.currentTarget, `Lv.${result.level}`);
+      lastBoostSignature = '';
+      renderBoostShop(true);
+      scheduleSave();
+    });
+  });
+}
+
 const AUTO_PURCHASE_IDS = ['autoCore', 'autoClicker'];
 function runAutoPurchase() {
   if (!isAutoPurchaseEnabled(state)) return;
@@ -1804,6 +1939,7 @@ function startLoop() {
     const delta = Math.min(2, (now - lastTick) / 1000);
     lastTick = now;
     if (state.passiveRate > 0) tickPassive(state, delta);
+    tickBoosts(state);
     renderLive();
     refreshUpgradesIfNeeded();
     if (fxEnabled && now - lastEnergyPulse > 1800) {
