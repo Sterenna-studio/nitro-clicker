@@ -217,7 +217,7 @@ function renderShell() {
         <div class="core-state-aura" id="core-state-aura" aria-hidden="true"><span></span><i></i><b></b></div>
         <div class="core-viewport" id="core-viewport">
           <div class="sub-core-field" id="sub-core-field" aria-hidden="true"></div>
-          <div class="core-shell-visual" id="core-shell-visual" aria-hidden="true"><span></span><i></i><b></b></div>
+          <div class="core-shell-visual" id="core-shell-visual" aria-hidden="true"><span></span><i></i><b></b><div class="shell-crack-fragments" id="shell-crack-fragments"></div></div>
           <button class="core-hit-zone" id="core-hit-zone" type="button" aria-label="Cliquer le noyau Nitro"></button>
           <button class="click-core" id="click-core" aria-label="Cliquer le noyau Nitro" tabindex="-1">
             <span class="core-rings"></span>
@@ -350,6 +350,12 @@ function handleCoreClick(event) {
   if (result?.fragments) {
     toast(`Fragment Nitro obtenu +${result.fragments}`);
     spawnFragmentOrbs(result.fragments);
+  }
+  if (result?.shellAutoBreak) {
+    playGameSound('shell.shatter', { volume: 0.9 }, 'shatter');
+    pulseShell('break');
+    toast(`LA SPHÈRE CÈDE SOUS LA PRESSION · +${result.shellReleased} fragments`);
+    if (result.shellReleased > 0) spawnFragmentOrbs(result.shellReleased);
   }
   if (Math.random() > 0.45) zapToRandomModule();
   if (Math.random() > 0.55) reflectLightningToClones({ max: 1 });
@@ -1256,6 +1262,7 @@ function renderCoreShell(force = false) {
     setClassToggle(btn, 'can-buy', false);
     setText('shell-break-cost', 'LOCKED');
     setMeter('shell-break-fill', 0);
+    renderShellCracks(shell);
     return;
   }
 
@@ -1275,6 +1282,39 @@ function renderCoreShell(force = false) {
     </div>
     <div class="shell-meter"><i style="transform:scaleX(${shell.fillRatio})"></i><b style="transform:scaleX(${shell.crackRatio})"></b></div>
   `);
+  renderShellCracks(shell);
+}
+
+const MAX_SHELL_CRACK_FRAGS = 8;
+
+// Fissures visibles : un petit éclat DOM par fissure accumulée (plafonné), positionné
+// en cercle autour de la coque. Diffe contre le DOM existant pour n'animer que les nouveaux.
+function renderShellCracks(shell) {
+  const field = document.getElementById('shell-crack-fragments');
+  if (!field) return;
+  const count = shell.unlocked ? Math.min(MAX_SHELL_CRACK_FRAGS, Math.floor(shell.cracks)) : 0;
+  const current = field.children.length;
+  if (count === current) return;
+
+  if (count < current) {
+    field.innerHTML = '';
+    for (let i = 0; i < count; i++) field.appendChild(makeShellCrackFrag(i));
+    return;
+  }
+
+  for (let i = current; i < count; i++) {
+    const frag = makeShellCrackFrag(i);
+    frag.classList.add('just-cracked');
+    field.appendChild(frag);
+    setTimeout(() => frag.classList.remove('just-cracked'), 520);
+  }
+}
+
+function makeShellCrackFrag(idx) {
+  const frag = document.createElement('span');
+  frag.className = 'shell-crack-frag';
+  frag.style.setProperty('--frag-angle', `${(idx * (360 / MAX_SHELL_CRACK_FRAGS)).toFixed(1)}deg`);
+  return frag;
 }
 
 function getUpgradeSignature() {

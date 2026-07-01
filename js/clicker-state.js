@@ -33,6 +33,14 @@ export const BALANCE = {
   shellFragmentBonusMax: 0.045,
   // Bonus fragment par point de capacité de coque
   shellFragmentBonusPerCapacity: 0.004,
+  // Choc infligé à la coque par clic manuel (fractionnaire, accumulé dans coreShell.cracks)
+  shellShockPerClick: 0.006,
+  // Choc supplémentaire infligé à la coque lors d'un Overdrive
+  shellShockPerOverdrive: 0.10,
+  // Choc supplémentaire infligé à la coque lors d'un Crit Overdrive (en plus du choc Overdrive)
+  shellShockPerCrit: 0.30,
+  // Remise max sur le coût de brisure manuelle quand la coque est déjà fissurée par les chocs
+  shellBreakCostCrackDiscount: 0.70,
   // Ratio de gain d'énergie par clic auto vs clic manuel (45% = moins rentable intentionnellement)
   autoClickGainRatio: 0.45,
   // Ratio de charge de surcharge par clic auto (85% = Overdrive possible mais ralenti)
@@ -614,7 +622,13 @@ export function getCoreShellBreakCost(state) {
   const stored = Math.max(0, Number(state?.coreShell?.storedFragments ?? 0));
   const hardnessFactor = Math.pow(BALANCE.shellBreakCostScale, Math.max(0, hardness - 1));
   const storedFactor = 0.8 + Math.max(0, stored) * 0.85;
-  return Math.floor(BALANCE.shellBaseBreakCost * hardnessFactor * storedFactor);
+  // Remise : plus la coque est déjà fissurée par les chocs (clic/overdrive), moins
+  // il coûte cher de l'achever à la main — le bouton devient un coup de grâce.
+  const requiredHits = getCoreShellRequiredHits(state);
+  const rawCracks = Math.max(0, Number(state?.coreShell?.cracks ?? 0));
+  const crackRatio = requiredHits > 0 ? Math.min(1, rawCracks / requiredHits) : 0;
+  const crackDiscount = 1 - crackRatio * BALANCE.shellBreakCostCrackDiscount;
+  return Math.floor(BALANCE.shellBaseBreakCost * hardnessFactor * storedFactor * crackDiscount);
 }
 
 export function getCoreShellRequiredHits(state) {
@@ -665,6 +679,39 @@ export function storeCoreShellFragments(state, amount = 1) {
   return { stored, overflow: incoming - stored };
 }
 
+// Libère les fragments stockés dans la coque et remet les fissures à zéro.
+// Partagé entre la brisure manuelle réussie et l'auto-brisure par choc.
+function releaseCoreShellFragments(state) {
+  const released = Math.max(0, Math.floor(Number(state.coreShell?.storedFragments ?? 0)));
+  state.coreShell.storedFragments = 0;
+  state.coreShell.cracks = 0;
+  state.coreShell.lastBreakAt = Date.now();
+  state.coreShell.failedBreaks = Math.max(0, Number(state.coreShell.failedBreaks ?? 0));
+  const releasedGain = released > 0 ? Math.max(released, Math.floor(released * getFragmentGainMultiplier(state))) : 0;
+  if (releasedGain > 0) addFragments(state, releasedGain);
+  state.updatedAt = Date.now();
+  return { released: releasedGain };
+}
+
+// Choc infligé à la coque par l'activité de clic (clic, overdrive, crit overdrive).
+// Accumule dans coreShell.cracks (fractionnaire) ; déclenche une auto-brisure
+// gratuite si le seuil de fissures requis est dépassé.
+export function applyCoreShellShock(state, amount) {
+  const shock = Math.max(0, Number(amount) || 0);
+  if (shock <= 0) return { autoBreak: false };
+  const capacity = Math.max(0, Number(state?.coreShellCapacity ?? 0));
+  if (capacity <= 0) return { autoBreak: false };
+
+  const rawCracks = Math.max(0, Number(state.coreShell?.cracks ?? 0)) + shock;
+  state.coreShell.cracks = rawCracks;
+  const requiredHits = getCoreShellRequiredHits(state);
+  if (rawCracks >= requiredHits) {
+    const { released } = releaseCoreShellFragments(state);
+    return { autoBreak: true, released };
+  }
+  return { autoBreak: false };
+}
+
 export function attemptCoreShellBreak(state) {
   const shell = getCoreShellInfo(state);
   if (!shell.unlocked) return { ok: false, reason: 'locked', shell };
@@ -678,14 +725,7 @@ export function attemptCoreShellBreak(state) {
   const forcedSuccess = nextCracks >= shell.requiredHits;
 
   if (naturalSuccess || forcedSuccess) {
-    const released = shell.storedFragments;
-    state.coreShell.storedFragments = 0;
-    state.coreShell.cracks = 0;
-    state.coreShell.lastBreakAt = Date.now();
-    state.coreShell.failedBreaks = Math.max(0, Number(state.coreShell.failedBreaks ?? 0));
-    const releasedGain = Math.max(released, Math.floor(released * getFragmentGainMultiplier(state)));
-    addFragments(state, releasedGain);
-    state.updatedAt = Date.now();
+    const { released: releasedGain } = releaseCoreShellFragments(state);
     return { ok: true, released: releasedGain, forced: forcedSuccess && !naturalSuccess, chance, shell: getCoreShellInfo(state) };
   }
 
@@ -742,9 +782,19 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
     }
   }
 
+  // Choc de coque : chaque clic use un peu la sphère, l'overdrive et le crit
+  // overdrive l'ébranlent davantage. Peut déclencher une auto-brisure gratuite.
+  let shellShock = BALANCE.shellShockPerClick * surchargeRatio;
+  if (overdrive) shellShock += BALANCE.shellShockPerOverdrive;
+  if (crit) shellShock += BALANCE.shellShockPerCrit;
+  const shockResult = applyCoreShellShock(state, shellShock);
+
   addEnergy(state, gain);
   state.updatedAt = Date.now();
-  return { gain, overdrive, overdriveGain, crit, fragments, fragmentsStored, automatic };
+  return {
+    gain, overdrive, overdriveGain, crit, fragments, fragmentsStored, automatic,
+    shellAutoBreak: shockResult.autoBreak, shellReleased: shockResult.released ?? 0,
+  };
 }
 
 export function tickAutoClicks(state, deltaSeconds) {
