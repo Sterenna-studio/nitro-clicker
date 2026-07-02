@@ -514,6 +514,22 @@ export const UPGRADES = [
     lockedText: 'Débloqué au Prestige 30.',
     apply(state) { state.clickPower += 560; state.passiveRate += 800; state.factoryRate += 300; state.factoryMult += 0.10; state.maxSurcharge += 50; },
   },
+  {
+    id: 'stellarConvergence', name: 'Convergence stellaire', icon: '✴️', baseCost: 80_000_000_000_000, scale: 1.38, currency: 'energy', tier: 8,
+    desc(state) {
+      const lvl = state?.upgrades?.stellarConvergence ?? 0;
+      if (lvl === 0) return "Prépare l'activation du Gwen Ha Star : +25% production globale par niveau. Prend le relais de la ruche orbitale sur la dernière ligne droite avant Prestige 50.";
+      return `Convergence ×${lvl} · +${(lvl * 25)}% production globale · alimente directement le Star.`;
+    },
+    // Débloqué à P40, juste avant que la ruche orbitale (P30) ne commence à
+    // s'essouffler face à la croissance exponentielle du coût de prestige —
+    // couvre le tronçon 40→50 comme orbitalHive a couvert 30→40. Scale douce
+    // (1.38) et bonus/niveau élevé (25%) : la pente de coût de prestige à ce
+    // stade (2.1^(prestige-10)) est trop raide pour un système plus timide.
+    unlock: state => state.prestige >= 40,
+    lockedText: 'Débloqué au Prestige 40.',
+    apply(state) { state.factoryMult += 0.25; },
+  },
 ];
 
 export const MILESTONES = [

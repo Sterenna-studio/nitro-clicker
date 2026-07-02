@@ -38,7 +38,7 @@ import {
 
 const CLICKS_PER_SEC = 4;
 const DT = 1; // secondes simulées par tick
-const MAX_TICKS = 20_000_000; // ~231 jours simulés, garde-fou anti boucle infinie
+const MAX_TICKS = 32_000_000; // ~370 jours simulés, garde-fou anti boucle infinie
 const TARGET_PRESTIGE = 50;
 // Alignés sur SCALING_LAYERS (clicker-state.js) : core=0, engine_bay=3, factory=10, district=25, orbital=50
 const REPORT_PRESTIGES = new Set([1, 3, 10, 20, 25, 30, 35, 40, 45, 50]);

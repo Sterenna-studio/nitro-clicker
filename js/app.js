@@ -65,7 +65,7 @@ const CORE_MODULE_GROUPS = [
   { id: 'automation', label: 'AUTO', color: '#00ff80', sound: 'module.automation', ids: ['autoCore', 'autoClicker', 'bioConduit'] },
   { id: 'overdrive', label: 'OVR', color: '#ff3df2', sound: 'module.overdrive', ids: ['surchargeCoil', 'fractureTuning', 'orbitalHive'] },
   { id: 'shell', label: 'SHELL', color: '#ffcc00', sound: 'module.shell', ids: ['coreIsolation', 'reflectiveAlloy', 'mirrorGel', 'prismGlass'] },
-  { id: 'coreNetwork', label: 'COREx', color: '#8fb7ff', sound: 'module.coreNetwork', ids: ['nitroFactory', 'enginePlant'] },
+  { id: 'coreNetwork', label: 'COREx', color: '#8fb7ff', sound: 'module.coreNetwork', ids: ['nitroFactory', 'enginePlant', 'stellarConvergence'] },
 ];
 
 let auth;
