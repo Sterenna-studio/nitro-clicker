@@ -78,6 +78,10 @@ export const SCALING_LAYERS = [
   { id: 'engine_bay', prestige: 3, name: 'Baie moteur', short: 'BAY', desc: 'Plusieurs modules commencent à tourner autour du noyau.', mult: 1.32 },
   { id: 'factory', prestige: 10, name: 'Multiplicateur de noyau', short: 'CORE×', desc: 'Le noyau se duplique. Copies à 10%→80% du noyau principal.', mult: 2.15 },
   { id: 'district', prestige: 25, name: 'District énergétique', short: 'DISTRICT', desc: 'Le réseau alimente un quartier entier du hub Star.', mult: 4.55 },
+  // Palier intermédiaire entre le district (25) et l'anneau orbital (50) : la ruche
+  // orbitale (upgrade orbitalHive, débloquée à P30) atteint sa maturité ici — comble
+  // le vide de 25 prestiges qui existait entre district et orbital.
+  { id: 'hive', prestige: 38, name: 'Ruche orbitale', short: 'HIVE', desc: "La ruche orbitale atteint sa masse critique et redistribue l'excédent d'énergie vers le noyau.", mult: 7.0 },
   { id: 'orbital', prestige: 50, name: 'Anneau orbital', short: 'ORBITAL', desc: 'Production à échelle orbitale : les usines deviennent un essaim.', mult: 10.2 },
 ];
 

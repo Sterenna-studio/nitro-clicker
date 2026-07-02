@@ -1822,7 +1822,7 @@ function renderScaleCard(force = false) {
       <span class="scale-chip">${layer.short}</span>
       <div><strong>${layer.name}</strong><p>${layer.desc}</p></div>
     </div>
-    <div class="scale-card-sub">Multiplicateur d'échelle ×${layer.mult} · prochain dézoom aux prestiges 3 / 10 / 25 / 50</div>
+    <div class="scale-card-sub">Multiplicateur d'échelle ×${layer.mult} · paliers de dézoom aux prestiges ${SCALING_LAYERS.map(l => l.prestige).filter(p => p > 0).join(' / ')}</div>
   `);
 }
 
