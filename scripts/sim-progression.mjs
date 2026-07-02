@@ -33,13 +33,15 @@ import {
   getCoreMultiplier,
   getCoreCloneCount,
   getCoreShellInfo,
+  getScalingLayer,
 } from '../js/clicker-state.js';
 
 const CLICKS_PER_SEC = 4;
 const DT = 1; // secondes simulées par tick
-const MAX_TICKS = 3_000_000; // ~34 jours simulés, garde-fou anti boucle infinie
+const MAX_TICKS = 20_000_000; // ~231 jours simulés, garde-fou anti boucle infinie
 const TARGET_PRESTIGE = 50;
-const REPORT_PRESTIGES = new Set([1, 3, 5, 10, 15, 20, 25, 30, 40, 50]);
+// Alignés sur SCALING_LAYERS (clicker-state.js) : core=0, engine_bay=3, factory=10, district=25, orbital=50
+const REPORT_PRESTIGES = new Set([1, 3, 10, 20, 25, 30, 35, 40, 45, 50]);
 
 let state = createDefaultState('sim');
 recalcDerivedStats(state);
@@ -148,25 +150,26 @@ function maybeFuse() {
 
 function snapshot(label) {
   const shell = getCoreShellInfo(state);
+  const layer = getScalingLayer(state);
+  const combinedCoreMult = getCoreMultiplier(state) * (state.coreCount ?? 1) * (state.coreTierBonus ?? 1);
   return {
     label,
     prestige: state.prestige,
+    layer: layer.short,
     simDays: (ticks * DT / 86400).toFixed(2),
-    totalEnergy: Math.round(state.totalEnergy),
+    totalEnergy: state.totalEnergy.toExponential(2),
     fragments: Math.round(state.fragments),
     totalFragments: Math.round(state.totalFragments),
-    clickPower: Math.round(state.clickPower),
-    passiveRate: Math.round(state.passiveRate),
-    factoryRate: Math.round(state.factoryRate),
-    coreIsolationLvl: state.upgrades.coreIsolation ?? 0,
+    clickPower: state.clickPower.toExponential(2),
+    passiveRate: state.passiveRate.toExponential(2),
+    factoryRate: state.factoryRate.toExponential(2),
     nitroFactoryLvl: state.upgrades.nitroFactory ?? 0,
     enginePlantLvl: state.upgrades.enginePlant ?? 0,
     orbitalHiveLvl: state.upgrades.orbitalHive ?? 0,
-    coreMultiplier: Number(getCoreMultiplier(state).toFixed(2)),
     clones: getCoreCloneCount(state),
     coreTier: state.coreTier,
+    combinedCoreMult: Number(combinedCoreMult.toPrecision(4)),
     lemegetonOnline: isLemegetonOnline(state),
-    shellUnlocked: shell.unlocked,
     shellHardness: shell.hardness,
   };
 }

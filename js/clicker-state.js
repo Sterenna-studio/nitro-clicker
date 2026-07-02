@@ -5,8 +5,11 @@ export const BALANCE = {
   prestigeBase: 18000,
   // Exposant de progression prestige early (P0->P10) — P1 vise ~25-35 min, P10 plusieurs heures
   prestigeEarlyScale: 2.05,
-  // Exposant de progression prestige tardif (P10+) — progression plus lente intentionnelle
-  prestigeLateScale: 2.3,
+  // Exposant de progression prestige tardif (P10+) — progression plus lente intentionnelle.
+  // Adouci (2.3→2.1) : au-delà de P30 les leviers multiplicatifs du noyau (fusion,
+  // clones, réflexion) plafonnent, et 2.3 créait un mur (P35→P40 prenait ~15x plus
+  // de temps que le rythme précédent) — audité via scripts/sim-progression.mjs.
+  prestigeLateScale: 2.1,
   // Cap de progression hors-ligne en heures (sans compétence offlineGrid LEMEGETON)
   passiveOfflineCapHours: 8,
   // Multiplicateur de base de l'Overdrive sur le gain de clic
@@ -497,11 +500,14 @@ export const UPGRADES = [
     id: 'orbitalHive', name: 'Ruche orbitale Nitro', icon: '🛰️', baseCost: 6200000, scale: 1.48, currency: 'energy', tier: 6,
     desc(state) {
       const lvl = state?.upgrades?.orbitalHive ?? 0;
-      if (lvl === 0) return 'Essaim orbital : +300 é/s industrielle et +10% production usine par niveau.';
-      return `Essaim ×${lvl} · +${lvl * 10}% production usine · +300 é/s par niveau.`;
+      if (lvl === 0) return 'Essaim orbital : +300 é/s industrielle et +10% production globale (clic/passif/usine) par niveau.';
+      return `Essaim ×${lvl} · +${lvl * 10}% production globale · +300 é/s par niveau.`;
     },
-    unlock: state => state.prestige >= 50,
-    lockedText: 'Débloqué au Prestige 50.',
+    // Débloqué juste après le plafond de fusion (~P30) pour combler le trou de
+    // progression avant le prochain palier de contenu, plutôt qu'à P50 où le
+    // mur avait déjà eu le temps de se former.
+    unlock: state => state.prestige >= 30,
+    lockedText: 'Débloqué au Prestige 30.',
     apply(state) { state.clickPower += 560; state.passiveRate += 800; state.factoryRate += 300; state.factoryMult += 0.10; state.maxSurcharge += 50; },
   },
 ];
@@ -692,12 +698,15 @@ export function recalcDerivedStats(state) {
   const tierBonus = getCoreTierBonus(state);
   state.coreTierBonus = tierBonus;
   const reflectMultiplier = 1 + Math.min(1.35, state.coreShellReflect ?? 0);
-  state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount * tierBonus;
-  state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount * tierBonus;
+  // Essaim orbital (orbitalHive) : levier multiplicatif intermédiaire entre le
+  // plafond de fusion (~P30) et le contenu suivant. S'applique à TOUTE la prod
+  // (pas seulement l'usine) pour combler le trou de progression entre les deux.
+  const hiveMult = state.factoryMult ?? 1;
+  state.clickPower  *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount * tierBonus * hiveMult;
+  state.passiveRate *= state.permanentMultiplier * reflectMultiplier * coreMult * coreCount * tierBonus * hiveMult;
   state.autoClickRate *= state.permanentMultiplier;
   // Production industrielle : source d'énergie/s réelle (tickPassive + offline).
-  // Boostée par le mult permanent, l'essaim orbital (factoryMult), la réflexion, les clones et le tier.
-  state.factoryRate   *= state.permanentMultiplier * (state.factoryMult ?? 1) * coreMult * coreCount * tierBonus;
+  state.factoryRate   *= state.permanentMultiplier * hiveMult * coreMult * coreCount * tierBonus;
 
   // Surcadence (compétence LEMEGETON) : +% production globale, persistant.
   const lemeProd = getLemegetonProdMultiplier(state);
