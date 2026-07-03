@@ -1016,118 +1016,29 @@ function orbitGeometry(reflections, R_center) {
   return { sizes, orbitR, subR, extent: orbitR + subR };
 }
 
-// Noyau « propre » : sphère Nitro lumineuse, sans aucun texte ni copie locale.
-function makeNucleus(size, { dup = false, growing = false, fresh = false, title = '', reflect = 0 } = {}) {
-  const node = document.createElement('div');
-  node.className = 'sub-core'
-    + (dup ? ' is-dup' : '')
-    + (growing ? ' is-growing' : '')
-    + (fresh ? ' just-divided' : '');
-  node.style.setProperty('--sub-size', `${size.toFixed(1)}px`);
-  node.style.setProperty('--eff', reflect.toFixed(3));
-  if (title) node.title = title;
-  // Les clones centraux portent le même modèle que le noyau principal : anneaux tournants.
-  const rings = dup ? '<span class="sub-core-rings" aria-hidden="true"></span>' : '';
-  node.innerHTML = `
-    ${rings}
-    <div class="sub-core-inner">
-      <span class="sub-core-plasma" aria-hidden="true"></span>
-      <span class="sub-core-plasma-layer" aria-hidden="true"></span>
-    </div>`;
-  return node;
-}
-
-// Construit un anneau de noyaux orbitaux dans `parent`. Renvoie l'extent du système.
-function buildOrbitalRing(parent, reflections, R_center, { animateLast = false } = {}) {
-  const geo = orbitGeometry(reflections, R_center);
-  reflections.forEach((reflect, idx) => {
-    const size = geo.sizes[idx];
-    const angle = -90 + (idx / reflections.length) * 360;
-    const growing = animateLast && idx === reflections.length - 1 && reflect < ORBITAL_MAX_REFLECT;
-
-    const link = document.createElement('span');
-    link.className = 'sub-core-link';
-    link.style.setProperty('--angle', `${angle}deg`);
-    link.style.setProperty('--orbit-r', `${geo.orbitR.toFixed(1)}px`);
-    link.style.setProperty('--sub-size', `${size.toFixed(1)}px`);
-    link.style.setProperty('--eff', reflect.toFixed(3));
-    parent.appendChild(link);
-
-    const node = makeNucleus(size, {
-      growing,
-      reflect,
-      title: `Noyau orbital ${idx + 1} · réflexion ${Math.round(reflect * 100)}%`,
-    });
-    node.style.setProperty('--angle', `${angle}deg`);
-    node.style.setProperty('--orbit-r', `${geo.orbitR.toFixed(1)}px`);
-    parent.appendChild(node);
-  });
-  return geo.extent;
-}
-
+// Noyau central simplifié : plus de rendu DOM par orbite/clone (chaque noyau
+// orbital + chaque clone hexagonal portait ses propres animations superposées
+// — rings, plasma, contre-rotation — dont le cumul pouvait bloquer/crasher le
+// navigateur sur une partie avancée). Le noyau principal reste seul visible ;
+// les mécaniques (coreMultiplier, coreCount, tierBonus, prod) sont inchangées,
+// seul l'affichage est redevenu simple.
 function renderSubCores() {
   const field = document.getElementById('sub-core-field');
   if (!field) return;
 
   const nitroLvl = state.upgrades?.nitroFactory ?? 0;
   const engineLvl = state.upgrades?.enginePlant ?? 0;
-  const reflections = orbitalReflections(nitroLvl);
-  const orbitalCount = reflections.length;
+  const orbitalCount = orbitalReflections(nitroLvl).length;
   const dupCount = Math.min(MAX_CORE_DUPLICATES, Math.floor(engineLvl / 10));
 
   const signature = `${nitroLvl}:${dupCount}`;
   if (signature === lastSubCoreSignature) return;
-  const grewDup = dupCount > lastDupCount;
   lastSubCoreSignature = signature;
   lastOrbitalCount = orbitalCount;
   lastDupCount = dupCount;
 
-  const panel = document.getElementById('core-panel');
-  const coreEl = document.getElementById('click-core');
-  const coreRect = coreEl?.getBoundingClientRect();
-  const panelRect = panel?.getBoundingClientRect();
-  const curZoom = panel ? (parseFloat(getComputedStyle(panel).getPropertyValue('--panel-zoom')) || 1) : 1;
-  // coreRect.width peut être 0 si le noyau est caché (mode STATS) — dans ce cas
-  // on réutilise la dernière mesure valide plutôt que de tomber à R_main=0.
-  const R_main = (coreRect && coreRect.width > 0) ? (coreRect.width / curZoom) / 2 : lastKnownRMain;
-  if (coreRect && coreRect.width > 0) lastKnownRMain = R_main;
-  const panelShort = (panelRect && panelRect.width > 0) ? Math.min(panelRect.width, panelRect.height) : 520;
-
   field.innerHTML = '';
-
-  // ── Noyaux orbitaux autour du noyau principal (réflexion d'énergie) ──
-  const mainExtent = buildOrbitalRing(field, reflections, R_main, { animateLast: true });
-  let totalExtent = mainExtent;
-
-  // ── Duplication du noyau central (placement hexagonal, max 5 clones) ──
-  if (dupCount > 0) {
-    const R_dup = R_main * 0.66;
-    const dupExtent = orbitGeometry(reflections, R_dup).extent;
-    const gap2 = R_main * 0.5;
-    // hexR : assez loin pour que chaque clone (+ ses orbitaux) reste hors du système principal
-    // et ne chevauche pas ses voisins hexagonaux (corde = hexR pour 60° de séparation).
-    const hexR = Math.max(mainExtent + dupExtent + gap2, 2 * dupExtent + gap2);
-
-    for (let k = 0; k < dupCount; k++) {
-      const angle = -90 + k * 60; // sommets d'un hexagone
-      const isNewest = grewDup && k === dupCount - 1;
-      const anchor = document.createElement('div');
-      anchor.className = 'dup-core' + (isNewest ? ' just-divided' : '');
-      anchor.style.setProperty('--angle', `${angle}deg`);
-      anchor.style.setProperty('--orbit-r', `${hexR.toFixed(1)}px`);
-      field.appendChild(anchor);
-
-      const body = makeNucleus(R_dup * 2, { dup: true, reflect: 0.8, title: `Noyau dupliqué ${k + 1} · clone complet (×1 prod)` });
-      body.style.setProperty('--angle', '0deg');
-      body.style.setProperty('--orbit-r', '0px');
-      anchor.appendChild(body);
-
-      buildOrbitalRing(anchor, reflections, R_dup, { animateLast: false });
-    }
-    totalExtent = Math.max(totalExtent, hexR + dupExtent);
-  }
-
-  setAutoFitZoom(R_main, panelShort, totalExtent);
+  lastAutoFitZoom = 1;
   applyCoreZoom();
 
   const scaleEl = document.getElementById('core-scale-value');
