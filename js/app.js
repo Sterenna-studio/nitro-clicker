@@ -982,15 +982,21 @@ const ORBITAL_MIN_REFLECT = 0.10;
 const ORBITAL_MAX_REFLECT = 0.80;
 const MAX_CORE_DUPLICATES = 5;
 
+// Plafond défensif du nombre de noyaux orbitaux rendus — bien au-delà de ce
+// qu'une partie légitime atteint (~10 vers prestige 45), pour qu'une save
+// corrompue/valeur aberrante ne génère pas des milliers de nœuds DOM d'un
+// coup et ne bloque le thread principal (crash navigateur type hang).
+const MAX_ORBITAL_RINGS = 60;
+
 // Réflexions des noyaux orbitaux (upgrade « Multiplicateur de noyau » / nitroFactory).
 // 1 noyau orbital par tranche de 10 niveaux. Le plus récent grandit DANS sa décade :
 // sa réflexion passe de 10% (niveau X1) à 80% au déblocage du suivant, puis se fige à 80%.
 function orbitalReflections(nitroLvl) {
-  const full = Math.floor(nitroLvl / 10);
+  const full = Math.min(MAX_ORBITAL_RINGS, Math.floor(nitroLvl / 10));
   const partial = nitroLvl % 10;
   const list = [];
   for (let i = 0; i < full; i++) list.push(ORBITAL_MAX_REFLECT);
-  if (partial > 0) {
+  if (partial > 0 && full < MAX_ORBITAL_RINGS) {
     list.push(ORBITAL_MIN_REFLECT + ((partial - 1) / 9) * (ORBITAL_MAX_REFLECT - ORBITAL_MIN_REFLECT));
   }
   return list;
@@ -2011,7 +2017,6 @@ let bootStatuses = BOOT_STEPS.map(() => 'pending');
 
 function renderBootScreen(extraHtml = '') {
   app.innerHTML = `
-    <div class="scanlines" aria-hidden="true"></div>
     <section class="boot-sequence">
       <div class="boot-orb">⬡</div>
       <h1 class="boot-title">NITRO <span>CLICKER</span></h1>
