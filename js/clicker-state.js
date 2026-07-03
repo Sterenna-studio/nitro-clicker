@@ -940,19 +940,22 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
       overdriveGain = Math.floor(overdriveGain * getCritOverdriveMultiplier(state));
     }
     gain += overdriveGain;
-    if (Math.random() < getFragmentDropChanceOnOverdrive(state)) {
-      const stored = storeCoreShellFragments(state, 1);
-      fragmentsStored = stored.stored;
-      if (stored.overflow > 0) fragments = addFragments(state, stored.overflow);
-    }
   }
 
   // Choc de coque : chaque clic use un peu la sphère, l'overdrive et le crit
   // overdrive l'ébranlent davantage. Peut déclencher une auto-brisure gratuite.
+  // Appliqué AVANT le tirage de drop de fragment ci-dessous : un fragment qui
+  // vient d'être stocké ne peut plus être relâché dans le même clic.
   let shellShock = BALANCE.shellShockPerClick * surchargeRatio;
   if (overdrive) shellShock += BALANCE.shellShockPerOverdrive;
   if (crit) shellShock += BALANCE.shellShockPerCrit;
   const shockResult = applyCoreShellShock(state, shellShock);
+
+  if (overdrive && Math.random() < getFragmentDropChanceOnOverdrive(state)) {
+    const stored = storeCoreShellFragments(state, 1);
+    fragmentsStored = stored.stored;
+    if (stored.overflow > 0) fragments = addFragments(state, stored.overflow);
+  }
 
   addEnergy(state, gain);
   state.updatedAt = Date.now();
@@ -963,30 +966,40 @@ export function applyCoreClick(state, { automatic = false, gainRatio = 1, surcha
 }
 
 export function tickAutoClicks(state, deltaSeconds) {
-  if ((state.autoClickRate ?? 0) <= 0 || deltaSeconds <= 0) return { clicks: 0, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
+  const empty = { clicks: 0, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0, shellAutoBreaks: 0, shellReleased: 0 };
+  if ((state.autoClickRate ?? 0) <= 0 || deltaSeconds <= 0) return empty;
   state.autoClickAccumulator = Math.max(0, Number(state.autoClickAccumulator ?? 0)) + state.autoClickRate * deltaSeconds;
   const clicks = Math.min(BALANCE.autoClickMaxBurstsPerTick, Math.floor(state.autoClickAccumulator));
-  if (clicks <= 0) return { clicks: 0, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
+  if (clicks <= 0) return empty;
   state.autoClickAccumulator -= clicks;
 
-  const summary = { clicks, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0 };
+  const summary = { clicks, gain: 0, overdrives: 0, fragments: 0, fragmentsStored: 0, shellAutoBreaks: 0, shellReleased: 0 };
   for (let i = 0; i < clicks; i++) {
     const result = applyCoreClick(state, { automatic: true, gainRatio: BALANCE.autoClickGainRatio, surchargeRatio: BALANCE.autoClickSurchargeRatio });
     summary.gain += result.gain;
     if (result.overdrive) summary.overdrives += 1;
     summary.fragments += result.fragments ?? 0;
     summary.fragmentsStored += result.fragmentsStored ?? 0;
+    if (result.shellAutoBreak) summary.shellAutoBreaks += 1;
+    summary.shellReleased += result.shellReleased ?? 0;
   }
   return summary;
 }
 
+// Retourne { gain, shellAutoBreaks, shellReleased } — pas juste un nombre — pour
+// que l'appelant puisse signaler (toast/FX) une auto-brisure de coque survenue
+// pendant un tick passif/auto-clicker, pas seulement sur un clic manuel.
 export function tickPassive(state, deltaSeconds) {
   const passiveGain = ((state.passiveRate ?? 0) + (state.factoryRate ?? 0)) * deltaSeconds;
   addEnergy(state, passiveGain);
   const auto = tickAutoClicks(state, deltaSeconds);
   state.lastTickAt = Date.now();
   state.updatedAt = Date.now();
-  return passiveGain + (auto?.gain ?? 0);
+  return {
+    gain: passiveGain + (auto?.gain ?? 0),
+    shellAutoBreaks: auto?.shellAutoBreaks ?? 0,
+    shellReleased: auto?.shellReleased ?? 0,
+  };
 }
 
 export function buyUpgrade(state, upgradeId) {

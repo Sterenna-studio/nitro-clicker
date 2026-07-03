@@ -1938,7 +1938,15 @@ function startLoop() {
     const now = performance.now();
     const delta = Math.min(2, (now - lastTick) / 1000);
     lastTick = now;
-    if (state.passiveRate > 0) tickPassive(state, delta);
+    if (state.passiveRate > 0) {
+      const passiveResult = tickPassive(state, delta);
+      if (passiveResult.shellAutoBreaks > 0) {
+        playGameSound('shell.shatter', { volume: 0.9 }, 'shatter');
+        pulseShell('break');
+        toast(`LA SPHÈRE CÈDE SOUS LA PRESSION · +${passiveResult.shellReleased} fragments`);
+        if (passiveResult.shellReleased > 0) spawnFragmentOrbs(passiveResult.shellReleased);
+      }
+    }
     tickBoosts(state);
     renderLive();
     refreshUpgradesIfNeeded();
