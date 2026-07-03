@@ -225,6 +225,11 @@
   padding: 13px;
 }
 
+.nc-slot-active {
+  border-color: rgba(0,255,204,.45);
+  box-shadow: 0 0 16px rgba(0,255,204,.12);
+}
+
 .nc-current-goal,
 .current-goal-panel {
   margin-bottom: 14px;

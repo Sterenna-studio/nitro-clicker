@@ -52,6 +52,110 @@ body {
   50% { transform: scale(.96); opacity: .68; }
 }
 
+/* ── Séquence de démarrage vérifiée ──────────────────────────────────────── */
+.boot-sequence {
+  min-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  color: rgba(168,230,255,.72);
+}
+
+.boot-orb {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(0,255,204,.35);
+  border-radius: 24px;
+  color: var(--nc-primary);
+  font-size: 34px;
+  box-shadow: 0 0 40px rgba(0,255,204,.18), inset 0 0 30px rgba(0,255,204,.07);
+  animation: ncPulse 1.6s ease-in-out infinite;
+}
+
+.boot-title {
+  font-family: var(--font-display, 'Exo 2', sans-serif);
+  font-size: clamp(1.4rem, 3.2vw, 2.2rem);
+  letter-spacing: .1em;
+  color: #eafcff;
+}
+.boot-title span { color: var(--nc-primary); }
+
+.boot-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: min(340px, 84vw);
+  text-align: left;
+}
+
+.boot-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.02);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: rgba(168,230,255,.5);
+  transition: border-color .2s, background .2s, color .2s;
+}
+
+.boot-step-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.boot-step-active {
+  border-color: rgba(0,255,204,.4);
+  background: rgba(0,255,204,.05);
+  color: var(--nc-primary);
+}
+.boot-step-active .boot-step-icon { animation: ncPulse 1s ease-in-out infinite; }
+
+.boot-step-ok {
+  color: rgba(232,250,255,.85);
+  border-color: rgba(0,255,204,.16);
+}
+.boot-step-ok .boot-step-icon { color: var(--nc-primary); }
+
+.boot-step-fail {
+  border-color: rgba(255,71,87,.5);
+  background: rgba(255,71,87,.06);
+  color: var(--nc-danger);
+}
+
+.boot-error {
+  max-width: min(420px, 86vw);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,71,87,.4);
+  background: rgba(255,71,87,.06);
+  color: rgba(232,250,255,.85);
+}
+.boot-error strong { display: block; color: var(--nc-danger); margin-bottom: 6px; letter-spacing: .06em; }
+.boot-error p { font-size: 11px; line-height: 1.5; margin-bottom: 12px; color: rgba(168,230,255,.65); }
+
+.boot-slot-grid {
+  min-width: min(560px, 90vw);
+}
+
+.boot-slot-card {
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.boot-slot-card:hover { border-color: rgba(0,255,204,.5); transform: translateY(-1px); }
+
 .topbar {
   display: flex;
   justify-content: space-between;

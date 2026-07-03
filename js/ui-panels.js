@@ -10,6 +10,7 @@ import {
   upgradeCost,
 } from './clicker-state.js';
 import { formatValue as fmt } from './ui/value-format.js';
+import { localKey, getActiveSlot, setActiveSlot, getSlotSummaries } from './clicker-save.js';
 
 const SNAPSHOT_PREFIX = 'nitro-clicker.save.';
 const EXPORT_VERSION = 1;
@@ -30,6 +31,16 @@ function getSaveKeys() {
 }
 
 function readSnapshot() {
+  // Priorité au live state (le slot réellement chargé dans la session en
+  // cours) — avec plusieurs slots par compte, "la save la plus récemment mise
+  // à jour trouvée dans localStorage" ne cible plus forcément le bon slot.
+  const live = getLiveState();
+  if (live?.userId) {
+    const slot = getActiveSlot(live.userId);
+    return { ...live, __key: localKey(live.userId, slot) };
+  }
+
+  // Repli (avant que le live state ne soit disponible) : ancienne heuristique.
   const keys = getSaveKeys();
   let best = null;
   let bestKey = null;
@@ -271,7 +282,16 @@ function renderUnlockPanel() {
 
 function renderSavePanel() {
   const s = readSnapshot();
+  const activeSlot = s?.userId ? getActiveSlot(s.userId) : 1;
+  const slotsHtml = s?.userId ? getSlotSummaries(s.userId).map(slot => `
+    <article class="nc-save-card ${slot.slot === activeSlot ? 'nc-slot-active' : ''}">
+      <h3>Slot ${slot.slot}${slot.slot === activeSlot ? ' · actif' : ''}</h3>
+      <p>${slot.exists ? `Prestige ${slot.prestige} · ${fmt(slot.totalEnergy)} énergie totale` : 'Vide — nouvelle partie'}</p>
+      ${slot.slot === activeSlot ? '' : `<button class="nc-action" type="button" data-switch-slot="${slot.slot}">Passer sur ce slot</button>`}
+    </article>`).join('') : '';
+
   return `
+    ${slotsHtml ? `<h3 class="nc-subtitle">Slots de sauvegarde</h3><div class="nc-save-grid">${slotsHtml}</div>` : ''}
     <div class="nc-save-grid">
       <article class="nc-save-card"><h3>Exporter</h3><p>Télécharge une copie JSON de ta sauvegarde locale.</p><button class="nc-action primary" type="button" id="nc-export-save">📤 Exporter JSON</button></article>
       <article class="nc-save-card"><h3>Importer</h3><p>Remplace la sauvegarde actuelle par un fichier JSON Nitro Clicker.</p><button class="nc-action" type="button" id="nc-import-save">📥 Importer JSON</button></article>
@@ -280,10 +300,21 @@ function renderSavePanel() {
     <textarea class="nc-save-textarea" id="nc-save-textarea" spellcheck="false" placeholder="Colle une sauvegarde JSON ici, puis clique sur Importer JSON.">${escapeHtml(JSON.stringify(buildExportPayload(s), null, 2))}</textarea>`;
 }
 
+function switchSlot(slot) {
+  const live = getLiveState();
+  if (!live?.userId) return;
+  if (!confirm(`Passer sur le Slot ${slot} ? La page va recharger.`)) return;
+  setActiveSlot(live.userId, slot);
+  location.reload();
+}
+
 function bindSavePanel() {
   document.getElementById('nc-export-save')?.addEventListener('click', exportSave);
   document.getElementById('nc-import-save')?.addEventListener('click', importSaveFromTextareaOrFile);
   document.getElementById('nc-repair-save')?.addEventListener('click', repairSave);
+  document.querySelectorAll('[data-switch-slot]').forEach(btn => {
+    btn.addEventListener('click', () => switchSlot(Number(btn.dataset.switchSlot)));
+  });
 }
 
 function getCurrentSaveKey(snapshot = readSnapshot()) {

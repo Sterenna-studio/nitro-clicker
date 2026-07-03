@@ -47,9 +47,10 @@ import {
   activateBoost,
   tickBoosts,
 } from './engine/clicker-state.js';
-import { loadSave, saveAll, readSaveError } from './engine/clicker-save.js';
+import { loadSave, saveAll, readSaveError, getActiveSlot, setActiveSlot, getSlotSummaries } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
 import { formatValue as fmt } from './ui/value-format.js';
+import { setLiveState } from './ui-panels.js';
 
 const app = document.getElementById('app');
 const FX_KEY = 'nitro-clicker.fx.enabled';
@@ -72,6 +73,7 @@ let auth;
 let profile;
 let state;
 let userId;
+let currentSlot = 1;
 let saveTimer;
 let lastTick = performance.now();
 let lastUpgradeSignature = '';
@@ -487,7 +489,7 @@ function bindStaticEvents() {
   window.addEventListener('resize', scheduleAutoFitRecalc);
 
   document.getElementById('save-btn').addEventListener('click', () => {
-    const ok = saveAll(userId, state);
+    const ok = persist();
     if (ok) {
       toast('Sauvegarde locale OK.');
     } else {
@@ -501,9 +503,10 @@ function bindStaticEvents() {
     const result = doPrestige(state);
     if (!result.ok) return toast('Prestige pas encore prêt. Continue à charger le noyau.');
     state = result.state;
+    setLiveState(state);
     playGameSound('prestige.activate', {}, 'prestige');
     window.NitroLemegeton?.react?.('prestige');
-    saveAll(userId, state);
+    persist();
     renderAll(true);
     spawnSystemWave(`PRESTIGE ${state.prestige} · +${fmt(result.prestigeReward)}F`);
     lightningStorm(9);
@@ -891,7 +894,7 @@ async function triggerCoreFusion() {
   // Phase 3 : fusion — mutation de l'état
   const result = doFuseCore(state);
   if (!result.ok) { fusionInProgress = false; return; }
-  saveAll(userId, state);
+  persist();
 
   // Phase 4 : émergence du noyau Tier II
   const coreEl = document.getElementById('click-core');
@@ -1924,10 +1927,14 @@ function setMeterNode(node, ratio) {
   if (node) setTransformScaleX(node, ratio);
 }
 
+function persist() {
+  return saveAll(userId, state, currentSlot);
+}
+
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const ok = saveAll(userId, state);
+    const ok = persist();
     if (!ok) flushSaveErrorToast();
   }, 900);
 }
@@ -1973,7 +1980,7 @@ function startLoop() {
   setInterval(runAutoPurchase, 700);
 
   setInterval(() => {
-    const ok = saveAll(userId, state);
+    const ok = persist();
     if (!ok) flushSaveErrorToast();
   }, 15000);
 }
@@ -1988,45 +1995,157 @@ async function fetchDeployBadge() {
   } catch {}
 }
 
-async function init() {
-  auth = await requireAuth({ redirectTo: '/login.html' });
-  if (!auth) return;
+// ── Séquence de démarrage vérifiée ──────────────────────────────────────────
+// Remplace l'ancien texte statique "// INITIALISATION" par une liste d'étapes
+// qui s'enchaînent visiblement (auth → profil → slot → save → moteur), avec
+// un rendu d'échec clair ancré sur l'étape qui a bloqué au lieu de laisser le
+// joueur face à un écran figé.
+const BOOT_STEPS = [
+  { id: 'auth', label: 'Authentification Nitro' },
+  { id: 'profile', label: 'Profil chargé' },
+  { id: 'slot', label: 'Sélection du slot' },
+  { id: 'save', label: 'Sauvegarde validée' },
+  { id: 'engine', label: 'Moteur initialisé' },
+];
+let bootStatuses = BOOT_STEPS.map(() => 'pending');
 
-  userId = auth.user.id;
-  profile = await getProfile(userId);
-  state = loadSave(userId);
-
-  const offlineResult = applyOfflineProgress(state);
-  const offlineGain = offlineResult?.gained ?? 0;
-  const cappedAt = offlineResult?.cappedAt;
-
-  renderShell();
-  fetchDeployBadge();
-  startLoop();
-
-  window.NitroPrestige = {
-    canDo: () => canPrestige(state),
-    info: () => ({ energy: state.energy, totalEnergy: state.totalEnergy, req: prestigeRequirement(state) }),
-    exec() {
-      const btn = document.getElementById('prestige-btn');
-      if (btn) btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    },
-  };
-
-  claimMilestonesAndRender();
-
-  if (offlineGain > 0) {
-    if (cappedAt != null) {
-      toast(`Hors-ligne · +${fmt(offlineGain)} E (plafonné à ${cappedAt.toFixed(1)}h).`);
-    } else {
-      toast(`Progression hors-ligne : +${fmt(offlineGain)} énergie.`);
-    }
-  }
-
-  flushSaveErrorToast();
+function renderBootScreen(extraHtml = '') {
+  app.innerHTML = `
+    <div class="scanlines" aria-hidden="true"></div>
+    <section class="boot-sequence">
+      <div class="boot-orb">⬡</div>
+      <h1 class="boot-title">NITRO <span>CLICKER</span></h1>
+      <ul class="boot-steps">
+        ${BOOT_STEPS.map((step, i) => {
+          const status = bootStatuses[i];
+          const icon = status === 'ok' ? '✓' : status === 'fail' ? '✕' : status === 'active' ? '◌' : '○';
+          return `<li class="boot-step boot-step-${status}"><span class="boot-step-icon">${icon}</span><span>${step.label}</span></li>`;
+        }).join('')}
+      </ul>
+      ${extraHtml}
+    </section>
+  `;
 }
 
+function bootStep(index, status) {
+  bootStatuses[index] = status;
+  renderBootScreen();
+}
+
+function bootFail(index, message) {
+  bootStatuses[index] = 'fail';
+  renderBootScreen(`
+    <div class="boot-error">
+      <strong>Échec : ${BOOT_STEPS[index].label}</strong>
+      <p>${message}</p>
+      <a class="nav-btn" href="/star/">Retour Star</a>
+    </div>
+  `);
+}
+
+function bootDelay(ms = 150) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+// Attend le clic du joueur sur une carte de slot ; résout avec le slot choisi.
+function pickSaveSlot(summaries, activeSlot) {
+  return new Promise(resolve => {
+    const cardsHtml = summaries.map(s => `
+      <button class="nc-save-card boot-slot-card" type="button" data-slot="${s.slot}">
+        <h3>Slot ${s.slot}${s.slot === activeSlot ? ' · actif' : ''}</h3>
+        ${s.exists
+          ? `<p>Prestige ${s.prestige} · ${fmt(s.totalEnergy)} énergie totale</p>`
+          : '<p>Vide — nouvelle partie</p>'}
+      </button>
+    `).join('');
+    renderBootScreen(`<div class="nc-save-grid boot-slot-grid">${cardsHtml}</div>`);
+    document.querySelectorAll('.boot-slot-card').forEach(btn => {
+      btn.addEventListener('click', () => resolve(Number(btn.dataset.slot)));
+    });
+  });
+}
+
+async function init() {
+  renderBootScreen();
+  try {
+    bootStep(0, 'active');
+    await bootDelay();
+    auth = await requireAuth({ redirectTo: '/login.html' });
+    if (!auth) return;
+    bootStep(0, 'ok');
+
+    bootStep(1, 'active');
+    await bootDelay();
+    userId = auth.user.id;
+    profile = await getProfile(userId);
+    bootStep(1, 'ok');
+
+    bootStep(2, 'active');
+    const summaries = getSlotSummaries(userId);
+    const activeSlot = getActiveSlot(userId);
+    const nonEmptyCount = summaries.filter(s => s.exists).length;
+    if (nonEmptyCount <= 1) {
+      // 0 ou 1 slot utilisé : rien à choisir, on continue directement dessus
+      // (nouvelle partie sur le slot actif, ou reprise de l'unique save).
+      currentSlot = summaries.find(s => s.exists)?.slot ?? activeSlot;
+      await bootDelay();
+    } else {
+      currentSlot = await pickSaveSlot(summaries, activeSlot);
+    }
+    setActiveSlot(userId, currentSlot);
+    bootStep(2, 'ok');
+
+    bootStep(3, 'active');
+    await bootDelay();
+    const loaded = loadSave(userId, currentSlot);
+    state = loaded.state;
+    setLiveState(state);
+    bootStep(3, 'ok');
+    if (loaded.corrupted) {
+      toast('⚠ Sauvegarde illisible détectée sur ce slot — une nouvelle partie a été démarrée.');
+    }
+
+    bootStep(4, 'active');
+    await bootDelay();
+    const offlineResult = applyOfflineProgress(state);
+    const offlineGain = offlineResult?.gained ?? 0;
+    const cappedAt = offlineResult?.cappedAt;
+
+    renderShell();
+    fetchDeployBadge();
+    startLoop();
+
+    window.NitroPrestige = {
+      canDo: () => canPrestige(state),
+      info: () => ({ energy: state.energy, totalEnergy: state.totalEnergy, req: prestigeRequirement(state) }),
+      exec() {
+        const btn = document.getElementById('prestige-btn');
+        if (btn) btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      },
+    };
+
+    claimMilestonesAndRender();
+
+    if (offlineGain > 0) {
+      if (cappedAt != null) {
+        toast(`Hors-ligne · +${fmt(offlineGain)} E (plafonné à ${cappedAt.toFixed(1)}h).`);
+      } else {
+        toast(`Progression hors-ligne : +${fmt(offlineGain)} énergie.`);
+      }
+    }
+
+    flushSaveErrorToast();
+  } catch (error) {
+    console.error('[Nitro Clicker] init failed:', error);
+    const failedIndex = bootStatuses.findIndex(s => s === 'active');
+    bootFail(failedIndex >= 0 ? failedIndex : bootStatuses.length - 1, error?.message ?? String(error));
+  }
+}
+
+// Filet de sécurité redondant : init() capture déjà ses propres erreurs pour
+// afficher l'étape en échec, mais si quelque chose s'échappe malgré tout
+// (erreur dans bootFail lui-même, etc.), ne jamais laisser un écran vide.
 init().catch(error => {
-  console.error('[Nitro Clicker] init failed:', error);
+  console.error('[Nitro Clicker] init failed (fallback):', error);
   app.innerHTML = `<section class="auth-error-panel"><div><h1>Erreur Nitro Clicker</h1><p>${error?.message ?? error}</p><a class="nav-btn" href="/star/">Retour Star</a></div></section>`;
 });

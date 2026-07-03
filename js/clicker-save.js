@@ -1,17 +1,57 @@
 import { createDefaultState, hydrateState, VERSION } from './clicker-state.js';
 
 const LS_PREFIX = 'nitro-clicker.save.';
+const ACTIVE_SLOT_PREFIX = 'nitro-clicker.activeSlot.';
 const MIGRATION_NOTICE_KEY = 'nitro-clicker.save.migration.notice';
 const SAVE_ERROR_KEY = 'nitro-clicker.save.error';
 const CURRENT_MIGRATION_ID = `save-v${VERSION}`;
 
-export function localKey(userId) {
+export const SAVE_SLOTS = [1, 2, 3];
+const DEFAULT_SLOT = 1;
+
+// Clé historique (avant l'introduction des slots) — jamais supprimée, sert
+// uniquement de source pour la migration one-shot vers le Slot 1.
+function legacyLocalKey(userId) {
   return `${LS_PREFIX}${userId ?? 'guest'}`;
 }
 
-export function loadLocalSave(userId) {
+export function localKey(userId, slot = DEFAULT_SLOT) {
+  return `${LS_PREFIX}${userId ?? 'guest'}.slot${slot}`;
+}
+
+export function getActiveSlot(userId) {
   try {
-    const raw = localStorage.getItem(localKey(userId));
+    const raw = Number(localStorage.getItem(`${ACTIVE_SLOT_PREFIX}${userId ?? 'guest'}`));
+    return SAVE_SLOTS.includes(raw) ? raw : DEFAULT_SLOT;
+  } catch {
+    return DEFAULT_SLOT;
+  }
+}
+
+export function setActiveSlot(userId, slot) {
+  if (!SAVE_SLOTS.includes(slot)) return;
+  try { localStorage.setItem(`${ACTIVE_SLOT_PREFIX}${userId ?? 'guest'}`, String(slot)); } catch {}
+}
+
+// Migration one-shot : si une save legacy (pré-slots) existe et qu'aucun slot
+// n'a encore été écrit pour cet utilisateur, la copier vers le Slot 1. La clé
+// legacy n'est jamais supprimée (filet de sécurité).
+function migrateLegacyToSlots(userId) {
+  const legacyRaw = localStorage.getItem(legacyLocalKey(userId));
+  if (!legacyRaw) return;
+  const anySlotExists = SAVE_SLOTS.some(slot => localStorage.getItem(localKey(userId, slot)) != null);
+  if (anySlotExists) return;
+  try {
+    localStorage.setItem(localKey(userId, DEFAULT_SLOT), legacyRaw);
+    setActiveSlot(userId, DEFAULT_SLOT);
+  } catch (error) {
+    console.warn('[Nitro Clicker] legacy-to-slot migration failed:', error);
+  }
+}
+
+export function loadLocalSave(userId, slot = DEFAULT_SLOT) {
+  try {
+    const raw = localStorage.getItem(localKey(userId, slot));
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (error) {
@@ -22,9 +62,9 @@ export function loadLocalSave(userId) {
 
 // #3 — Notifie le joueur en cas d'échec de sauvegarde localStorage
 // Couvre : QuotaExceededError, SecurityError, localStorage désactivé
-export function saveLocal(userId, state) {
+export function saveLocal(userId, state, slot = DEFAULT_SLOT) {
   try {
-    localStorage.setItem(localKey(userId), JSON.stringify(state));
+    localStorage.setItem(localKey(userId, slot), JSON.stringify(state));
     // Efface toute erreur précédente si la sauvegarde réussit
     try { sessionStorage.removeItem(SAVE_ERROR_KEY); } catch {}
     return true;
@@ -54,16 +94,47 @@ export function readSaveError() {
   }
 }
 
-export function loadSave(userId) {
-  const local = loadLocalSave(userId);
-  if (!local) return createDefaultState(userId);
+// Résumés des 3 slots pour l'UI de sélection (boot sequence + panneau Save).
+export function getSlotSummaries(userId) {
+  migrateLegacyToSlots(userId);
+  return SAVE_SLOTS.map(slot => {
+    const raw = loadLocalSave(userId, slot);
+    if (!raw) return { slot, exists: false };
+    return {
+      slot,
+      exists: true,
+      prestige: Math.max(0, Number(raw.prestige ?? 0)),
+      totalEnergy: Math.max(0, Number(raw.totalEnergy ?? raw.energy ?? 0)),
+      updatedAt: Number(raw.updatedAt ?? 0),
+    };
+  });
+}
+
+// raw === undefined : lecture localStorage normale. raw === null explicite
+// (passé par l'appelant) signale une save trouvée mais illisible (JSON
+// corrompu) — distinction utilisée par la séquence de boot pour avertir le
+// joueur au lieu de continuer en silence avec une save neuve.
+export function loadSave(userId, slot = getActiveSlot(userId)) {
+  migrateLegacyToSlots(userId);
+  const rawText = (() => {
+    try { return localStorage.getItem(localKey(userId, slot)); } catch { return null; }
+  })();
+  if (!rawText) return { state: createDefaultState(userId), corrupted: false };
+
+  let local;
+  try {
+    local = JSON.parse(rawText);
+  } catch (error) {
+    console.warn('[Nitro Clicker] save JSON corrompu:', error);
+    return { state: createDefaultState(userId), corrupted: true };
+  }
 
   const { state, migrated, notice } = migrateLegacySave(local, userId);
   if (migrated) {
-    saveLocal(userId, state);
+    saveLocal(userId, state, slot);
     queueMigrationNotice(notice);
   }
-  return state;
+  return { state, corrupted: false };
 }
 
 export function migrateLegacySave(raw, userId = null) {
@@ -153,11 +224,11 @@ export function readMigrationNotice() {
   }
 }
 
-export function saveAll(userId, state) {
+export function saveAll(userId, state, slot = getActiveSlot(userId)) {
   state.version = VERSION;
-  return saveLocal(userId, state);
+  return saveLocal(userId, state, slot);
 }
 
-export function deleteLocalSave(userId) {
-  localStorage.removeItem(localKey(userId));
+export function deleteLocalSave(userId, slot = getActiveSlot(userId)) {
+  localStorage.removeItem(localKey(userId, slot));
 }
