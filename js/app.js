@@ -47,7 +47,7 @@ import {
   activateBoost,
   tickBoosts,
 } from './engine/clicker-state.js';
-import { loadSave, saveAll, readSaveError, readMigrationNotice } from './engine/clicker-save.js';
+import { loadSave, saveAll, readSaveError } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
 import { formatValue as fmt } from './ui/value-format.js';
 
@@ -1992,8 +1992,6 @@ async function init() {
   const offlineGain = offlineResult?.gained ?? 0;
   const cappedAt = offlineResult?.cappedAt;
 
-  const migrationNotice = readMigrationNotice();
-
   renderShell();
   fetchDeployBadge();
   startLoop();
@@ -2008,13 +2006,6 @@ async function init() {
   };
 
   claimMilestonesAndRender();
-
-  if (migrationNotice) {
-    const comp = migrationNotice.compensated && migrationNotice.compensation
-      ? ` · +${fmt(migrationNotice.compensation.energy)} E, +${migrationNotice.compensation.fragments} F offerts`
-      : '';
-    toast(`⬡ Sauvegarde migrée v${migrationNotice.fromVersion} → v${migrationNotice.toVersion}${comp}.`);
-  }
 
   if (offlineGain > 0) {
     if (cappedAt != null) {

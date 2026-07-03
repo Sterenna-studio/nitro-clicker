@@ -1,4 +1,5 @@
 import { readMigrationNotice } from '../clicker-save.js';
+import { formatValue as format } from './value-format.js';
 
 let mounted = false;
 
@@ -29,14 +30,6 @@ function mountMigrationNotice() {
   node.querySelector('button')?.addEventListener('click', () => node.remove());
   setTimeout(() => node.remove(), 12000);
   return true;
-}
-
-function format(value) {
-  const n = Math.floor(Number(value ?? 0));
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 100_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString('fr-FR');
 }
 
 const boot = setInterval(() => {
