@@ -46,13 +46,29 @@ function pulseAutoClick() {
   setTimeout(() => core.classList.remove('auto-click-pulse'), 180);
 }
 
+// FIX CRASH : cette fonction est appelée à chaque frame (60 fps) par la boucle
+// rAF. Quand le sélecteur DOM ne matche pas (upgrade verrouillée sur une save
+// neuve → texte "Tier N" au lieu de "Lv.N", ou mode stats), elle retombait sur
+// readLatestSave() qui parse en JSON TOUTES les clés de save localStorage — à
+// 60 fps. Avec l'arrivée des 3 slots (+ clé legacy conservée), jusqu'à 4 blobs
+// JSON parsés par frame : saturation du thread principal → hang navigateur.
+// Le niveau lu depuis la save est désormais mis en cache et rafraîchi au plus
+// toutes les 3 s.
+let cachedSaveLevel = 0;
+let cachedSaveLevelAt = 0;
+
 function getAutoClickerLevel() {
   const live = document.querySelector('[data-upgrade="autoClicker"] [data-upgrade-level="autoClicker"]');
   const match = live?.textContent?.match(/Lv\.([0-9]+)/i);
   if (match) return Number(match[1]) || 0;
 
-  const save = readLatestSave();
-  return Number(save?.upgrades?.autoClicker ?? 0);
+  const now = performance.now();
+  if (now - cachedSaveLevelAt > 3000) {
+    cachedSaveLevelAt = now;
+    const save = readLatestSave();
+    cachedSaveLevel = Number(save?.upgrades?.autoClicker ?? 0);
+  }
+  return cachedSaveLevel;
 }
 
 function readLatestSave() {

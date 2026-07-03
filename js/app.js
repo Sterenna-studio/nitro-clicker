@@ -89,7 +89,10 @@ let lastTendrilSignature = '';
 let lastLayerId = '';
 let lastShellSignature = '';
 let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
-let coreStatsMode = localStorage.getItem(CORE_STATS_KEY) === 'true';
+// Mode STATS actif PAR DÉFAUT (diagnostic crash) : masque tout le rendu visuel
+// du noyau — si le hang persiste même en mode stats, la cause n'est pas le
+// rendu du noyau. Le joueur peut toujours revenir au visuel via ⊞ STATS.
+let coreStatsMode = localStorage.getItem(CORE_STATS_KEY) !== 'false';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
 let currentLayout = localStorage.getItem(LAYOUT_KEY) ?? 'nexus';
