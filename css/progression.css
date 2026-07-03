@@ -282,21 +282,17 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  /* ligne de balayage lente type microscope électronique */
+  /* Ligne de balayage statique — l'animation en boucle (background-position,
+     déclenche un repaint à chaque frame) tournait en continu dès le premier
+     chargement, indépendamment de la progression. Retirée par simplicité et
+     par prudence (suspectée de contribuer à un hang navigateur). */
   background: linear-gradient(180deg, transparent 0%, rgba(0,255,204,.07) 48%, rgba(0,255,204,.10) 50%, rgba(0,255,204,.07) 52%, transparent 100%);
   background-size: 100% 220%;
+  background-position: 0 0;
   opacity: .5;
-  animation: microscopeScan 7.5s linear infinite;
 }
 
 .core-panel.microscope-active .microscope-lens { opacity: .85; }
-
-@keyframes microscopeScan {
-  0%   { background-position: 0 -110%; }
-  100% { background-position: 0 110%; }
-}
-
-.fx-disabled .microscope-lens::after { animation: none; }
 
 /* ── Sub-core field : noyaux orbitaux (nitroFactory) + clones centraux (enginePlant) ── */
 
