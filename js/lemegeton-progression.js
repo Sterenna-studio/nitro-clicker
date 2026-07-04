@@ -421,7 +421,9 @@ function dispatchLoreWave(text) {
   setTimeout(() => node.remove(), 2200);
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+// ?nolore : désactive ce module seul (tout le reste tourne) — bisection crash.
+const loreDisabled = window.NITRO_DISABLE_PERIPHERALS || new URLSearchParams(location.search).has('nolore');
+const boot = loreDisabled ? null : setInterval(() => {
   mount();
   if (mounted) clearInterval(boot);
 }, 250);

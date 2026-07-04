@@ -102,10 +102,7 @@ const NOLOOP_MODE = DIAG.has('noloop');
 if (DIAG.has('noperiph') || SAFE_MODE) window.NITRO_DISABLE_PERIPHERALS = true;
 
 let fxEnabled = SAFE_MODE ? false : localStorage.getItem(FX_KEY) !== 'false';
-// Mode STATS actif PAR DÉFAUT (diagnostic crash) : masque tout le rendu visuel
-// du noyau — si le hang persiste même en mode stats, la cause n'est pas le
-// rendu du noyau. Le joueur peut toujours revenir au visuel via ⊞ STATS.
-let coreStatsMode = localStorage.getItem(CORE_STATS_KEY) !== 'false';
+let coreStatsMode = localStorage.getItem(CORE_STATS_KEY) === 'true';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
 let currentLayout = localStorage.getItem(LAYOUT_KEY) ?? 'nexus';

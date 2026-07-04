@@ -147,7 +147,9 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+// ?nosvg : désactive ce module seul (tout le reste tourne) — bisection crash.
+const svgDisabled = window.NITRO_DISABLE_PERIPHERALS || new URLSearchParams(location.search).has('nosvg');
+const boot = svgDisabled ? null : setInterval(() => {
   mountObserver();
   if (observedRoot?.id === 'app') clearInterval(boot);
 }, 200);

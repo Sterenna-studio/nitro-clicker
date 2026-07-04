@@ -7,7 +7,7 @@ const GROUPS = [
   { id: 'overdrive', title: 'OVERDRIVE', subtitle: 'Surcharge et explosions énergétiques.', upgrades: ['surchargeCoil'] },
   { id: 'automation', title: 'AUTO', subtitle: 'Clics automatiques, surcharge et LEMEGETON.', upgrades: ['autoClicker'] },
   { id: 'fragments', title: 'FRAGMENTS', subtitle: 'Bonus permanents et rupture de coque.', upgrades: ['fragmentCatalyst', 'fractureTuning'] },
-  { id: 'infrastructure', title: 'INFRA', subtitle: 'Groupements de noyaux, production et réseau orbital.', upgrades: ['nitroFactory', 'enginePlant', 'orbitalHive'] },
+  { id: 'infrastructure', title: 'INFRA', subtitle: 'Groupements de noyaux, production et réseau orbital.', upgrades: ['nitroFactory', 'enginePlant', 'orbitalHive', 'stellarConvergence'] },
 ];
 
 const UPGRADE_INFO = {
@@ -30,6 +30,7 @@ const UPGRADE_INFO = {
 };
 
 let organizing = false;
+let uxObserver = null;
 let lastLevels = new Map();
 let guideStep = 0;
 let guideActive = false;
@@ -39,7 +40,8 @@ function mountUpgradeUx() {
   const root = document.getElementById('upgrade-list');
   if (!root || root.dataset.upgradeUxMounted) return;
   root.dataset.upgradeUxMounted = 'true';
-  new MutationObserver(() => organizeUpgradeList()).observe(root, { childList: true });
+  uxObserver = new MutationObserver(() => organizeUpgradeList());
+  uxObserver.observe(root, { childList: true });
   organizeUpgradeList();
 
   document.addEventListener('click', event => {
@@ -76,6 +78,11 @@ function organizeUpgradeList() {
   if (!rawButtons.length) return;
 
   organizing = true;
+  // Déconnexion pendant notre propre mutation : replaceChildren() ci-dessous
+  // modifie #upgrade-list (l'élément observé) et re-déclencherait l'observer en
+  // boucle infinie — surtout si un upgrade n'est dans aucun GROUP et reste un
+  // enfant direct (rawButtons jamais vide). On se reconnecte après.
+  uxObserver?.disconnect();
   const buttonsById = new Map(rawButtons.map(button => [button.dataset.upgrade, button]));
   const fragment = document.createDocumentFragment();
 
@@ -107,6 +114,7 @@ function organizeUpgradeList() {
     fragment.appendChild(button);
   }
   root.replaceChildren(fragment);
+  uxObserver?.observe(root, { childList: true });
   organizing = false;
   detectUpgradeStatChanges(true);
 }
@@ -205,7 +213,9 @@ function showGuideCard({ title, text, action = 'OK', done = false }) {
   });
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+// ?noux : désactive ce module seul (tout le reste tourne) — bisection crash.
+const uxDisabled = window.NITRO_DISABLE_PERIPHERALS || new URLSearchParams(location.search).has('noux');
+const boot = uxDisabled ? null : setInterval(() => {
   mountUpgradeUx();
   if (document.getElementById('upgrade-list')?.dataset.upgradeUxMounted) clearInterval(boot);
 }, 250);

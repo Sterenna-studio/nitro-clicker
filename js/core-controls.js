@@ -83,7 +83,9 @@ function readLatestSave() {
   return best;
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+// ?nocore : désactive ce module seul (tout le reste tourne) — bisection crash.
+const coreDisabled = window.NITRO_DISABLE_PERIPHERALS || new URLSearchParams(location.search).has('nocore');
+const boot = coreDisabled ? null : setInterval(() => {
   mountCoreControls();
   if (mounted) clearInterval(boot);
 }, 250);
