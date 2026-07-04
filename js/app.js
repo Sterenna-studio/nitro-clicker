@@ -2033,7 +2033,27 @@ async function init() {
       toast('⚠ Sauvegarde illisible détectée sur ce slot — une nouvelle partie a été démarrée.');
     }
 
-    bootStep(4, 'active');
+    // MODE SAFE : on s'arrête AVANT tout rendu du jeu et tout démarrage de
+    // boucle. Les modules périphériques (beacon, œil, objectif…) ne trouvent
+    // alors aucune cible DOM à monter → ils ne tournent pas non plus. Si le
+    // crash persiste dans cet état quasi-inerte, il ne peut venir que du boot
+    // lui-même, du chargement des modules, ou du CSS/auth — plus du jeu.
+    if (SAFE_MODE) {
+      app.innerHTML = `
+        <section class="boot-sequence">
+          <div class="boot-orb">⬡</div>
+          <h1 class="boot-title">NITRO <span>CLICKER</span></h1>
+          <div class="boot-error">
+            <strong>MODE SAFE — moteur arrêté</strong>
+            <p>Aucun rendu de jeu, aucune boucle, aucun module. Si cette page
+            fait quand même grimper le CPU / crashe, le problème n'est pas dans
+            le jeu mais dans le chargement ou le CSS de base.</p>
+            <a class="nav-btn" href="/clicker/">Quitter le mode safe</a>
+          </div>
+        </section>`;
+      return;
+    }
+
     await bootDelay();
     const offlineResult = applyOfflineProgress(state);
     const offlineGain = offlineResult?.gained ?? 0;
@@ -2041,12 +2061,7 @@ async function init() {
 
     renderShell();
     fetchDeployBadge();
-    if (SAFE_MODE) {
-      toast('⚠ MODE SAFE actif : boucle de jeu et FX désactivés (diagnostic).');
-      renderAll(true);
-    } else {
-      startLoop();
-    }
+    startLoop();
 
     window.NitroPrestige = {
       canDo: () => canPrestige(state),
