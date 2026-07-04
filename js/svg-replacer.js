@@ -147,7 +147,7 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   mountObserver();
   if (observedRoot?.id === 'app') clearInterval(boot);
 }, 200);

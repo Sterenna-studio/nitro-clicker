@@ -79,7 +79,7 @@ function setOpen(value) {
   btn?.classList.toggle('active', open);
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   if (mountSettingsPanel()) clearInterval(boot);
 }, 250);
 

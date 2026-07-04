@@ -83,7 +83,7 @@ function readLatestSave() {
   return best;
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   mountCoreControls();
   if (mounted) clearInterval(boot);
 }, 250);

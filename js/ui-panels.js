@@ -480,7 +480,7 @@ function injectPeripheralVisuals() {
   core.insertAdjacentHTML('afterbegin', `<div class="peripheral-ring" id="peripheral-ring" aria-hidden="true">${Array.from({ length: 16 }, (_, i) => `<span style="--i:${i};--a:${i * 22.5}deg"></span>`).join('')}</div><div class="bio-cable-grid" aria-hidden="true">${Array.from({ length: 12 }, (_, i) => `<i style="--i:${i};--x:${8 + (i * 11) % 84}%;--d:${(-i * .13).toFixed(2)}s"></i>`).join('')}</div>`);
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   mountAuxPanels();
   if (mounted) clearInterval(boot);
 }, 250);

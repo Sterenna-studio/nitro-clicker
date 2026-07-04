@@ -89,12 +89,16 @@ let lastTendrilSignature = '';
 let lastLayerId = '';
 let lastShellSignature = '';
 // ── Modes de diagnostic crash (activables par l'URL, sans rien casser d'autre) ──
-// ?safe  : ne démarre PAS la boucle de jeu (startLoop) et coupe tous les FX.
-//          → si ?safe ne hang plus, le coupable est dans la boucle/les FX.
-// ?noperiph : signale aux modules périphériques (beacon, lore, objectif…) de ne
-//          pas démarrer leurs propres intervalles de scan localStorage.
+// ?safe  : arrêt total avant tout rendu de jeu (écran inerte). Confirmé stable.
+// ?noloop : rend le jeu normalement MAIS ne démarre pas la boucle 250ms.
+//          → si ?noloop est stable, le coupable est dans la boucle de jeu.
+//          → si ?noloop hang, le coupable est dans renderShell / le montage
+//            des modules périphériques.
+// ?noperiph : coupe TOUS les modules périphériques (intervalles + boucle rAF
+//          de core-controls + MutationObserver de svg-replacer).
 const DIAG = new URLSearchParams(location.search);
 const SAFE_MODE = DIAG.has('safe');
+const NOLOOP_MODE = DIAG.has('noloop');
 if (DIAG.has('noperiph') || SAFE_MODE) window.NITRO_DISABLE_PERIPHERALS = true;
 
 let fxEnabled = SAFE_MODE ? false : localStorage.getItem(FX_KEY) !== 'false';
@@ -2061,7 +2065,12 @@ async function init() {
 
     renderShell();
     fetchDeployBadge();
-    startLoop();
+    if (NOLOOP_MODE) {
+      renderAll(true);
+      toast('⚠ NOLOOP : jeu rendu une fois, boucle 250ms désactivée (diagnostic).');
+    } else {
+      startLoop();
+    }
 
     window.NitroPrestige = {
       canDo: () => canPrestige(state),

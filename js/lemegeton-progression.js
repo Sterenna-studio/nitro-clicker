@@ -421,7 +421,7 @@ function dispatchLoreWave(text) {
   setTimeout(() => node.remove(), 2200);
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   mount();
   if (mounted) clearInterval(boot);
 }, 250);

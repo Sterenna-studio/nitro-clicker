@@ -205,7 +205,7 @@ function showGuideCard({ title, text, action = 'OK', done = false }) {
   });
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   mountUpgradeUx();
   if (document.getElementById('upgrade-list')?.dataset.upgradeUxMounted) clearInterval(boot);
 }, 250);

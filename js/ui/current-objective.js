@@ -180,7 +180,7 @@ function setScale(id, value) {
   if (node && node.style.transform !== next) node.style.transform = next;
 }
 
-const boot = setInterval(() => {
+const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
   if (mountCurrentObjective()) clearInterval(boot);
 }, 250);
 
