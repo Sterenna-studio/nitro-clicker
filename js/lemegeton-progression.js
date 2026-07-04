@@ -126,7 +126,7 @@ function mount() {
   bindEyeTracking();
   startChronicles();
   update();
-  setInterval(update, 700);
+  if (!window.NITRO_DISABLE_PERIPHERALS) setInterval(update, 700);
 }
 
 // Adapte l'échelle de l'œil pour caser le visage (2 yeux) dans l'écran.

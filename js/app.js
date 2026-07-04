@@ -88,7 +88,16 @@ let lastFactorySignature = '';
 let lastTendrilSignature = '';
 let lastLayerId = '';
 let lastShellSignature = '';
-let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
+// ── Modes de diagnostic crash (activables par l'URL, sans rien casser d'autre) ──
+// ?safe  : ne démarre PAS la boucle de jeu (startLoop) et coupe tous les FX.
+//          → si ?safe ne hang plus, le coupable est dans la boucle/les FX.
+// ?noperiph : signale aux modules périphériques (beacon, lore, objectif…) de ne
+//          pas démarrer leurs propres intervalles de scan localStorage.
+const DIAG = new URLSearchParams(location.search);
+const SAFE_MODE = DIAG.has('safe');
+if (DIAG.has('noperiph') || SAFE_MODE) window.NITRO_DISABLE_PERIPHERALS = true;
+
+let fxEnabled = SAFE_MODE ? false : localStorage.getItem(FX_KEY) !== 'false';
 // Mode STATS actif PAR DÉFAUT (diagnostic crash) : masque tout le rendu visuel
 // du noyau — si le hang persiste même en mode stats, la cause n'est pas le
 // rendu du noyau. Le joueur peut toujours revenir au visuel via ⊞ STATS.
@@ -2032,7 +2041,12 @@ async function init() {
 
     renderShell();
     fetchDeployBadge();
-    startLoop();
+    if (SAFE_MODE) {
+      toast('⚠ MODE SAFE actif : boucle de jeu et FX désactivés (diagnostic).');
+      renderAll(true);
+    } else {
+      startLoop();
+    }
 
     window.NitroPrestige = {
       canDo: () => canPrestige(state),

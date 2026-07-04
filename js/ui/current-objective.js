@@ -184,6 +184,6 @@ const boot = setInterval(() => {
   if (mountCurrentObjective()) clearInterval(boot);
 }, 250);
 
-setInterval(updateCurrentObjective, 550);
+if (!window.NITRO_DISABLE_PERIPHERALS) setInterval(updateCurrentObjective, 550);
 
 window.NitroCurrentObjective = { update: updateCurrentObjective };

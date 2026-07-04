@@ -243,5 +243,7 @@ const boot = setInterval(() => {
   clearInterval(boot);
 }, 100);
 
-setInterval(updateBeacon, 800);
-setTimeout(updateBeacon, 400);
+if (!window.NITRO_DISABLE_PERIPHERALS) {
+  setInterval(updateBeacon, 800);
+  setTimeout(updateBeacon, 400);
+}
