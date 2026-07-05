@@ -88,7 +88,7 @@ function updateFavicon(src) {
   link.type = 'image/png';
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+const boot = setInterval(() => {
   if (mountSharedAssets()) clearInterval(boot);
 }, 250);
 

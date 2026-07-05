@@ -32,7 +32,7 @@ function mountMigrationNotice() {
   return true;
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+const boot = setInterval(() => {
   if (mountMigrationNotice()) clearInterval(boot);
 }, 250);
 

@@ -126,7 +126,7 @@ function mount() {
   bindEyeTracking();
   startChronicles();
   update();
-  if (!window.NITRO_DISABLE_PERIPHERALS) setInterval(update, 700);
+  setInterval(update, 700);
 }
 
 // Adapte l'échelle de l'œil pour caser le visage (2 yeux) dans l'écran.
@@ -421,9 +421,7 @@ function dispatchLoreWave(text) {
   setTimeout(() => node.remove(), 2200);
 }
 
-// ?nolore : désactive ce module seul (tout le reste tourne) — bisection crash.
-const loreDisabled = window.NITRO_DISABLE_PERIPHERALS || new URLSearchParams(location.search).has('nolore');
-const boot = loreDisabled ? null : setInterval(() => {
+const boot = setInterval(() => {
   mount();
   if (mounted) clearInterval(boot);
 }, 250);

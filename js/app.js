@@ -88,20 +88,7 @@ let lastFactorySignature = '';
 let lastTendrilSignature = '';
 let lastLayerId = '';
 let lastShellSignature = '';
-// ── Modes de diagnostic crash (activables par l'URL, sans rien casser d'autre) ──
-// ?safe  : arrêt total avant tout rendu de jeu (écran inerte). Confirmé stable.
-// ?noloop : rend le jeu normalement MAIS ne démarre pas la boucle 250ms.
-//          → si ?noloop est stable, le coupable est dans la boucle de jeu.
-//          → si ?noloop hang, le coupable est dans renderShell / le montage
-//            des modules périphériques.
-// ?noperiph : coupe TOUS les modules périphériques (intervalles + boucle rAF
-//          de core-controls + MutationObserver de svg-replacer).
-const DIAG = new URLSearchParams(location.search);
-const SAFE_MODE = DIAG.has('safe');
-const NOLOOP_MODE = DIAG.has('noloop');
-if (DIAG.has('noperiph') || SAFE_MODE) window.NITRO_DISABLE_PERIPHERALS = true;
-
-let fxEnabled = SAFE_MODE ? false : localStorage.getItem(FX_KEY) !== 'false';
+let fxEnabled = localStorage.getItem(FX_KEY) !== 'false';
 let coreStatsMode = localStorage.getItem(CORE_STATS_KEY) === 'true';
 let buyMultiplier = Number(localStorage.getItem(BUY_MULT_KEY) || 1);
 if (!BUY_MULTIPLIERS.includes(buyMultiplier)) buyMultiplier = 1;
@@ -2034,27 +2021,6 @@ async function init() {
       toast('⚠ Sauvegarde illisible détectée sur ce slot — une nouvelle partie a été démarrée.');
     }
 
-    // MODE SAFE : on s'arrête AVANT tout rendu du jeu et tout démarrage de
-    // boucle. Les modules périphériques (beacon, œil, objectif…) ne trouvent
-    // alors aucune cible DOM à monter → ils ne tournent pas non plus. Si le
-    // crash persiste dans cet état quasi-inerte, il ne peut venir que du boot
-    // lui-même, du chargement des modules, ou du CSS/auth — plus du jeu.
-    if (SAFE_MODE) {
-      app.innerHTML = `
-        <section class="boot-sequence">
-          <div class="boot-orb">⬡</div>
-          <h1 class="boot-title">NITRO <span>CLICKER</span></h1>
-          <div class="boot-error">
-            <strong>MODE SAFE — moteur arrêté</strong>
-            <p>Aucun rendu de jeu, aucune boucle, aucun module. Si cette page
-            fait quand même grimper le CPU / crashe, le problème n'est pas dans
-            le jeu mais dans le chargement ou le CSS de base.</p>
-            <a class="nav-btn" href="/clicker/">Quitter le mode safe</a>
-          </div>
-        </section>`;
-      return;
-    }
-
     await bootDelay();
     const offlineResult = applyOfflineProgress(state);
     const offlineGain = offlineResult?.gained ?? 0;
@@ -2062,12 +2028,7 @@ async function init() {
 
     renderShell();
     fetchDeployBadge();
-    if (NOLOOP_MODE) {
-      renderAll(true);
-      toast('⚠ NOLOOP : jeu rendu une fois, boucle 250ms désactivée (diagnostic).');
-    } else {
-      startLoop();
-    }
+    startLoop();
 
     window.NitroPrestige = {
       canDo: () => canPrestige(state),

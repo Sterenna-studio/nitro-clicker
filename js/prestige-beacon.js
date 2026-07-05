@@ -237,13 +237,11 @@ function updateBeacon() {
 }
 
 // ── Boot ──────────────────────────────────────────────────────
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+const boot = setInterval(() => {
   if (!document.body) return;
   injectBeacon();
   clearInterval(boot);
 }, 100);
 
-if (!window.NITRO_DISABLE_PERIPHERALS) {
-  setInterval(updateBeacon, 800);
-  setTimeout(updateBeacon, 400);
-}
+setInterval(updateBeacon, 800);
+setTimeout(updateBeacon, 400);

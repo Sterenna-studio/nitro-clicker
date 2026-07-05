@@ -180,10 +180,10 @@ function setScale(id, value) {
   if (node && node.style.transform !== next) node.style.transform = next;
 }
 
-const boot = window.NITRO_DISABLE_PERIPHERALS ? null : setInterval(() => {
+const boot = setInterval(() => {
   if (mountCurrentObjective()) clearInterval(boot);
 }, 250);
 
-if (!window.NITRO_DISABLE_PERIPHERALS) setInterval(updateCurrentObjective, 550);
+setInterval(updateCurrentObjective, 550);
 
 window.NitroCurrentObjective = { update: updateCurrentObjective };

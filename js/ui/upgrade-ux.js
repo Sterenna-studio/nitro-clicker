@@ -213,9 +213,7 @@ function showGuideCard({ title, text, action = 'OK', done = false }) {
   });
 }
 
-// ?noux : désactive ce module seul (tout le reste tourne) — bisection crash.
-const uxDisabled = window.NITRO_DISABLE_PERIPHERALS || new URLSearchParams(location.search).has('noux');
-const boot = uxDisabled ? null : setInterval(() => {
+const boot = setInterval(() => {
   mountUpgradeUx();
   if (document.getElementById('upgrade-list')?.dataset.upgradeUxMounted) clearInterval(boot);
 }, 250);
