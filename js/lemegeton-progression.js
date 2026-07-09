@@ -284,19 +284,21 @@ function react(type) {
 // Le container a une taille définie au moment de l'init → la lib rend les
 // yeux DEDANS (sinon elle bascule en plein écran). Puis on ajuste l'échelle.
 let eyeLoaded = false;
-// DÉSACTIVÉ : chargeait un script tiers NON VERSIONNÉ depuis GitHub Pages
-// (cyberagentailab.github.io/Web-Eye-Animation) qui lance une animation canvas
-// perpétuelle (rAF 60fps). Dépendance externe fragile : une mise à jour amont
-// a introduit une régression qui saturait le CPU → crash navigateur
-// (RESULT_CODE_HUNG) sur le jeu déployé, sans aucun changement de notre côté.
-// L'œil est purement cosmétique et tout le code appelant est en window.eyes?.
-// (optional chaining) → aucune casse sans lui. On ne charge plus le script.
+// Lib d'yeux (CyberAgent Web-Eye-Animation) chargée depuis une copie VENDORISÉE
+// locale (js/vendor/web-eye-animation.js + js/vendor/gsap.min.js), plus depuis
+// le CDN GitHub Pages non versionné d'origine — cette dépendance externe fragile
+// avait causé un crash CPU (RESULT_CODE_HUNG) suite à une mise à jour amont sans
+// aucun changement de notre côté. La copie vendorisée est figée : elle ne peut
+// plus changer sous nos pieds. Tout le code appelant est en window.eyes?.
+// (optional chaining) → rien ne casse tant que le script n'a pas fini de charger.
 function loadEyeScreen() {
   if (eyeLoaded || !document.getElementById('lemegeton-eye')) return;
   eyeLoaded = true;
-  // Panneau œil laissé en état « dormant » (pas d'animation externe).
-  const screen = document.querySelector('.lemegeton-screen');
-  if (screen) screen.classList.add('dormant', 'eye-offline');
+  const s = document.createElement('script');
+  s.src = './js/vendor/web-eye-animation.js';
+  s.onload = () => { setTimeout(fitEyeScreen, 200); setTimeout(fitEyeScreen, 1000); };
+  document.head.appendChild(s);
+  window.addEventListener('resize', fitEyeScreen, { passive: true });
 }
 
 function readState() {
