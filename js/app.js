@@ -204,7 +204,7 @@ function renderShell() {
         <div class="layout-switcher" role="group" aria-label="Disposition des panels">
           ${LAYOUTS.map(l => `<button class="layout-btn${currentLayout === l ? ' active' : ''}" data-layout-btn="${l}" type="button">${l.toUpperCase()}</button>`).join('')}
         </div>
-        <a href="./lemegeton-compare.html" class="nav-btn">◇ TESTS</a>
+        <a href="./lemegeton.html" class="nav-btn">◇ TEST ŒIL</a>
         <a href="./core-fx-editor.html" class="nav-btn">FX EDITOR</a>
         <a href="/star/" class="nav-btn">⬡ STAR</a>
         <a href="/" class="nav-btn">← HUB</a>

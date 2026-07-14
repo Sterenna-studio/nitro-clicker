@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LEMEGETON · Lab</title>
+  <title>LEMEGETON · Paramètres CyberAgent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@600;700;800&display=swap" rel="stylesheet">
@@ -70,10 +70,9 @@
   <header>
     <div>
       <h1>⬡ LEMEGETON · LAB</h1>
-      <small>BAC À SABLE DU ROBOT · TESTS LIVE</small>
+      <small>WEB-EYE-ANIMATION (CYBERAGENT) · PARAMÈTRES LIVE</small>
     </div>
     <nav class="top-actions">
-      <a href="./lemegeton-compare.html">⇆ COMPARER</a>
       <a href="./">▶ JOUER</a>
     </nav>
   </header>
@@ -243,9 +242,9 @@
       eye.style.height = Math.round(w * 0.6) + 'px';
       applyColors();
       const s = document.createElement('script');
-      s.src = 'https://cyberagentailab.github.io/Web-Eye-Animation/web-eye-animation.js?v=' + Date.now();
+      s.src = './js/vendor/web-eye-animation.js';
       s.onload = () => log('robot <b>en ligne</b> — joue avec les contrôles');
-      s.onerror = () => log('⚠️ échec du chargement de la lib (CDN injoignable)');
+      s.onerror = () => log('⚠️ échec du chargement de la lib vendorisée');
       document.head.appendChild(s);
     }
 
