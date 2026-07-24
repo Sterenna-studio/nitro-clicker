@@ -30,7 +30,8 @@
       box-shadow:0 0 20px var(--glow,rgba(0,255,204,.85)),0 0 44px rgba(0,180,255,.5) !important;
     }
     .mono-eye .eye:last-child { display:none !important; }
-    .mono-eye .eye:first-child { width:100% !important; }
+    .mono-eye { display:flex !important; align-items:center !important; justify-content:center !important; }
+    .mono-eye .eye:first-child { width:55% !important; height:55% !important; flex-shrink:0 !important; }
   </style>
   <svg width="0" height="0" style="position:absolute;pointer-events:none">
     <defs>
@@ -93,9 +94,9 @@
   frameEl.style.borderRadius=frameConf.radius;
   eyeEl.style.width=frameConf.w+'px'; eyeEl.style.height=frameConf.h+'px';
   crtInner.style.width=frameConf.w+'px'; crtInner.style.height=frameConf.h+'px';
-  if(bgMode==='black')    { document.body.style.background='#000'; frameEl.classList.add('has-bg'); }
-  if(bgMode==='phosphor') { document.body.style.background='#001200'; frameEl.classList.add('has-bg-phosphor'); }
-  if(bgMode==='amber')    { document.body.style.background='#0d0800'; frameEl.classList.add('has-bg-amber'); }
+  if(bgMode==='black')    frameEl.classList.add('has-bg');
+  if(bgMode==='phosphor') frameEl.classList.add('has-bg-phosphor');
+  if(bgMode==='amber')    frameEl.classList.add('has-bg-amber');
   if(frameKey!=='none') frameEl.style.boxShadow=[`0 0 0 2px ${border}`,`0 0 10px 4px ${border}cc`,`0 0 28px 7px ${border}77`,`0 0 60px 14px ${border}33`,`inset 0 0 18px 4px ${border}22`].join(',');
   if(bumpFilter){ crtInner.style.filter=`url(#${bumpFilter})`; frameEl.classList.add(bumpKey==='hard'?'has-bump-strong':'has-bump'); }
   if(hasCRTTV) { frameEl.classList.add('crt-tv','has-scanlines','has-glare'); }
@@ -107,21 +108,16 @@
   eyeEl.style.setProperty('--glow',`rgba(${parseInt(hx.slice(0,2),16)},${parseInt(hx.slice(2,4),16)},${parseInt(hx.slice(4,6),16)},.85)`);
 
   // ── Repousse des bords : zone safe en fonction du frame ──
-  // Les yeux ne doivent jamais s'approcher du bord a moins de MARGIN px
-  const MARGIN = 28; // px dans l'espace du frame
+  const MARGIN = 28;
   const FW = frameConf.w, FH = frameConf.h;
-  // Centre absolu du frame dans l'espace move() = pixels body 320x190
   const CX = 160, CY = 95;
-  // Limites en offset depuis le centre
   const MAX_DX = FW/2 - MARGIN;
   const MAX_DY = FH/2 - MARGIN;
   function clampGaze(gx, gy) {
-    // Repousse douce : si on depasse la limite, on ramene avec facteur exponentiel
     const adx = Math.abs(gx), ady = Math.abs(gy);
     let nx = gx, ny = gy;
     if(adx > MAX_DX) nx = Math.sign(gx) * (MAX_DX - (adx - MAX_DX) * 0.1);
     if(ady > MAX_DY) ny = Math.sign(gy) * (MAX_DY - (ady - MAX_DY) * 0.1);
-    // Hard clamp final
     nx = Math.max(-MAX_DX, Math.min(MAX_DX, nx));
     ny = Math.max(-MAX_DY, Math.min(MAX_DY, ny));
     return [nx, ny];

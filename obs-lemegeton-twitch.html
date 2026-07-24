@@ -88,9 +88,9 @@
   eyeEl.style.width=frameConf.w+'px'; eyeEl.style.height=frameConf.h+'px';
   crtInner.style.width=frameConf.w+'px'; crtInner.style.height=frameConf.h+'px';
   crtInner.style.filter='url(#bulge-soft)';
-  if(bgMode==='black')    { document.body.style.background='#000'; frameEl.classList.add('has-bg'); }
-  if(bgMode==='phosphor') { document.body.style.background='#001200'; frameEl.classList.add('has-bg-phosphor'); }
-  if(bgMode==='amber')    { document.body.style.background='#0d0800'; frameEl.classList.add('has-bg-amber'); }
+  if(bgMode==='black')    frameEl.classList.add('has-bg');
+  if(bgMode==='phosphor') frameEl.classList.add('has-bg-phosphor');
+  if(bgMode==='amber')    frameEl.classList.add('has-bg-amber');
   if(hasCRTTV) frameEl.classList.add('crt-tv');
   if(frameKey!=='none') frameEl.style.boxShadow=[`0 0 0 2px ${border}`,`0 0 10px 4px ${border}cc`,`0 0 28px 7px ${border}77`,`inset 0 0 18px 4px ${border}22`].join(',');
   const hxG=colorBase.glow.replace('#','');
