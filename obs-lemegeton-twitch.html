@@ -16,14 +16,10 @@
     .scanlines{position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(0,255,204,.045) 0 1px,transparent 1px 4px);opacity:.7;}
     .vignette{position:absolute;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse 82% 74% at 50% 50%,transparent 42%,rgba(0,0,0,.28) 100%);}
     .crt-glare{position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:inherit;background:radial-gradient(ellipse 55% 35% at 34% 22%,rgba(255,255,255,.08) 0%,transparent 70%);}
-    #event-toast{
-      position:absolute;top:8px;left:50%;transform:translateX(-50%) translateY(-40px);
-      background:rgba(0,0,0,.75);border:1px solid var(--c2,#00ffcc);border-radius:20px;
-      padding:4px 14px;font-family:'Courier New',monospace;font-size:7px;letter-spacing:.12em;
-      color:var(--c2,#00ffcc);white-space:nowrap;z-index:20;pointer-events:none;
-      opacity:0;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s;
-      text-shadow:0 0 6px var(--c2,#00ffcc);max-width:280px;overflow:hidden;text-overflow:ellipsis;
-    }
+    .crt-tv .scanlines{background:repeating-linear-gradient(0deg,rgba(0,0,0,.55) 0 1px,transparent 1px 3px) !important;opacity:1 !important;}
+    .crt-tv .vignette{background:radial-gradient(ellipse 75% 68% at 50% 50%,transparent 30%,rgba(0,0,0,.55) 100%) !important;}
+    .has-bg{background:#000 !important;} .has-bg-phosphor{background:#001200 !important;} .has-bg-amber{background:#0d0800 !important;}
+    #event-toast{position:absolute;top:8px;left:50%;transform:translateX(-50%) translateY(-40px);background:rgba(0,0,0,.75);border:1px solid var(--c2,#00ffcc);border-radius:20px;padding:4px 14px;font-family:'Courier New',monospace;font-size:7px;letter-spacing:.12em;color:var(--c2,#00ffcc);white-space:nowrap;z-index:20;pointer-events:none;opacity:0;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s;text-shadow:0 0 6px var(--c2,#00ffcc);max-width:280px;overflow:hidden;text-overflow:ellipsis;}
     #event-toast.visible{transform:translateX(-50%) translateY(0);opacity:1;}
     .event-ring{position:absolute;inset:-4px;border-radius:inherit;pointer-events:none;z-index:7;opacity:0;transition:opacity .1s;border:3px solid transparent;}
     .event-ring.flash{opacity:1;animation:ring-fade .7s ease-out forwards;}
@@ -35,10 +31,7 @@
   </style>
   <svg width="0" height="0" style="position:absolute;pointer-events:none">
     <defs>
-      <filter id="bulge-soft" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" seed="2" result="n"/>
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
-      </filter>
+      <filter id="bulge-soft" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" seed="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/></filter>
     </defs>
   </svg>
 </head>
@@ -54,10 +47,8 @@
     <div id="event-toast"></div>
     <div id="status-dot" class="connecting"></div>
   </div>
-
   <script src="./js/vendor/web-eye-animation.js"></script>
   <link rel="stylesheet" href="./css/eye-override.css">
-
   <script>
   const COLOR_PRESETS={
     default:{c1:'#d6fff5',c2:'#00ffcc',c3:'#00b3ff',glow:'#00ccff',border:'#00b3ff'},
@@ -70,10 +61,14 @@
     pink:{c1:'#fff0f8',c2:'#ff66cc',c3:'#cc0077',glow:'#ff44aa',border:'#ee33aa'},
     gold:{c1:'#fffbe8',c2:'#ffd700',c3:'#b8860b',glow:'#ffcc00',border:'#d4aa00'},
     void_:{c1:'#f0e8ff',c2:'#aa00ff',c3:'#440066',glow:'#9900ff',border:'#7700cc'},
+    phosphor:{c1:'#efffef',c2:'#00ff44',c3:'#007722',glow:'#00ff44',border:'#00cc33'},
+    amber:{c1:'#fff8e0',c2:'#ffaa00',c3:'#994400',glow:'#ff8800',border:'#cc6600'},
   };
   const P=new URLSearchParams(location.search);
   const colorKey=P.get('preset')||'default';
   const frameKey=P.get('frame')||'oval';
+  const shaderRaw=P.get('shader')||'crt';
+  const bgMode=P.get('bg')||'transparent';
   const CHANNEL=P.get('channel')||'mutenrock';
   const CLIENT_ID=P.get('client_id')||'';
   const ACCESS_TOKEN=P.get('token')||'';
@@ -84,45 +79,65 @@
   const colorBase=COLOR_PRESETS[colorKey]||COLOR_PRESETS.default;
   const border=P.get('border')||colorBase.border;
   const frameConf=FRAME_CONFIGS[frameKey]||FRAME_CONFIGS.oval;
+  const hasCRTTV=shaderRaw.includes('tv');
   const frameEl=document.getElementById('frame');
   const eyeEl=document.getElementById('eye');
   const crtInner=document.getElementById('crt-inner');
   frameEl.style.width=frameConf.w+'px'; frameEl.style.height=frameConf.h+'px';
   frameEl.style.borderRadius=frameConf.radius;
-  eyeEl.style.width=frameConf.w+'px';    eyeEl.style.height=frameConf.h+'px';
+  eyeEl.style.width=frameConf.w+'px'; eyeEl.style.height=frameConf.h+'px';
   crtInner.style.width=frameConf.w+'px'; crtInner.style.height=frameConf.h+'px';
   crtInner.style.filter='url(#bulge-soft)';
+  if(bgMode==='black')    { document.body.style.background='#000'; frameEl.classList.add('has-bg'); }
+  if(bgMode==='phosphor') { document.body.style.background='#001200'; frameEl.classList.add('has-bg-phosphor'); }
+  if(bgMode==='amber')    { document.body.style.background='#0d0800'; frameEl.classList.add('has-bg-amber'); }
+  if(hasCRTTV) frameEl.classList.add('crt-tv');
   if(frameKey!=='none') frameEl.style.boxShadow=[`0 0 0 2px ${border}`,`0 0 10px 4px ${border}cc`,`0 0 28px 7px ${border}77`,`inset 0 0 18px 4px ${border}22`].join(',');
   const hxG=colorBase.glow.replace('#','');
   eyeEl.style.setProperty('--c1',colorBase.c1);eyeEl.style.setProperty('--c2',colorBase.c2);eyeEl.style.setProperty('--c3',colorBase.c3);
   eyeEl.style.setProperty('--glow',`rgba(${parseInt(hxG.slice(0,2),16)},${parseInt(hxG.slice(2,4),16)},${parseInt(hxG.slice(4,6),16)},.85)`);
 
-  const EVENT_REACTIONS={
-    'channel.follow':{emotion:'love',ringColor:'#ff44aa',label:u=>`\u2665 ${u} follow !`,gazeY:-120},
-    'channel.subscribe':{emotion:'excitement',ringColor:'#aa00ff',label:u=>`\u2605 ${u} sub !`,gazeY:-100},
-    'channel.subscription.gift':{emotion:'surprise',ringColor:'#ffd700',label:(u,e)=>`\u2728 ${u} offre ${e.total||1} sub(s) !`,gazeY:-100},
-    'channel.raid':{emotion:'surprise',ringColor:'#ff8800',label:(u,e)=>`\u26a1 RAID de ${u} (${e.viewers||'?'}) !`,gazeY:-150,shakeFrame:true},
-    'channel.cheer':{emotion:'joy',ringColor:'#00ccff',label:(u,e)=>`\u2666 ${u} : ${e.bits||'?'} bits !`,gazeY:-80},
-    'channel.channel_points_custom_reward_redemption.add':{emotion:'confusion',ringColor:'#00ffcc',label:(u,e)=>`\u25cf ${u} : ${e.reward?.title||'reward'} !`,gazeY:0},
-    'chat.message':{emotion:null,ringColor:null,label:null},
-  };
+  // Repousse bords
+  const MARGIN=28;
+  const MAX_DX=frameConf.w/2-MARGIN,MAX_DY=frameConf.h/2-MARGIN;
+  function clampGaze(gx,gy){
+    let nx=gx,ny=gy;
+    const adx=Math.abs(gx),ady=Math.abs(gy);
+    if(adx>MAX_DX) nx=Math.sign(gx)*(MAX_DX-(adx-MAX_DX)*0.1);
+    if(ady>MAX_DY) ny=Math.sign(gy)*(MAX_DY-(ady-MAX_DY)*0.1);
+    nx=Math.max(-MAX_DX,Math.min(MAX_DX,nx));
+    ny=Math.max(-MAX_DY,Math.min(MAX_DY,ny));
+    return[nx,ny];
+  }
+  function safeMove(gx,gy){ const[nx,ny]=clampGaze(gx,gy); if(window.eyes?.move) window.eyes.move(160+nx,95+ny); }
 
+  const EVENT_REACTIONS={
+    'channel.follow':{emotion:'love',ringColor:'#ff44aa',label:u=>`\u2665 ${u} follow !`,gazeY:-100},
+    'channel.subscribe':{emotion:'excitement',ringColor:'#aa00ff',label:u=>`\u2605 ${u} sub !`,gazeY:-80},
+    'channel.subscription.gift':{emotion:'surprise',ringColor:'#ffd700',label:(u,e)=>`\u2728 ${u} offre ${e.total||1} sub(s) !`,gazeY:-80},
+    'channel.raid':{emotion:'surprise',ringColor:'#ff8800',label:(u,e)=>`\u26a1 RAID de ${u} (${e.viewers||'?'}) !`,gazeY:-100,shakeFrame:true},
+    'channel.cheer':{emotion:'joy',ringColor:'#00ccff',label:(u,e)=>`\u2666 ${u} : ${e.bits||'?'} bits !`,gazeY:-60},
+    'channel.channel_points_custom_reward_redemption.add':{emotion:'confusion',ringColor:'#00ffcc',label:(u,e)=>`\u25cf ${u} : ${e.reward?.title||'reward'} !`,gazeY:0},
+  };
   const toast=document.getElementById('event-toast');
   const ring=document.getElementById('event-ring');
   let toastTimer=null;
   function showEvent(type,user,ev){
     const rx=EVENT_REACTIONS[type]; if(!rx) return;
     if(rx.emotion&&window.eyes?.emotion){ window.eyes.emotion(rx.emotion); setTimeout(()=>window.eyes.emotion?.('joy'),4000); }
-    if(window.eyes?.target&&rx.gazeY!==undefined) window.eyes.target(Math.round((Math.random()-.5)*80),rx.gazeY,700+Math.round(Math.random()*300));
+    if(window.eyes?.target&&rx.gazeY!==undefined){
+      const gx=(Math.random()-.5)*60;
+      const[cgx,cgy]=clampGaze(gx,rx.gazeY);
+      window.eyes.target(Math.round(cgx*2),Math.round(cgy*1.5),700+Math.round(Math.random()*300));
+    }
     if(rx.ringColor){ ring.style.borderColor=rx.ringColor; ring.classList.remove('flash'); void ring.offsetWidth; ring.classList.add('flash'); }
-    if(rx.shakeFrame){ let s=0; const si=setInterval(()=>{ frameEl.style.transform=`translate(${(Math.random()-.5)*6}px,${(Math.random()-.5)*4}px)`; if(++s>10){clearInterval(si);frameEl.style.transform='';} },50); }
+    if(rx.shakeFrame){ let s=0; const si=setInterval(()=>{ frameEl.style.transform=`translate(${(Math.random()-.5)*5}px,${(Math.random()-.5)*3}px)`; if(++s>10){clearInterval(si);frameEl.style.transform='';} },50); }
     if(rx.label){ toast.textContent=rx.label(user,ev); toast.classList.add('visible'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('visible'),4500); }
   }
-
   function connectKoriganWS(url){
     const ws=new WebSocket(url),dot=document.getElementById('status-dot');
     dot.className='connecting';
-    ws.onopen=()=>{ dot.className='connected'; };
+    ws.onopen=()=>dot.className='connected';
     ws.onclose=()=>{ dot.className='disconnected'; setTimeout(()=>connectKoriganWS(url),10000); };
     ws.onerror=()=>dot.className='disconnected';
     ws.onmessage=({data})=>{
@@ -133,7 +148,6 @@
       }catch(e){}
     };
   }
-
   async function subscribeEventSub(sid){
     const SUBS=[
       {type:'channel.follow',version:'2',condition:{broadcaster_user_id:BROADCASTER_ID,moderator_user_id:BROADCASTER_ID}},
@@ -143,9 +157,7 @@
       {type:'channel.cheer',version:'1',condition:{broadcaster_user_id:BROADCASTER_ID}},
       {type:'channel.channel_points_custom_reward_redemption.add',version:'1',condition:{broadcaster_user_id:BROADCASTER_ID}},
     ];
-    for(const sub of SUBS){
-      try{ await fetch('https://api.twitch.tv/helix/eventsub/subscriptions',{method:'POST',headers:{'Client-Id':CLIENT_ID,'Authorization':`Bearer ${ACCESS_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({...sub,transport:{method:'websocket',session_id:sid}})}); }catch(e){}
-    }
+    for(const sub of SUBS){ try{ await fetch('https://api.twitch.tv/helix/eventsub/subscriptions',{method:'POST',headers:{'Client-Id':CLIENT_ID,'Authorization':`Bearer ${ACCESS_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({...sub,transport:{method:'websocket',session_id:sid}})}); }catch(e){} }
   }
   function connectEventSubDirect(){
     if(!CLIENT_ID||!ACCESS_TOKEN||!BROADCASTER_ID) return;
@@ -165,7 +177,7 @@
     const dot=document.getElementById('status-dot'),ws=new WebSocket('wss://irc-ws.chat.twitch.tv:443');
     let buf='';
     dot.className='connecting';
-    ws.onopen=()=>{ ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send(`PASS oauth:anonymous`); ws.send(`NICK justinfan${Math.floor(Math.random()*99999)}`); ws.send(`JOIN #${CHANNEL}`); dot.className='connected'; };
+    ws.onopen=()=>{ ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send('PASS oauth:anonymous'); ws.send(`NICK justinfan${Math.floor(Math.random()*99999)}`); ws.send(`JOIN #${CHANNEL}`); dot.className='connected'; };
     ws.onclose=()=>{ dot.className='disconnected'; setTimeout(connectTMI,10000); };
     ws.onerror=()=>dot.className='disconnected';
     ws.onmessage=({data})=>{
@@ -177,16 +189,13 @@
         if(m){
           const txt=m[2].trim().toLowerCase();
           if(Math.random()<.05&&window.eyes?.emotion){ const q=['joy','surprise','confusion']; window.eyes.emotion(q[Math.floor(Math.random()*q.length)]); setTimeout(()=>window.eyes.emotion?.('joy'),2000); }
-          if(txt.includes('lemegeton')||txt.includes('robot')||txt.includes('@bot')){
-            if(window.eyes?.emotion){ window.eyes.emotion('surprise'); setTimeout(()=>window.eyes.emotion?.('joy'),3000); }
-          }
+          if(txt.includes('lemegeton')||txt.includes('robot')||txt.includes('@bot')){ if(window.eyes?.emotion){ window.eyes.emotion('surprise'); setTimeout(()=>window.eyes.emotion?.('joy'),3000); } }
           if(txt.includes('lol')||txt.includes('haha')||txt.includes('xd')) if(window.eyes?.emotion) window.eyes.emotion('joy');
           if(txt.includes('gg')||txt.includes('bravo')||txt.includes('nice')) if(window.eyes?.emotion) window.eyes.emotion('love');
         }
       });
     };
   }
-
   let t=0,seed=Math.random()*1000,gx=0,gy=0;
   function sn(x,s){const v=Math.sin(x*1.234+s*7.89)*43758.5453;return(v-Math.floor(v))*2-1;}
   function jitter(b,r){return b*(1+(Math.random()-.5)*r);}
@@ -194,10 +203,10 @@
   const W=[12,4,5,7,3,9];
   let lastEmo=null;
   function pickEmo(){ const pool=[]; EMOTIONS.forEach((e,i)=>{if(e!==lastEmo) for(let j=0;j<W[i];j++) pool.push(e);}); lastEmo=pool[Math.floor(Math.random()*pool.length)]; return lastEmo; }
-  function microLoop(){ t+=.012+Math.random()*.008; if(window.eyes?.move) window.eyes.move(160+gx+sn(t,seed)*8,95+gy+sn(t,seed+100)*5); setTimeout(microLoop,55+Math.random()*50); }
+  function setGaze(x,y){ const[nx,ny]=clampGaze(x,y); gx=nx; gy=ny; }
+  function microLoop(){ t+=.012+Math.random()*.008; safeMove(gx+sn(t,seed)*8,gy+sn(t,seed+100)*5); setTimeout(microLoop,55+Math.random()*50); }
   function scheduleEmo(){ setTimeout(()=>{ if(window.eyes?.emotion) window.eyes.emotion(pickEmo()); scheduleEmo(); },jitter(8000,.8)); }
-  function scheduleGaze(){ setTimeout(()=>{ gx=(Math.random()-.5)*120;gy=(Math.random()-.5)*80; if(window.eyes?.target) window.eyes.target(Math.round(gx*2),Math.round(gy*1.5),700+Math.round(Math.random()*500)); scheduleGaze(); },jitter(3500,.8)); }
-
+  function scheduleGaze(){ setTimeout(()=>{ setGaze((Math.random()-.5)*100,(Math.random()-.5)*65); if(window.eyes?.target) window.eyes.target(Math.round(gx*2),Math.round(gy*1.5),700+Math.round(Math.random()*500)); scheduleGaze(); },jitter(3500,.8)); }
   function boot(){
     if(!window.eyes?.emotion){requestAnimationFrame(boot);return;}
     window.eyes.emotion('joy');

@@ -4,177 +4,163 @@
   <meta charset="UTF-8" />
   <title>LEMEGETON — Variantes OBS</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #06090e;
-      font-family: 'Courier New', monospace;
-      color: #00ffcc;
-      min-height: 100vh;
-      padding: 28px;
-    }
-    h1 { font-size:.95rem; letter-spacing:.2em; text-transform:uppercase; color:#00b3ff; text-shadow:0 0 14px #00b3ff; margin-bottom:4px; }
-    .subtitle { font-size:.68rem; color:#444; margin-bottom:28px; letter-spacing:.1em; }
-
-    /* ── Sections ── */
-    .section { margin-bottom: 36px; }
-    .section-title {
-      font-size:.6rem; letter-spacing:.22em; text-transform:uppercase;
-      color:#333; border-bottom:1px solid #111; padding-bottom:6px; margin-bottom:18px;
-    }
-    .grid { display:flex; flex-wrap:wrap; gap:24px; }
-
-    /* ── Cartes ── */
-    .card { display:flex; flex-direction:column; align-items:center; gap:8px; width:160px; }
-    .preview-wrap {
-      width:160px; height:95px;
-      overflow:hidden; position:relative;
-      border-radius:4px; cursor:pointer;
-      border:1px solid #1a1a2a;
-      transition:border-color .2s;
-      background: repeating-conic-gradient(#111 0% 25%, #1a1a2a 0% 50%) 0 0 / 10px 10px;
-    }
-    .preview-wrap:hover { border-color:#555; }
-    .preview-wrap iframe {
-      display:block; border:none;
-      width:320px; height:190px;
-      transform:scale(0.5); transform-origin:top left;
-      pointer-events:none;
-    }
-    .swatches { display:flex; gap:4px; }
-    .swatch { width:12px; height:12px; border-radius:50%; border:1px solid #222; }
-    .card-label { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:#ccc; text-align:center; }
-    .card-sub { font-size:.58rem; color:#444; text-align:center; letter-spacing:.06em; line-height:1.4; }
-
-    .copy-btn {
-      width:100%; background:#0d0d1a; border:1px solid #222; color:#00ffcc;
-      font-family:inherit; font-size:.6rem; letter-spacing:.1em;
-      padding:5px 6px; cursor:pointer; text-transform:uppercase;
-      border-radius:3px; transition:border-color .15s;
-    }
-    .copy-btn:hover { border-color:#00b3ff; }
-    .copy-btn.ok { border-color:#00ffcc; }
-    .open-btn {
-      width:100%; text-align:center; display:block;
-      background:transparent; border:1px solid #1a1a2a; color:#444;
-      font-family:inherit; font-size:.58rem; letter-spacing:.1em;
-      padding:4px 6px; cursor:pointer; text-transform:uppercase;
-      border-radius:3px; text-decoration:none; transition:all .15s;
-    }
-    .open-btn:hover { color:#00ffcc; border-color:#333; }
-
-    .hint { font-size:.58rem; color:#2a2a3a; margin-top:24px; letter-spacing:.08em; line-height:1.8; }
-    .hint b { color:#3a3a4a; }
-    code { background:#0d0d1a; padding:1px 5px; border-radius:3px; color:#555; font-size:.56rem; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:#06090e;font-family:'Courier New',monospace;color:#00ffcc;min-height:100vh;padding:28px;}
+    h1{font-size:.95rem;letter-spacing:.2em;text-transform:uppercase;color:#00b3ff;text-shadow:0 0 14px #00b3ff;margin-bottom:4px;}
+    .subtitle{font-size:.68rem;color:#444;margin-bottom:32px;letter-spacing:.1em;}
+    .section{margin-bottom:40px;}
+    .section-title{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:#00b3ff88;border-bottom:1px solid #111;padding-bottom:6px;margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+    .section-title span{color:#333;}
+    .section-desc{font-size:.58rem;color:#334;margin-bottom:14px;letter-spacing:.06em;line-height:1.6;}
+    .grid{display:flex;flex-wrap:wrap;gap:24px;}
+    .card{display:flex;flex-direction:column;align-items:center;gap:8px;width:160px;}
+    .preview-wrap{width:160px;height:95px;overflow:hidden;position:relative;border-radius:4px;cursor:pointer;border:1px solid #1a1a2a;transition:border-color .2s;background:repeating-conic-gradient(#111 0% 25%,#1a1a2a 0% 50%) 0 0 / 10px 10px;}
+    .preview-wrap.has-bg{background:#000 !important;}
+    .preview-wrap.has-bg-phosphor{background:#001200 !important;}
+    .preview-wrap.has-bg-amber{background:#0d0800 !important;}
+    .preview-wrap:hover{border-color:#555;}
+    .preview-wrap iframe{display:block;border:none;width:320px;height:190px;transform:scale(0.5);transform-origin:top left;pointer-events:none;}
+    .swatches{display:flex;gap:4px;}
+    .swatch{width:12px;height:12px;border-radius:50%;border:1px solid #222;}
+    .card-label{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#ccc;text-align:center;}
+    .card-sub{font-size:.58rem;color:#444;text-align:center;letter-spacing:.06em;line-height:1.4;}
+    .copy-btn{width:100%;background:#0d0d1a;border:1px solid #222;color:#00ffcc;font-family:inherit;font-size:.6rem;letter-spacing:.1em;padding:5px 6px;cursor:pointer;text-transform:uppercase;border-radius:3px;transition:border-color .15s;}
+    .copy-btn:hover{border-color:#00b3ff;}
+    .copy-btn.ok{border-color:#00ffcc;}
+    .open-btn{width:100%;text-align:center;display:block;background:transparent;border:1px solid #1a1a2a;color:#444;font-family:inherit;font-size:.58rem;letter-spacing:.1em;padding:4px 6px;cursor:pointer;text-transform:uppercase;border-radius:3px;text-decoration:none;transition:all .15s;}
+    .open-btn:hover{color:#00ffcc;border-color:#333;}
+    .section-radio .section-title{color:#ff880088;}
+    .section-twitch .section-title{color:#9146ff88;}
+    .hint{font-size:.58rem;color:#2a2a3a;margin-top:28px;letter-spacing:.08em;line-height:1.8;}
+    .hint b{color:#3a3a4a;}
+    code{background:#0d0d1a;padding:1px 5px;border-radius:3px;color:#555;font-size:.56rem;}
+    .tag{display:inline-block;font-size:.5rem;letter-spacing:.1em;padding:1px 5px;border-radius:10px;margin-left:4px;vertical-align:middle;}
+    .tag-radio{background:#ff880022;color:#ff8800;border:1px solid #ff880044;}
+    .tag-twitch{background:#9146ff22;color:#9146ff;border:1px solid #9146ff44;}
+    .tag-new{background:#00ffcc22;color:#00ffcc;border:1px solid #00ffcc44;}
   </style>
 </head>
 <body>
-  <h1>⬡ LEMEGETON — OBS Variants</h1>
-  <p class="subtitle">Browser Source 320 × 190 px — clic = copier URL dans le presse-papier</p>
-
+  <h1>⧡ LEMEGETON — OBS Variants</h1>
+  <p class="subtitle">Browser Source 320 × 190 px — clic = copier URL — les yeux ne sortent plus du cadre</p>
   <div id="root"></div>
-
   <p class="hint">
-    <b>► OBS</b> : Browser Source → coller URL → 320×190 → ✓ Transparent background<br>
-    <b>Params URL :</b>
-    <code>?preset=</code> couleur des yeux ·
-    <code>?frame=</code> cadre (none/oval/square/round/mono) ·
-    <code>?shader=</code> effets (none/crt/ice/crt+ice) ·
-    <code>?bump=</code> bombage (none/soft/mid/hard/3d)
+    <b>► OBS</b> : Browser Source → coller URL → 320×190 → ✓ Transparent background (sauf variantes avec fond)<br>
+    <b>Params :</b>
+    <code>?preset=</code> couleur &middot;
+    <code>?frame=</code> cadre &middot;
+    <code>?shader=crt|tv|ice|crt+ice</code> effets &middot;
+    <code>?bump=none|soft|mid|hard|3d</code> bombage &middot;
+    <code>?bg=transparent|black|phosphor|amber</code> fond
   </p>
-
   <script>
-  const BASE = (() => {
-    const p = window.location.pathname.replace('obs-lemegeton-variants.html','');
-    return window.location.origin + p;
-  })();
+  const BASE=(()=>{ const p=window.location.pathname.replace('obs-lemegeton-variants.html',''); return window.location.origin+p; })();
 
-  // ── Données ─────────────────────────────────────────
-  const COLOR_PRESETS = [
-    { key:'default', label:'Cyan',    sub:'Default',          colors:['#d6fff5','#00ffcc','#00b3ff'] },
-    { key:'red',     label:'Red',     sub:'Danger / colère',   colors:['#fff0f0','#ff3333','#cc0000'] },
-    { key:'green',   label:'Green',   sub:'Hack / soin',       colors:['#f0fff4','#00ff88','#00cc44'] },
-    { key:'yellow',  label:'Yellow',  sub:'Alerte / énergie',  colors:['#fffef0','#ffe600','#cc9900'] },
-    { key:'nitro',   label:'Nitro',   sub:'Violet Nitro',      colors:['#e8f0ff','#7744ff','#3300cc'] },
-    { key:'red_hot', label:'Red Hot', sub:'Lave / boss',       colors:['#fff5e0','#ff8800','#ff2200'] },
-    { key:'ice',     label:'Ice',     sub:'Cryogénique',       colors:['#ffffff','#aaddff','#3399ff'] },
-    { key:'pink',    label:'Pink',    sub:'Magie / amour',     colors:['#fff0f8','#ff66cc','#cc0077'] },
-    { key:'gold',    label:'Gold',    sub:'Légendaire',        colors:['#fffbe8','#ffd700','#b8860b'] },
-    { key:'void_',   label:'Void',    sub:'Sombre',            colors:['#f0e8ff','#aa00ff','#440066'] },
+  // ── Sections ────────────────────────────────────────
+  const SECTIONS = [
+    {
+      id: 'classic',
+      title: '\u25b8 Classique — fonctionnement autonome',
+      desc: 'Réactif au comportement organique interne (regards, émotions, clignements). Aucune source externe requise.',
+      cls: '',
+      file: 'obs-lemegeton.html',
+      variants: [
+        // Couleurs fond transparent
+        {label:'Cyan',    sub:'Défaut CRT oval',     params:'preset=default&frame=oval&shader=crt&bump=soft',  colors:['#d6fff5','#00ffcc','#00b3ff']},
+        {label:'Nitro',   sub:'Violet bombé',        params:'preset=nitro&frame=oval&shader=crt&bump=soft',    colors:['#e8f0ff','#7744ff','#3300cc']},
+        {label:'Red Hot', sub:'Lave boss',            params:'preset=red_hot&frame=oval&shader=crt&bump=hard',  colors:['#fff5e0','#ff8800','#ff2200']},
+        {label:'Pink',    sub:'Magie amour',          params:'preset=pink&frame=round&shader=crt&bump=soft',   colors:['#fff0f8','#ff66cc','#cc0077']},
+        {label:'Gold',    sub:'Légendaire',          params:'preset=gold&frame=oval&shader=crt&bump=soft',    colors:['#fffbe8','#ffd700','#b8860b']},
+        {label:'Void',    sub:'Sombre',               params:'preset=void_&frame=oval&shader=crt&bump=mid',    colors:['#f0e8ff','#aa00ff','#440066']},
+        {label:'Mono-œil',sub:'Cyclope CRT',        params:'preset=default&frame=mono&shader=crt&bump=soft', colors:['#d6fff5','#00ffcc','#00b3ff']},
+        {label:'Glace',   sub:'Ovale + filtre givre', params:'preset=ice&frame=round&shader=crt+ice&bump=mid',  colors:['#ffffff','#aaddff','#3399ff']},
+        // Fond noir
+        {label:'Noir Cyan',   sub:'Fond noir + CRT',       params:'preset=default&frame=oval&shader=crt&bump=soft&bg=black',   colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+        {label:'Noir Nitro',  sub:'Fond noir + violet',    params:'preset=nitro&frame=oval&shader=crt&bump=soft&bg=black',    colors:['#e8f0ff','#7744ff','#3300cc'], bgClass:'has-bg'},
+        {label:'Noir Void',   sub:'Fond noir profond',     params:'preset=void_&frame=oval&shader=crt&bump=mid&bg=black',    colors:['#f0e8ff','#aa00ff','#440066'], bgClass:'has-bg'},
+        // CRT TV lourd
+        {label:'CRT TV Cyan', sub:'Tube TV cathodique',    params:'preset=default&frame=oval&shader=tv&bump=hard&bg=black',  colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+        {label:'CRT TV Red',  sub:'Tube TV danger',        params:'preset=red&frame=oval&shader=tv&bump=hard&bg=black',      colors:['#fff0f0','#ff3333','#cc0000'], bgClass:'has-bg'},
+        // Terminal phosphore
+        {label:'Terminal',    sub:'Phosphore vert terminal', params:'preset=phosphor&frame=none&shader=tv&bump=none&bg=phosphor', colors:['#efffef','#00ff44','#007722'], bgClass:'has-bg-phosphor'},
+        {label:'Ambre',       sub:'Tube ambre vintage',   params:'preset=amber&frame=none&shader=tv&bump=none&bg=amber',    colors:['#fff8e0','#ffaa00','#994400'], bgClass:'has-bg-amber'},
+        {label:'Plein écran', sub:'Transparent no-frame',  params:'preset=default&frame=none&shader=none&bump=none',         colors:['#d6fff5','#00ffcc','#00b3ff']},
+      ]
+    },
+    {
+      id: 'radio',
+      title: '\u25b8 Radio Korigan — réactif audio',
+      desc: 'Synchronisé au stream audio de korigan.sterenna.fr/radio. Les émotions, l’amplitude du regard et le VU-mètre répondent au niveau sonore en temps réel.',
+      cls: 'section-radio',
+      file: 'obs-lemegeton-radio.html',
+      variants: [
+        {label:'Radio Défaut',  sub:'Cyan oval + VU-mètre',    params:'preset=default&frame=oval&shader=crt&bump=soft',            colors:['#d6fff5','#00ffcc','#00b3ff']},
+        {label:'Radio Nitro',   sub:'Violet bombé',            params:'preset=nitro&frame=oval&shader=crt&bump=soft',             colors:['#e8f0ff','#7744ff','#3300cc']},
+        {label:'Radio Red Hot', sub:'Lave réactif',            params:'preset=red_hot&frame=oval&shader=crt&bump=hard',           colors:['#fff5e0','#ff8800','#ff2200']},
+        {label:'Radio Noir',    sub:'Fond noir + VU-mètre',    params:'preset=default&frame=oval&shader=crt&bump=soft&bg=black', colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+        {label:'Radio CRT TV',  sub:'Tube TV + audio',         params:'preset=default&frame=oval&shader=tv&bump=hard&bg=black',   colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+        {label:'Radio Terminal',sub:'Phosphore + audio',       params:'preset=phosphor&frame=none&shader=tv&bump=none&bg=phosphor&bar=0', colors:['#efffef','#00ff44','#007722'], bgClass:'has-bg-phosphor'},
+        {label:'Radio sans titre',sub:'Barre seule, no title', params:'preset=default&frame=oval&shader=crt&bump=soft&title=0',   colors:['#d6fff5','#00ffcc','#00b3ff']},
+        {label:'Radio Ambre',   sub:'Vintage tube ambre',      params:'preset=amber&frame=none&shader=tv&bump=none&bg=amber&bar=0', colors:['#fff8e0','#ffaa00','#994400'], bgClass:'has-bg-amber'},
+      ]
+    },
+    {
+      id: 'twitch',
+      title: '\u25b8 Twitch #mutenrock — réactif chat',
+      desc: 'Connexion au chat/événements Twitch de mutenrock. Follow, sub, raid, bits, channel points → émotions + toast + ring coloré. Mode A : WS Korigan | Mode B : EventSub | Mode C : IRC anonyme (fallback auto).',
+      cls: 'section-twitch',
+      file: 'obs-lemegeton-twitch.html',
+      variants: [
+        {label:'Twitch Défaut',  sub:'Cyan oval IRC auto',       params:'preset=default&frame=oval&shader=crt&bump=soft',           colors:['#d6fff5','#00ffcc','#00b3ff']},
+        {label:'Twitch Nitro',   sub:'Violet + events',          params:'preset=nitro&frame=oval&shader=crt&bump=soft',            colors:['#e8f0ff','#7744ff','#3300cc']},
+        {label:'Twitch Red',     sub:'Rouge danger',             params:'preset=red&frame=oval&shader=crt&bump=soft',              colors:['#fff0f0','#ff3333','#cc0000']},
+        {label:'Twitch Noir',    sub:'Fond noir + events',       params:'preset=default&frame=oval&shader=crt&bump=soft&bg=black',  colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+        {label:'Twitch CRT TV',  sub:'Tube TV + events',         params:'preset=default&frame=oval&shader=tv&bump=hard&bg=black',   colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+        {label:'Twitch Terminal',sub:'Phosphore + events',       params:'preset=phosphor&frame=none&shader=tv&bump=none&bg=phosphor', colors:['#efffef','#00ff44','#007722'], bgClass:'has-bg-phosphor'},
+        {label:'Twitch Ambre',   sub:'Vintage + events',         params:'preset=amber&frame=none&shader=tv&bump=none&bg=amber',    colors:['#fff8e0','#ffaa00','#994400'], bgClass:'has-bg-amber'},
+        {label:'Twitch Rond',    sub:'Cercle + events',          params:'preset=pink&frame=round&shader=crt&bump=soft',            colors:['#fff0f8','#ff66cc','#cc0077']},
+        {label:'Twitch Mono',    sub:'Cyclope + events',         params:'preset=nitro&frame=mono&shader=crt&bump=soft',            colors:['#e8f0ff','#7744ff','#3300cc']},
+      ]
+    }
   ];
 
-  const FRAME_PRESETS = [
-    { key:'oval',   label:'Oval CRT',    sub:'Bombé léger, contour lumineux', frame:'oval',   shader:'crt',     bump:'soft' },
-    { key:'none',   label:'Sans cadre',  sub:'Transparent pur, plein écran',  frame:'none',   shader:'none',    bump:'none' },
-    { key:'square', label:'Carré',       sub:'Format carré, coins arrondis',  frame:'square', shader:'crt',     bump:'soft' },
-    { key:'round',  label:'Rond',        sub:'Cercle parfait, CRT',           frame:'round',  shader:'crt',     bump:'soft' },
-    { key:'mono',   label:'Mono-œil',   sub:'Un seul œil central, rond',     frame:'mono',   shader:'crt',     bump:'soft' },
-    { key:'oval_nobump', label:'Oval plat', sub:'Ovale sans bombage',         frame:'oval',   shader:'crt',     bump:'none' },
-    { key:'oval_hard',   label:'Oval bombé', sub:'Bombage fort CRT',          frame:'oval',   shader:'crt',     bump:'hard' },
-    { key:'oval_3d',     label:'Oval 3D', sub:'Relief perspectif',            frame:'oval',   shader:'crt',     bump:'3d'   },
-    { key:'round_ice',   label:'Rond Glace', sub:'Filtre givre + ovale',      frame:'round',  shader:'crt+ice', bump:'mid'  },
-    { key:'square_ice',  label:'Carré Glace', sub:'Filtre givre carré',       frame:'square', shader:'crt+ice', bump:'mid'  },
-    { key:'none_ice',    label:'Plein Glace', sub:'Glace plein écran',        frame:'none',   shader:'ice',     bump:'none' },
-    { key:'none_crt',    label:'Plein CRT',   sub:'Scanlines plein écran',    frame:'none',   shader:'crt',     bump:'none' },
-  ];
+  const root=document.getElementById('root');
 
-  // ── Rendu ────────────────────────────────────────────
-  const root = document.getElementById('root');
+  SECTIONS.forEach(sec=>{
+    const sEl=document.createElement('div');
+    sEl.className='section '+(sec.cls||'');
+    sEl.innerHTML=`<p class="section-title">${sec.title}</p><p class="section-desc">${sec.desc}</p>`;
+    const grid=document.createElement('div'); grid.className='grid';
 
-  function buildSection(title, items, urlFn) {
-    const sec = document.createElement('div');
-    sec.className = 'section';
-    sec.innerHTML = `<p class="section-title">▸ ${title}</p>`;
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-
-    items.forEach(item => {
-      const url = BASE + urlFn(item);
-      const iframeSrc = urlFn(item);
-      const card = document.createElement('div');
-      card.className = 'card';
-
-      const swatchHtml = (item.colors || []).map(c =>
-        `<span class="swatch" style="background:${c}"></span>`
-      ).join('');
-
-      card.innerHTML = `
-        <div class="preview-wrap" onclick="copyUrl('${url}', this)" title="${url}">
+    sec.variants.forEach(v=>{
+      const url=BASE+sec.file+'?'+v.params;
+      const iframeSrc=sec.file+'?'+v.params;
+      const card=document.createElement('div'); card.className='card';
+      const swatchHtml=(v.colors||[]).map(c=>`<span class="swatch" style="background:${c}"></span>`).join('');
+      const bgCls=v.bgClass?' '+v.bgClass:'';
+      card.innerHTML=`
+        <div class="preview-wrap${bgCls}" onclick="copyUrl('${url}',this)" title="${url}">
           <iframe src="${iframeSrc}" scrolling="no"></iframe>
         </div>
-        <div class="card-label">${item.label}</div>
-        ${swatchHtml ? `<div class="swatches">${swatchHtml}</div>` : ''}
-        <div class="card-sub">${item.sub}</div>
-        <button class="copy-btn" onclick="copyUrl('${url}', this)">⎘ Copier URL OBS</button>
+        <div class="card-label">${v.label}</div>
+        ${swatchHtml?`<div class="swatches">${swatchHtml}</div>`:''}
+        <div class="card-sub">${v.sub}</div>
+        <button class="copy-btn" onclick="copyUrl('${url}',this)">⎘ Copier URL OBS</button>
         <a class="open-btn" href="${iframeSrc}" target="_blank">↗ Ouvrir</a>
       `;
       grid.appendChild(card);
     });
+    sEl.appendChild(grid);
+    root.appendChild(sEl);
+  });
 
-    sec.appendChild(grid);
-    root.appendChild(sec);
-  }
-
-  // Section 1 : couleurs (frame oval crt soft par défaut)
-  buildSection(
-    'Couleurs des yeux — cadre oval CRT par défaut',
-    COLOR_PRESETS,
-    item => `obs-lemegeton.html?preset=${item.key}&frame=oval&shader=crt&bump=soft`
-  );
-
-  // Section 2 : cadres (preset cyan par défaut)
-  buildSection(
-    'Cadres & effets — couleur cyan par défaut',
-    FRAME_PRESETS,
-    item => `obs-lemegeton.html?preset=default&frame=${item.frame}&shader=${item.shader}&bump=${item.bump}`
-  );
-
-  function copyUrl(url, el) {
-    navigator.clipboard.writeText(url).then(() => {
-      const btn = el.tagName === 'BUTTON' ? el : el.closest('.card').querySelector('.copy-btn');
-      const orig = btn.textContent;
-      btn.textContent = '✓ Copié !';
+  function copyUrl(url,el){
+    navigator.clipboard.writeText(url).then(()=>{
+      const btn=el.tagName==='BUTTON'?el:el.closest('.card').querySelector('.copy-btn');
+      const orig=btn.textContent;
+      btn.textContent='\u2713 Copié !';
       btn.classList.add('ok');
-      setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1800);
+      setTimeout(()=>{ btn.textContent=orig; btn.classList.remove('ok'); },1800);
     });
   }
   </script>
