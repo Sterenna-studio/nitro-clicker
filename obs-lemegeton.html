@@ -10,6 +10,8 @@
       --c2: #00ffcc;
       --c3: #00b3ff;
       --glow: rgba(0,255,204,.85);
+      --border-color: #00b3ff;
+      --border-glow: rgba(0,179,255,0.9);
     }
 
     html, body {
@@ -26,17 +28,50 @@
       place-items: center;
     }
 
-    .obs-stage {
+    /* ── Cadre cathodique ─────────────────────────────────── */
+    .crt-frame {
       position: relative;
-      width: 320px;
-      height: 190px;
-      background: transparent;
+      width: 308px;
+      height: 178px;
+      border-radius: 48% / 38%;
       overflow: hidden;
+      /* Effet bombé : perspective + léger scale aux coins */
+      transform: perspective(600px) scale(1.0);
+      /* Contour lumineux bleu */
+      box-shadow:
+        0 0 0 2px var(--border-color),
+        0 0 10px 3px var(--border-glow),
+        0 0 28px 6px rgba(0,179,255,0.45),
+        0 0 60px 12px rgba(0,100,255,0.2),
+        inset 0 0 18px 4px rgba(0,180,255,0.12);
+    }
+
+    /* Distorsion bombée via pseudo-element SVG filter */
+    .crt-frame::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      background: radial-gradient(
+        ellipse 80% 80% at 50% 50%,
+        transparent 55%,
+        rgba(0,0,0,0.32) 100%
+      );
+      pointer-events: none;
+      z-index: 4;
+      border-radius: inherit;
+    }
+
+    /* Filtre SVG bombé appliqué sur le contenu */
+    .crt-inner {
+      width: 100%;
+      height: 100%;
+      filter: url(#crt-bulge);
+      position: relative;
     }
 
     .eye-container {
-      width: 320px;
-      height: 190px;
+      width: 308px;
+      height: 178px;
       position: relative;
     }
 
@@ -50,10 +85,12 @@
         0 0 44px rgba(0,180,255,.5) !important;
     }
 
+    /* Scanlines */
     .scanlines {
       position: absolute;
       inset: 0;
       pointer-events: none;
+      z-index: 2;
       background: repeating-linear-gradient(
         0deg,
         rgba(0,255,204,.045) 0 1px,
@@ -62,19 +99,53 @@
       opacity: 0.7;
     }
 
+    /* Vignette cathodique interne */
     .vignette {
       position: absolute;
       inset: 0;
       pointer-events: none;
-      background: radial-gradient(circle at 50% 50%, transparent 45%, rgba(0,0,0,.18) 100%);
+      z-index: 3;
+      background: radial-gradient(
+        ellipse 82% 74% at 50% 50%,
+        transparent 42%,
+        rgba(0,0,0,.28) 100%
+      );
+    }
+
+    /* Reflet de surface cathodique */
+    .crt-glare {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+      background: radial-gradient(
+        ellipse 55% 35% at 34% 22%,
+        rgba(255,255,255,0.07) 0%,
+        transparent 70%
+      );
+      border-radius: inherit;
     }
   </style>
+
+  <!-- Filtre SVG bombé (barrel distortion simulé) -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <filter id="crt-bulge" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="linearRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" seed="2" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" result="displaced" />
+        <feComposite in="displaced" in2="SourceGraphic" operator="atop" />
+      </filter>
+    </defs>
+  </svg>
 </head>
 <body>
-  <div class="obs-stage">
-    <div class="eye-container" id="eye"></div>
-    <div class="scanlines"></div>
-    <div class="vignette"></div>
+  <div class="crt-frame">
+    <div class="crt-inner">
+      <div class="eye-container" id="eye"></div>
+      <div class="scanlines"></div>
+      <div class="vignette"></div>
+    </div>
+    <div class="crt-glare"></div>
   </div>
 
   <script src="./js/vendor/web-eye-animation.js"></script>
@@ -101,17 +172,10 @@
         requestAnimationFrame(boot);
         return;
       }
-
       window.eyes.emotion('joy');
       setRandomTarget();
-
-      setInterval(() => {
-        cycleEmotion();
-      }, 6000);
-
-      setInterval(() => {
-        setRandomTarget();
-      }, 2200);
+      setInterval(cycleEmotion, 6000);
+      setInterval(setRandomTarget, 2200);
     }
 
     boot();

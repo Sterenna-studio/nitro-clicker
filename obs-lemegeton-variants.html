@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>LEMEGETON — Variantes OBS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0f;
+      font-family: 'Courier New', monospace;
+      color: #00ffcc;
+      min-height: 100vh;
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 1.1rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #00b3ff;
+      text-shadow: 0 0 12px #00b3ff;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: .75rem;
+      color: #444;
+      margin-bottom: 36px;
+      letter-spacing: .1em;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 28px;
+      justify-content: flex-start;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .card-label {
+      font-size: .7rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: #888;
+    }
+
+    .card-label span {
+      display: block;
+      font-size: .6rem;
+      margin-top: 4px;
+      color: #444;
+    }
+
+    /* Cadre de preview avec fond de couleur */
+    .preview-wrap {
+      border: 1px solid #222;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .preview-wrap:hover { border-color: #555; }
+
+    .preview-wrap iframe {
+      display: block;
+      border: none;
+      pointer-events: none;
+      transform-origin: top left;
+      transform: scale(0.5);
+      width: 320px;
+      height: 190px;
+    }
+
+    /* la div wrapper fait la moitié de la taille de l'iframe */
+    .preview-wrap {
+      width: 160px;
+      height: 95px;
+    }
+
+    .copy-btn {
+      background: #111;
+      border: 1px solid #333;
+      color: #00ffcc;
+      font-family: inherit;
+      font-size: .65rem;
+      letter-spacing: .1em;
+      padding: 5px 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background .15s, border-color .15s;
+      border-radius: 3px;
+      width: 100%;
+    }
+    .copy-btn:hover { background: #1a1a2a; border-color: #00b3ff; }
+    .copy-btn.copied { color: #00ffcc; border-color: #00ffcc; }
+
+    .open-btn {
+      background: transparent;
+      border: 1px solid #222;
+      color: #555;
+      font-family: inherit;
+      font-size: .6rem;
+      letter-spacing: .1em;
+      padding: 4px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all .15s;
+      border-radius: 3px;
+      width: 100%;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+    }
+    .open-btn:hover { color: #00ffcc; border-color: #333; }
+
+    .hint {
+      font-size: .6rem;
+      color: #333;
+      margin-top: 24px;
+      letter-spacing: .08em;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⬡ LEMEGETON — OBS Variants</h1>
+  <p class="subtitle">Browser Source 320 × 190 px — cliquer pour copier l'URL</p>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="hint">► Dans OBS : Browser Source → coller l'URL → 320×190 → ✓ Transparent background</p>
+
+  <script>
+    const BASE = window.location.origin + window.location.pathname.replace('obs-lemegeton-variants.html', '');
+
+    const VARIANTS = [
+      {
+        id: 'transparent',
+        label: 'Transparent',
+        sub: 'OBS natif — fond pur alpha',
+        url: 'obs-lemegeton.html',
+        bg: 'transparent',
+        checkered: true,
+      },
+      {
+        id: 'red',
+        label: 'Chroma Red',
+        sub: 'Green screen remplaçable',
+        url: 'obs-lemegeton.html?bg=red',
+        bg: '#c00000',
+      },
+      {
+        id: 'green',
+        label: 'Chroma Green',
+        sub: 'Green screen classique',
+        url: 'obs-lemegeton.html?bg=green',
+        bg: '#00b140',
+      },
+      {
+        id: 'yellow',
+        label: 'Chroma Yellow',
+        sub: 'Alternative chroma',
+        url: 'obs-lemegeton.html?bg=yellow',
+        bg: '#d4c000',
+      },
+      {
+        id: 'nitro',
+        label: 'Nitro Clicker',
+        sub: 'Style dark UI du jeu',
+        url: 'obs-lemegeton.html?bg=nitro',
+        bg: '#0d0d1a',
+      },
+    ];
+
+    const grid = document.getElementById('grid');
+
+    VARIANTS.forEach(v => {
+      const fullUrl = BASE + v.url;
+
+      const card = document.createElement('div');
+      card.className = 'card';
+
+      // Preview checkered si transparent
+      const bgStyle = v.checkered
+        ? `background: repeating-conic-gradient(#1a1a2a 0% 25%, #111 0% 50%) 0 0 / 12px 12px;`
+        : `background: ${v.bg};`;
+
+      card.innerHTML = `
+        <div class="preview-wrap" title="${fullUrl}" onclick="copyUrl('${fullUrl}', this)" style="${bgStyle}">
+          <iframe src="${v.url}" scrolling="no" frameborder="0"></iframe>
+        </div>
+        <div class="card-label">${v.label}<span>${v.sub}</span></div>
+        <button class="copy-btn" onclick="copyUrl('${fullUrl}', this)">⎘ Copier URL OBS</button>
+        <a class="open-btn" href="${v.url}" target="_blank">↗ Ouvrir</a>
+      `;
+
+      grid.appendChild(card);
+    });
+
+    function copyUrl(url, el) {
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = el.tagName === 'BUTTON' ? el : el.closest('.card').querySelector('.copy-btn');
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copié !';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1800);
+      });
+    }
+  </script>
+
+  <!-- Gestion des params bg dans obs-lemegeton.html -->
+  <!-- Ce script est inclus ici juste pour référence du système de params -->
+</body>
+</html>
