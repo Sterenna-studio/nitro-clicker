@@ -13,11 +13,9 @@
     }
     body { display: grid; place-items: center; }
 
-    /* ━━ FRAME WRAPPER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     .obs-frame {
       position: relative;
       overflow: hidden;
-      /* dimensions et border-radius injectés par JS selon ?frame= */
     }
     .obs-frame::before {
       content: '';
@@ -25,13 +23,11 @@
       pointer-events: none; z-index: 4;
       border-radius: inherit;
     }
-    /* vignette commune */
     .vignette {
       position: absolute; inset: 0;
       pointer-events: none; z-index: 3;
       background: radial-gradient(ellipse 82% 74% at 50% 50%, transparent 42%, rgba(0,0,0,.28) 100%);
     }
-    /* scanlines CRT */
     .scanlines {
       position: absolute; inset: 0;
       pointer-events: none; z-index: 2;
@@ -39,7 +35,6 @@
       opacity: 0;
     }
     .has-scanlines .scanlines { opacity: 0.7; }
-    /* reflet glare */
     .crt-glare {
       position: absolute; inset: 0;
       pointer-events: none; z-index: 5;
@@ -50,7 +45,6 @@
       opacity: 1;
       background: radial-gradient(ellipse 55% 35% at 34% 22%, rgba(255,255,255,0.08) 0%, transparent 70%);
     }
-    /* shader glace */
     .ice-overlay {
       position: absolute; inset: 0;
       pointer-events: none; z-index: 6;
@@ -63,7 +57,6 @@
         radial-gradient(ellipse 60% 40% at 30% 25%, rgba(180,240,255,0.14) 0%, transparent 65%),
         radial-gradient(ellipse 40% 60% at 70% 70%, rgba(140,210,255,0.09) 0%, transparent 60%);
     }
-    /* vignette noir pour mode bombage */
     .bump-vignette {
       position: absolute; inset: 0;
       pointer-events: none; z-index: 4;
@@ -78,8 +71,6 @@
       opacity: 1;
       background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 40%, rgba(0,0,0,.65) 100%);
     }
-
-    /* container yeux */
     .eye-container { position: relative; }
     .eye-container .eye {
       background: radial-gradient(circle at 50% 42%,
@@ -90,43 +81,36 @@
         0 0 20px var(--glow, rgba(0,255,204,.85)),
         0 0 44px rgba(0,180,255,.5) !important;
     }
-    /* mono-oeil : on masque le 2e oeil */
     .mono-eye .eye:last-child { display: none !important; }
     .mono-eye .eye:first-child { width: 100% !important; }
   </style>
 
-  <!-- Filtres SVG réutilisables -->
   <svg width="0" height="0" style="position:absolute;pointer-events:none">
     <defs>
-      <!-- Bombage léger -->
       <filter id="bulge-soft" x="-5%" y="-5%" width="110%" height="110%">
         <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" seed="2" result="n"/>
         <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
-      <!-- Bombage moyen -->
       <filter id="bulge-mid" x="-8%" y="-8%" width="116%" height="116%">
         <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="1" seed="5" result="n"/>
         <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
-      <!-- Bombage fort -->
       <filter id="bulge-hard" x="-12%" y="-12%" width="124%" height="124%">
         <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="1" seed="9" result="n"/>
         <feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G"/>
       </filter>
-      <!-- Glace -->
-      <filter id="ice-filter" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.9 0.5" numOctaves="3" seed="12" result="n"/>
-        <feColorMatrix type="saturate" values="0" in="n" result="gray"/>
-        <feBlend in="SourceGraphic" in2="gray" mode="screen" result="blend"/>
-        <feDisplacementMap in="blend" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="B"/>
-      </filter>
-      <!-- 3D perspective (relief côté droit) -->
       <filter id="persp-3d" x="-10%" y="-10%" width="120%" height="120%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="shadow"/>
         <feOffset in="shadow" dx="3" dy="3" result="offsetShadow"/>
         <feFlood flood-color="rgba(0,0,0,0.5)" result="shadowColor"/>
         <feComposite in="shadowColor" in2="offsetShadow" operator="in" result="dropShadow"/>
         <feMerge><feMergeNode in="dropShadow"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <filter id="ice-filter" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9 0.5" numOctaves="3" seed="12" result="n"/>
+        <feColorMatrix type="saturate" values="0" in="n" result="gray"/>
+        <feBlend in="SourceGraphic" in2="gray" mode="screen" result="blend"/>
+        <feDisplacementMap in="blend" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="B"/>
       </filter>
     </defs>
   </svg>
@@ -144,10 +128,10 @@
   </div>
 
   <script src="./js/vendor/web-eye-animation.js"></script>
+  <!-- Override APRES la lib : corrige width:100vw / height:100vh / background:black injectés dynamiquement -->
+  <link rel="stylesheet" href="./css/eye-override.css">
+
   <script>
-  // ════════════════════════════════════════════════════
-  // PRESETS COULEURS
-  // ════════════════════════════════════════════════════
   const COLOR_PRESETS = {
     default:  { c1:'#d6fff5', c2:'#00ffcc', c3:'#00b3ff', glow:'#00ccff', border:'#00b3ff' },
     red:      { c1:'#fff0f0', c2:'#ff3333', c3:'#cc0000', glow:'#ff2200', border:'#ff2200' },
@@ -160,32 +144,15 @@
     gold:     { c1:'#fffbe8', c2:'#ffd700', c3:'#b8860b', glow:'#ffcc00', border:'#d4aa00' },
     void_:    { c1:'#f0e8ff', c2:'#aa00ff', c3:'#440066', glow:'#9900ff', border:'#7700cc' },
   };
-
-  // ════════════════════════════════════════════════════
-  // PRESETS CADRE
-  // frame= none | oval | square | round | mono
-  // shader= none | crt | ice | crt+ice
-  // bump= none | soft | mid | hard | 3d
-  // ════════════════════════════════════════════════════
   const FRAME_CONFIGS = {
-    none:   { w:320, h:190, radius:'0', aspect:320/190 },
-    oval:   { w:308, h:178, radius:'48% / 38%', aspect:308/178 },
-    square: { w:190, h:190, radius:'8px', aspect:1 },
-    round:  { w:190, h:190, radius:'50%', aspect:1 },
-    mono:   { w:190, h:190, radius:'50%', aspect:1, mono:true },
+    none:   { w:320, h:190, radius:'0' },
+    oval:   { w:308, h:178, radius:'48% / 38%' },
+    square: { w:190, h:190, radius:'8px' },
+    round:  { w:190, h:190, radius:'50%' },
+    mono:   { w:190, h:190, radius:'50%', mono:true },
   };
+  const BUMP_FILTERS = { none:null, soft:'bulge-soft', mid:'bulge-mid', hard:'bulge-hard', '3d':'persp-3d' };
 
-  const BUMP_FILTERS = {
-    none: null,
-    soft: 'bulge-soft',
-    mid:  'bulge-mid',
-    hard: 'bulge-hard',
-    '3d': 'persp-3d',
-  };
-
-  // ════════════════════════════════════════════════════
-  // LECTURE PARAMS URL
-  // ════════════════════════════════════════════════════
   const P = new URLSearchParams(location.search);
   const colorKey  = P.get('preset') || 'default';
   const frameKey  = P.get('frame')  || 'oval';
@@ -198,29 +165,26 @@
   const c3     = P.get('c3')     || colorBase.c3;
   const glow   = P.get('glow')   || colorBase.glow;
   const border = P.get('border') || colorBase.border;
-
   const frameConf  = FRAME_CONFIGS[frameKey]  || FRAME_CONFIGS.oval;
   const bumpFilter = BUMP_FILTERS[bumpKey] ?? BUMP_FILTERS.soft;
   const hasShaderCRT = shaderRaw.includes('crt');
   const hasShaderIce = shaderRaw.includes('ice');
 
-  // ════════════════════════════════════════════════════
-  // APPLICATION DU FRAME
-  // ════════════════════════════════════════════════════
-  const frameEl   = document.getElementById('frame');
-  const crtInner  = document.getElementById('crt-inner');
-  const eyeEl     = document.getElementById('eye');
+  const frameEl  = document.getElementById('frame');
+  const crtInner = document.getElementById('crt-inner');
+  const eyeEl    = document.getElementById('eye');
 
-  // Dimensions du cadre
-  frameEl.style.width         = frameConf.w + 'px';
-  frameEl.style.height        = frameConf.h + 'px';
-  frameEl.style.borderRadius  = frameConf.radius;
-
-  // Container yeux = mêmes dimensions
+  // Dimensions
+  frameEl.style.width  = frameConf.w + 'px';
+  frameEl.style.height = frameConf.h + 'px';
+  frameEl.style.borderRadius = frameConf.radius;
+  // eye-container : on fixe aussi en px pour que 100% CSS s'appuie dessus
   eyeEl.style.width  = frameConf.w + 'px';
   eyeEl.style.height = frameConf.h + 'px';
+  // crt-inner : mêmes dimensions
+  crtInner.style.width  = frameConf.w + 'px';
+  crtInner.style.height = frameConf.h + 'px';
 
-  // Contour lumineux (pas pour none)
   if (frameKey !== 'none') {
     frameEl.style.boxShadow = [
       `0 0 0 2px ${border}`,
@@ -230,230 +194,118 @@
       `inset 0 0 18px 4px ${border}22`,
     ].join(',');
   }
-
-  // Filtre bombage
   if (bumpFilter) {
     crtInner.style.filter = `url(#${bumpFilter})`;
     frameEl.classList.add(bumpKey === 'hard' ? 'has-bump-strong' : 'has-bump');
   }
-
-  // Shaders
-  if (hasShaderCRT) frameEl.classList.add('has-scanlines', 'has-glare');
+  if (hasShaderCRT) frameEl.classList.add('has-scanlines','has-glare');
   if (hasShaderIce) {
     frameEl.classList.add('has-ice');
-    if (bumpFilter) crtInner.style.filter += ` url(#ice-filter)`; // cumul possible
+    if (bumpFilter) crtInner.style.filter += ` url(#ice-filter)`;
   }
-
-  // Mono-oeil
   if (frameConf.mono) eyeEl.classList.add('mono-eye');
 
-  // ════════════════════════════════════════════════════
-  // APPLICATION COULEURS
-  // ════════════════════════════════════════════════════
   eyeEl.style.setProperty('--c1', c1);
   eyeEl.style.setProperty('--c2', c2);
   eyeEl.style.setProperty('--c3', c3);
   const hx = glow.replace('#','');
-  const _r = parseInt(hx.slice(0,2),16), _g = parseInt(hx.slice(2,4),16), _b = parseInt(hx.slice(4,6),16);
+  const _r=parseInt(hx.slice(0,2),16),_g=parseInt(hx.slice(2,4),16),_b=parseInt(hx.slice(4,6),16);
   eyeEl.style.setProperty('--glow', `rgba(${_r},${_g},${_b},.85)`);
 
-  // ════════════════════════════════════════════════════
-  // MOTEUR COMPORTEMENTAL ORGANIQUE
-  // Chaque instance a son propre état aléatoire,
-  // aucun pattern fixe, timings bruités
-  // ════════════════════════════════════════════════════
-  const EMOTIONS = [
-    'joy','sadness','surprise','anger','fear',
-    'disgust','confusion','love','sleepy','excitement'
-  ];
-
-  // Pondération : rend certaines émotions plus rares
-  const EMO_WEIGHTS = [
-    12, 3, 8, 2, 2, 1, 6, 7, 4, 9  // même ordre que EMOTIONS
-  ];
-
-  // Tire une émotion pondérée (non-répétitive)
-  let lastEmotion = null;
-  function pickEmotion() {
-    const pool = [];
-    EMOTIONS.forEach((e, i) => {
-      if (e === lastEmotion) return;
-      for (let j = 0; j < EMO_WEIGHTS[i]; j++) pool.push(e);
-    });
-    const e = pool[Math.floor(Math.random() * pool.length)];
-    lastEmotion = e;
-    return e;
+  // ═══ MOTEUR COMPORTEMENTAL ORGANIQUE ═══
+  const EMOTIONS=['joy','sadness','surprise','anger','fear','disgust','confusion','love','sleepy','excitement'];
+  const EMO_W=[12,3,8,2,2,1,6,7,4,9];
+  let lastEmo=null;
+  function pickEmo(){
+    const pool=[];
+    EMOTIONS.forEach((e,i)=>{ if(e!==lastEmo) for(let j=0;j<EMO_W[i];j++) pool.push(e); });
+    lastEmo=pool[Math.floor(Math.random()*pool.length)];
+    return lastEmo;
   }
+  function sn(t,s){ const v=Math.sin(t*1.234+s*7.89)*43758.5453; return (v-Math.floor(v))*2-1; }
+  function jitter(b,r){ return b*(1+(Math.random()-.5)*r); }
+  const state={seed:Math.random()*1000,t:0,gx:0,gy:0,modeTimer:null,emotionTimer:null};
 
-  // Bruit de Perlin simplifié (valeur smooth entre -1 et 1)
-  function smoothNoise(t, seed) {
-    const s = Math.sin(t * 1.234 + seed * 7.89) * 43758.5453;
-    return (s - Math.floor(s)) * 2 - 1;
-  }
-
-  // Générateur de délai bruité autour d'un centre
-  function jitter(base, ratio = 0.5) {
-    return base * (1 + (Math.random() - 0.5) * ratio);
-  }
-
-  // Etat global du comportement
-  const state = {
-    seed: Math.random() * 1000,
-    t: 0,
-    // mode actuel : 'idle' | 'focus' | 'drift' | 'blink_scan'
-    mode: 'idle',
-    modeTimer: null,
-    emotionTimer: null,
-    gazeTimer: null,
-    microTimer: null,
-    // position courante du regard (en unités lib)
-    gx: 0, gy: 0,
-    // cible
-    tx: 0, ty: 0,
-  };
-
-  // — Micro-tremblements (quête de naturel, imperceptible)
-  function startMicro() {
-    function tick() {
-      state.t += 0.015 + Math.random() * 0.01;
-      if (!window.eyes?.move) { state.microTimer = setTimeout(tick, 80); return; }
-      const jx = smoothNoise(state.t, state.seed)       * 8;
-      const jy = smoothNoise(state.t, state.seed + 100) * 5;
-      window.eyes.move(
-        160 + state.gx + jx,
-        95  + state.gy + jy
-      );
-      state.microTimer = setTimeout(tick, 60 + Math.random() * 60);
+  function startMicro(){
+    function tick(){
+      state.t+=0.015+Math.random()*0.01;
+      if(window.eyes?.move){
+        window.eyes.move(160+state.gx+sn(state.t,state.seed)*8, 95+state.gy+sn(state.t,state.seed+100)*5);
+      }
+      setTimeout(tick,60+Math.random()*60);
     }
     tick();
   }
 
-  // — Déplace le regard vers une cible avec vitesse variable
-  function gazeTo(x, y) {
-    state.gx = x; state.gy = y;
+  function modeIdle(){
+    const x=(Math.random()-.5)*120, y=(Math.random()-.5)*80;
+    state.gx=x; state.gy=y;
+    if(window.eyes?.target) window.eyes.target(Math.round(x*2.2),Math.round(y*1.8),1000+Math.round(Math.random()*600));
+    scheduleNextMode(jitter(4500,.7));
   }
-
-  // — Modes comportementaux
-  function modeIdle() {
-    // Regard vague, dérive lente
-    const x = (Math.random() - 0.5) * 120;
-    const y = (Math.random() - 0.5) * 80;
-    gazeTo(x, y);
-    if (window.eyes?.target) {
-      window.eyes.target(
-        Math.round(x * 2.2),
-        Math.round(y * 1.8),
-        1000 + Math.round(Math.random() * 600)
-      );
-    }
-    scheduleNextMode(jitter(4500, 0.7));
+  function modeFocus(){
+    const x=(Math.random()-.5)*200, y=(Math.random()-.5)*130;
+    state.gx=x; state.gy=y;
+    if(window.eyes?.target) window.eyes.target(Math.round(x*2),Math.round(y*1.5),600+Math.round(Math.random()*400));
+    if(Math.random()>.55) setTimeout(()=>{ state.gx+=（Math.random()-.5)*40; state.gy+=(Math.random()-.5)*25; },700+Math.random()*400);
+    scheduleNextMode(jitter(3000,.8));
   }
-
-  function modeFocus() {
-    // Regarde vers un "point d'intérêt" précis avec légère hésitation
-    const px = (Math.random() - 0.5) * 200;
-    const py = (Math.random() - 0.5) * 130;
-    gazeTo(px, py);
-    if (window.eyes?.target) window.eyes.target(Math.round(px*2), Math.round(py*1.5), 600 + Math.round(Math.random()*400));
-    // Éventuellement : petit re-ajustement après 800ms
-    if (Math.random() > 0.55) {
-      setTimeout(() => {
-        gazeTo(px + (Math.random()-0.5)*40, py + (Math.random()-0.5)*25);
-      }, 700 + Math.random() * 400);
-    }
-    scheduleNextMode(jitter(3000, 0.8));
-  }
-
-  function modeDrift() {
-    // Regard qui glisse lentement comme une caméra de surveillance
-    let steps = 3 + Math.floor(Math.random() * 3);
-    let s = 0;
-    function step() {
-      if (s++ >= steps) { scheduleNextMode(jitter(2000, 0.6)); return; }
-      const x = (Math.random() - 0.5) * 180;
-      const y = (Math.random() * 0.4 - 0.2) * 80; // drift surtout horizontal
-      gazeTo(x, y);
-      if (window.eyes?.target) window.eyes.target(Math.round(x*2), Math.round(y*1.5), 1200 + Math.round(Math.random()*800));
-      setTimeout(step, jitter(900, 0.6));
+  function modeDrift(){
+    let steps=3+Math.floor(Math.random()*3), s=0;
+    function step(){
+      if(s++>=steps){ scheduleNextMode(jitter(2000,.6)); return; }
+      const x=(Math.random()-.5)*180, y=(Math.random()*.4-.2)*80;
+      state.gx=x; state.gy=y;
+      if(window.eyes?.target) window.eyes.target(Math.round(x*2),Math.round(y*1.5),1200+Math.round(Math.random()*800));
+      setTimeout(step,jitter(900,.6));
     }
     step();
   }
-
-  function modeBlinkScan() {
-    // Séquence: regarde un point → "cligne" (emotion blink) → regarde ailleurs
-    const x1 = (Math.random()-0.5)*200, y1 = (Math.random()-0.5)*120;
-    gazeTo(x1, y1);
-    if (window.eyes?.target) window.eyes.target(Math.round(x1*2), Math.round(y1*1.5), 700);
-    setTimeout(() => {
-      if (window.eyes?.emotion) window.eyes.emotion('sleepy'); // squint / clignement
-      setTimeout(() => {
-        const x2 = (Math.random()-0.5)*200, y2 = (Math.random()-0.5)*120;
-        gazeTo(x2, y2);
-        if (window.eyes?.target) window.eyes.target(Math.round(x2*2), Math.round(y2*1.5), 700);
-        if (window.eyes?.emotion) window.eyes.emotion(pickEmotion());
-        scheduleNextMode(jitter(3500, 0.7));
-      }, 300 + Math.random() * 200);
-    }, 600 + Math.random() * 400);
+  function modeBlinkScan(){
+    const x1=(Math.random()-.5)*200, y1=(Math.random()-.5)*120;
+    state.gx=x1; state.gy=y1;
+    if(window.eyes?.target) window.eyes.target(Math.round(x1*2),Math.round(y1*1.5),700);
+    setTimeout(()=>{
+      if(window.eyes?.emotion) window.eyes.emotion('sleepy');
+      setTimeout(()=>{
+        const x2=(Math.random()-.5)*200, y2=(Math.random()-.5)*120;
+        state.gx=x2; state.gy=y2;
+        if(window.eyes?.target) window.eyes.target(Math.round(x2*2),Math.round(y2*1.5),700);
+        if(window.eyes?.emotion) window.eyes.emotion(pickEmo());
+        scheduleNextMode(jitter(3500,.7));
+      },300+Math.random()*200);
+    },600+Math.random()*400);
   }
-
-  const MODES = [
-    { fn: modeIdle,       weight: 4 },
-    { fn: modeFocus,      weight: 3 },
-    { fn: modeDrift,      weight: 2 },
-    { fn: modeBlinkScan,  weight: 2 },
-  ];
-
-  function pickMode() {
-    const pool = [];
-    MODES.forEach(m => { for (let i=0; i<m.weight; i++) pool.push(m.fn); });
-    return pool[Math.floor(Math.random() * pool.length)];
+  const MODES=[{fn:modeIdle,w:4},{fn:modeFocus,w:3},{fn:modeDrift,w:2},{fn:modeBlinkScan,w:2}];
+  function pickMode(){ const pool=[]; MODES.forEach(m=>{ for(let i=0;i<m.w;i++) pool.push(m.fn); }); return pool[Math.floor(Math.random()*pool.length)]; }
+  function scheduleNextMode(d){ clearTimeout(state.modeTimer); state.modeTimer=setTimeout(()=>pickMode()(),d); }
+  function scheduleEmotion(){
+    state.emotionTimer=setTimeout(()=>{
+      if(window.eyes?.emotion) window.eyes.emotion(pickEmo());
+      scheduleEmotion();
+    },jitter(7000,.8));
   }
-
-  function scheduleNextMode(delay) {
-    clearTimeout(state.modeTimer);
-    state.modeTimer = setTimeout(() => pickMode()(), delay);
-  }
-
-  // — Boucle d'émotions indépendante (délais variables, pas de cycle fixe)
-  function scheduleNextEmotion() {
-    const delay = jitter(7000, 0.8); // entre ~2.8s et ~11.2s
-    clearTimeout(state.emotionTimer);
-    state.emotionTimer = setTimeout(() => {
-      if (window.eyes?.emotion) window.eyes.emotion(pickEmotion());
-      scheduleNextEmotion();
-    }, delay);
-  }
-
-  // — Saccades oculaires spontanées (mouvement bref rapide, naturel)
-  function scheduleSaccade() {
-    const delay = jitter(3200, 0.9);
-    setTimeout(() => {
-      if (window.eyes?.move) {
-        const sx = (Math.random()-0.5)*60;
-        const sy = (Math.random()-0.5)*40;
-        window.eyes.move(160 + state.gx + sx, 95 + state.gy + sy);
-        setTimeout(() => window.eyes.move(160 + state.gx, 95 + state.gy), 80 + Math.random()*60);
+  function scheduleSaccade(){
+    setTimeout(()=>{
+      if(window.eyes?.move){
+        const sx=(Math.random()-.5)*60, sy=(Math.random()-.5)*40;
+        window.eyes.move(160+state.gx+sx,95+state.gy+sy);
+        setTimeout(()=>window.eyes.move(160+state.gx,95+state.gy),80+Math.random()*60);
       }
       scheduleSaccade();
-    }, delay);
+    },jitter(3200,.9));
   }
 
-  // ════════════════════════════════════════════════════
-  // BOOT
-  // ════════════════════════════════════════════════════
-  function boot() {
-    if (!window.eyes?.emotion) { requestAnimationFrame(boot); return; }
-
-    // Décalage aléatoire au démarrage pour que chaque instance OBS
-    // soit désynchronisée dès le début
-    const startOffset = Math.random() * 4000;
-    setTimeout(() => {
-      window.eyes.emotion('joy');
+  function boot(){
+    if(!window.eyes?.emotion){ requestAnimationFrame(boot); return; }
+    window.eyes.emotion('joy');
+    const off=Math.random()*4000;
+    setTimeout(()=>{
       startMicro();
-      scheduleNextEmotion();
+      scheduleEmotion();
       scheduleSaccade();
-      setTimeout(() => pickMode()(), jitter(1500, 0.5));
-    }, startOffset);
+      setTimeout(()=>pickMode()(),jitter(1500,.5));
+    },off);
   }
   boot();
   </script>

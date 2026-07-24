@@ -1,0 +1,22 @@
+/*
+ * OVERRIDE obligatoire pour web-eye-animation.js
+ * La lib injecte dynamiquement :
+ *   .eye-container { width:100vw; height:100vh; background-color:black; }
+ * Ce fichier, chargé APRÈS la lib, écrase ces valeurs.
+ * Inclure via <link rel="stylesheet" href="./css/eye-override.css"> APRÈS le <script> de la lib.
+ */
+.eye-container {
+  /* Dimensions héritées du parent JS plutôt que du viewport */
+  width: 100% !important;
+  height: 100% !important;
+  /* Transparent : le fond visible vient du cadre (obs-frame), pas du container */
+  background: transparent !important;
+  background-color: transparent !important;
+  /* Clip strictement dans les limites du parent */
+  overflow: hidden !important;
+  /* Repositionnement : centré dans le parent au lieu du viewport */
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+}

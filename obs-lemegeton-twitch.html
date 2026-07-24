@@ -4,100 +4,35 @@
   <meta charset="UTF-8" />
   <title>LEMEGETON — Twitch MutenRock</title>
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      width: 320px; height: 190px;
-      background: transparent;
-      overflow: hidden;
+    html,body{margin:0;padding:0;width:320px;height:190px;background:transparent;overflow:hidden;}
+    body{display:grid;place-items:center;}
+    .obs-frame{position:relative;overflow:hidden;transition:box-shadow .3s;}
+    .crt-inner{width:100%;height:100%;position:relative;}
+    .eye-container{position:relative;}
+    .eye-container .eye{
+      background:radial-gradient(circle at 50% 42%,var(--c1,#d6fff5) 0%,var(--c2,#00ffcc) 42%,var(--c3,#00b3ff) 92%) !important;
+      box-shadow:0 0 20px var(--glow,rgba(0,255,204,.85)),0 0 44px rgba(0,180,255,.5) !important;
     }
-    body { display: grid; place-items: center; }
-
-    .obs-frame {
-      position: relative; overflow: hidden;
-      transition: box-shadow .3s;
+    .scanlines{position:absolute;inset:0;pointer-events:none;z-index:2;background:repeating-linear-gradient(0deg,rgba(0,255,204,.045) 0 1px,transparent 1px 4px);opacity:.7;}
+    .vignette{position:absolute;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse 82% 74% at 50% 50%,transparent 42%,rgba(0,0,0,.28) 100%);}
+    .crt-glare{position:absolute;inset:0;pointer-events:none;z-index:5;border-radius:inherit;background:radial-gradient(ellipse 55% 35% at 34% 22%,rgba(255,255,255,.08) 0%,transparent 70%);}
+    #event-toast{
+      position:absolute;top:8px;left:50%;transform:translateX(-50%) translateY(-40px);
+      background:rgba(0,0,0,.75);border:1px solid var(--c2,#00ffcc);border-radius:20px;
+      padding:4px 14px;font-family:'Courier New',monospace;font-size:7px;letter-spacing:.12em;
+      color:var(--c2,#00ffcc);white-space:nowrap;z-index:20;pointer-events:none;
+      opacity:0;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s;
+      text-shadow:0 0 6px var(--c2,#00ffcc);max-width:280px;overflow:hidden;text-overflow:ellipsis;
     }
-    .crt-inner { width:100%; height:100%; position:relative; }
-    .eye-container { position:relative; }
-    .eye-container .eye {
-      background: radial-gradient(circle at 50% 42%,
-        var(--c1,#d6fff5) 0%, var(--c2,#00ffcc) 42%, var(--c3,#00b3ff) 92%) !important;
-      box-shadow: 0 0 20px var(--glow,rgba(0,255,204,.85)), 0 0 44px rgba(0,180,255,.5) !important;
-    }
-    .scanlines {
-      position:absolute; inset:0; pointer-events:none; z-index:2;
-      background:repeating-linear-gradient(0deg,rgba(0,255,204,.045) 0 1px,transparent 1px 4px);
-      opacity:.7;
-    }
-    .vignette {
-      position:absolute; inset:0; pointer-events:none; z-index:3;
-      background:radial-gradient(ellipse 82% 74% at 50% 50%,transparent 42%,rgba(0,0,0,.28) 100%);
-    }
-    .crt-glare {
-      position:absolute; inset:0; pointer-events:none; z-index:5; border-radius:inherit;
-      background:radial-gradient(ellipse 55% 35% at 34% 22%,rgba(255,255,255,.08) 0%,transparent 70%);
-    }
-
-    /* Toast notification event Twitch */
-    #event-toast {
-      position: absolute;
-      top: 8px; left: 50%;
-      transform: translateX(-50%) translateY(-40px);
-      background: rgba(0,0,0,.75);
-      border: 1px solid var(--c2, #00ffcc);
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-family: 'Courier New', monospace;
-      font-size: 7px;
-      letter-spacing: .12em;
-      color: var(--c2, #00ffcc);
-      white-space: nowrap;
-      z-index: 20;
-      pointer-events: none;
-      opacity: 0;
-      transition: transform .25s cubic-bezier(.34,1.56,.64,1), opacity .25s;
-      text-shadow: 0 0 6px var(--c2, #00ffcc);
-      max-width: 280px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    #event-toast.visible {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-
-    /* Halo d'événement (pulse color) */
-    .event-ring {
-      position: absolute; inset: -4px;
-      border-radius: inherit;
-      pointer-events: none; z-index: 7;
-      opacity: 0;
-      transition: opacity .1s;
-      border: 3px solid transparent;
-    }
-    .event-ring.flash {
-      opacity: 1;
-      animation: ring-fade .7s ease-out forwards;
-    }
-    @keyframes ring-fade {
-      0%   { opacity: 1; }
-      100% { opacity: 0; }
-    }
-
-    /* Statut connexion */
-    #status-dot {
-      position: absolute;
-      bottom: 8px; right: 10px;
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: #333;
-      z-index: 20;
-      transition: background .3s;
-    }
-    #status-dot.connected    { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
-    #status-dot.connecting   { background: #ffaa00; box-shadow: 0 0 6px #ffaa00; }
-    #status-dot.disconnected { background: #ff2200; box-shadow: 0 0 6px #ff2200; }
+    #event-toast.visible{transform:translateX(-50%) translateY(0);opacity:1;}
+    .event-ring{position:absolute;inset:-4px;border-radius:inherit;pointer-events:none;z-index:7;opacity:0;transition:opacity .1s;border:3px solid transparent;}
+    .event-ring.flash{opacity:1;animation:ring-fade .7s ease-out forwards;}
+    @keyframes ring-fade{0%{opacity:1}100%{opacity:0}}
+    #status-dot{position:absolute;bottom:8px;right:10px;width:6px;height:6px;border-radius:50%;background:#333;z-index:20;transition:background .3s;}
+    #status-dot.connected{background:#00ff88;box-shadow:0 0 6px #00ff88;}
+    #status-dot.connecting{background:#ffaa00;box-shadow:0 0 6px #ffaa00;}
+    #status-dot.disconnected{background:#ff2200;box-shadow:0 0 6px #ff2200;}
   </style>
-
   <svg width="0" height="0" style="position:absolute;pointer-events:none">
     <defs>
       <filter id="bulge-soft" x="-5%" y="-5%" width="110%" height="110%">
@@ -121,378 +56,157 @@
   </div>
 
   <script src="./js/vendor/web-eye-animation.js"></script>
+  <link rel="stylesheet" href="./css/eye-override.css">
+
   <script>
-  // ══ CONFIG ═══════════════════════════════════════════
-  const COLOR_PRESETS = {
-    default:  { c1:'#d6fff5', c2:'#00ffcc', c3:'#00b3ff', glow:'#00ccff', border:'#00b3ff' },
-    red:      { c1:'#fff0f0', c2:'#ff3333', c3:'#cc0000', glow:'#ff2200', border:'#ff2200' },
-    green:    { c1:'#f0fff4', c2:'#00ff88', c3:'#00cc44', glow:'#00ff66', border:'#00cc44' },
-    yellow:   { c1:'#fffef0', c2:'#ffe600', c3:'#cc9900', glow:'#ffcc00', border:'#ddaa00' },
-    nitro:    { c1:'#e8f0ff', c2:'#7744ff', c3:'#3300cc', glow:'#6633ff', border:'#5522ee' },
-    red_hot:  { c1:'#fff5e0', c2:'#ff8800', c3:'#ff2200', glow:'#ff5500', border:'#ff4400' },
-    ice:      { c1:'#ffffff', c2:'#aaddff', c3:'#3399ff', glow:'#88ccff', border:'#55aaff' },
-    pink:     { c1:'#fff0f8', c2:'#ff66cc', c3:'#cc0077', glow:'#ff44aa', border:'#ee33aa' },
-    gold:     { c1:'#fffbe8', c2:'#ffd700', c3:'#b8860b', glow:'#ffcc00', border:'#d4aa00' },
-    void_:    { c1:'#f0e8ff', c2:'#aa00ff', c3:'#440066', glow:'#9900ff', border:'#7700cc' },
+  const COLOR_PRESETS={
+    default:{c1:'#d6fff5',c2:'#00ffcc',c3:'#00b3ff',glow:'#00ccff',border:'#00b3ff'},
+    red:{c1:'#fff0f0',c2:'#ff3333',c3:'#cc0000',glow:'#ff2200',border:'#ff2200'},
+    green:{c1:'#f0fff4',c2:'#00ff88',c3:'#00cc44',glow:'#00ff66',border:'#00cc44'},
+    yellow:{c1:'#fffef0',c2:'#ffe600',c3:'#cc9900',glow:'#ffcc00',border:'#ddaa00'},
+    nitro:{c1:'#e8f0ff',c2:'#7744ff',c3:'#3300cc',glow:'#6633ff',border:'#5522ee'},
+    red_hot:{c1:'#fff5e0',c2:'#ff8800',c3:'#ff2200',glow:'#ff5500',border:'#ff4400'},
+    ice:{c1:'#ffffff',c2:'#aaddff',c3:'#3399ff',glow:'#88ccff',border:'#55aaff'},
+    pink:{c1:'#fff0f8',c2:'#ff66cc',c3:'#cc0077',glow:'#ff44aa',border:'#ee33aa'},
+    gold:{c1:'#fffbe8',c2:'#ffd700',c3:'#b8860b',glow:'#ffcc00',border:'#d4aa00'},
+    void_:{c1:'#f0e8ff',c2:'#aa00ff',c3:'#440066',glow:'#9900ff',border:'#7700cc'},
   };
-  const P = new URLSearchParams(location.search);
-  const colorKey = P.get('preset') || 'default';
-  const frameKey = P.get('frame')  || 'oval';
+  const P=new URLSearchParams(location.search);
+  const colorKey=P.get('preset')||'default';
+  const frameKey=P.get('frame')||'oval';
+  const CHANNEL=P.get('channel')||'mutenrock';
+  const CLIENT_ID=P.get('client_id')||'';
+  const ACCESS_TOKEN=P.get('token')||'';
+  const BROADCASTER_ID=P.get('broadcaster')||'';
+  const KORIGAN_WS=P.get('ws')||'';
+  const EVENTSUB_URL='wss://eventsub.wss.twitch.tv/ws';
+  const FRAME_CONFIGS={none:{w:320,h:190,radius:'0'},oval:{w:308,h:178,radius:'48% / 38%'},square:{w:190,h:190,radius:'8px'},round:{w:190,h:190,radius:'50%'}};
+  const colorBase=COLOR_PRESETS[colorKey]||COLOR_PRESETS.default;
+  const border=P.get('border')||colorBase.border;
+  const frameConf=FRAME_CONFIGS[frameKey]||FRAME_CONFIGS.oval;
+  const frameEl=document.getElementById('frame');
+  const eyeEl=document.getElementById('eye');
+  const crtInner=document.getElementById('crt-inner');
+  frameEl.style.width=frameConf.w+'px'; frameEl.style.height=frameConf.h+'px';
+  frameEl.style.borderRadius=frameConf.radius;
+  eyeEl.style.width=frameConf.w+'px';    eyeEl.style.height=frameConf.h+'px';
+  crtInner.style.width=frameConf.w+'px'; crtInner.style.height=frameConf.h+'px';
+  crtInner.style.filter='url(#bulge-soft)';
+  if(frameKey!=='none') frameEl.style.boxShadow=[`0 0 0 2px ${border}`,`0 0 10px 4px ${border}cc`,`0 0 28px 7px ${border}77`,`inset 0 0 18px 4px ${border}22`].join(',');
+  const hxG=colorBase.glow.replace('#','');
+  eyeEl.style.setProperty('--c1',colorBase.c1);eyeEl.style.setProperty('--c2',colorBase.c2);eyeEl.style.setProperty('--c3',colorBase.c3);
+  eyeEl.style.setProperty('--glow',`rgba(${parseInt(hxG.slice(0,2),16)},${parseInt(hxG.slice(2,4),16)},${parseInt(hxG.slice(4,6),16)},.85)`);
 
-  // ══ Twitch EventSub WebSocket ══════════════════════════
-  // Pour activer : fournir ?token=USER_OAUTH_TOKEN&client_id=APP_CLIENT_ID&broadcaster_id=NUMERIC_ID
-  // OU utiliser le serveur EventSub de Korigan (voir obs-lemegeton-eventsub.html)
-  //
-  // MODE DEMO : sans token, le chat Twitch public est parsé via iframe postMessage
-  // (Twitch bloque l'embedding direct hors dev, prévoir un relay WS)
-  //
-  // ══ CONFIGURATION ═════════════════════════════════
-  const CHANNEL      = P.get('channel')       || 'mutenrock';
-  const CLIENT_ID    = P.get('client_id')     || '';
-  const ACCESS_TOKEN = P.get('token')         || '';
-  const BROADCASTER_ID = P.get('broadcaster') || '';
-  // URL du broadcast WS Korigan (si le serveur eventsub tourne)
-  const KORIGAN_WS   = P.get('ws')            || '';
-
-  const EVENTSUB_URL = 'wss://eventsub.wss.twitch.tv/ws';
-
-  // ══ APPLICATION COULEURS + FRAME ═════════════════════
-  const FRAME_CONFIGS = {
-    none:   { w:320, h:190, radius:'0' },
-    oval:   { w:308, h:178, radius:'48% / 38%' },
-    square: { w:190, h:190, radius:'8px' },
-    round:  { w:190, h:190, radius:'50%' },
+  const EVENT_REACTIONS={
+    'channel.follow':{emotion:'love',ringColor:'#ff44aa',label:u=>`\u2665 ${u} follow !`,gazeY:-120},
+    'channel.subscribe':{emotion:'excitement',ringColor:'#aa00ff',label:u=>`\u2605 ${u} sub !`,gazeY:-100},
+    'channel.subscription.gift':{emotion:'surprise',ringColor:'#ffd700',label:(u,e)=>`\u2728 ${u} offre ${e.total||1} sub(s) !`,gazeY:-100},
+    'channel.raid':{emotion:'surprise',ringColor:'#ff8800',label:(u,e)=>`\u26a1 RAID de ${u} (${e.viewers||'?'}) !`,gazeY:-150,shakeFrame:true},
+    'channel.cheer':{emotion:'joy',ringColor:'#00ccff',label:(u,e)=>`\u2666 ${u} : ${e.bits||'?'} bits !`,gazeY:-80},
+    'channel.channel_points_custom_reward_redemption.add':{emotion:'confusion',ringColor:'#00ffcc',label:(u,e)=>`\u25cf ${u} : ${e.reward?.title||'reward'} !`,gazeY:0},
+    'chat.message':{emotion:null,ringColor:null,label:null},
   };
-  const colorBase = COLOR_PRESETS[colorKey] || COLOR_PRESETS.default;
-  const c2 = P.get('c2') || colorBase.c2;
-  const border = P.get('border') || colorBase.border;
-  const frameConf = FRAME_CONFIGS[frameKey] || FRAME_CONFIGS.oval;
 
-  const frameEl  = document.getElementById('frame');
-  const eyeEl    = document.getElementById('eye');
-  const crtInner = document.getElementById('crt-inner');
-
-  frameEl.style.width = frameConf.w + 'px';
-  frameEl.style.height = frameConf.h + 'px';
-  frameEl.style.borderRadius = frameConf.radius;
-  eyeEl.style.width = frameConf.w + 'px';
-  eyeEl.style.height = frameConf.h + 'px';
-  crtInner.style.filter = 'url(#bulge-soft)';
-
-  if (frameKey !== 'none') {
-    frameEl.style.boxShadow = [
-      `0 0 0 2px ${border}`,
-      `0 0 10px 4px ${border}cc`,
-      `0 0 28px 7px ${border}77`,
-      `inset 0 0 18px 4px ${border}22`,
-    ].join(',');
+  const toast=document.getElementById('event-toast');
+  const ring=document.getElementById('event-ring');
+  let toastTimer=null;
+  function showEvent(type,user,ev){
+    const rx=EVENT_REACTIONS[type]; if(!rx) return;
+    if(rx.emotion&&window.eyes?.emotion){ window.eyes.emotion(rx.emotion); setTimeout(()=>window.eyes.emotion?.('joy'),4000); }
+    if(window.eyes?.target&&rx.gazeY!==undefined) window.eyes.target(Math.round((Math.random()-.5)*80),rx.gazeY,700+Math.round(Math.random()*300));
+    if(rx.ringColor){ ring.style.borderColor=rx.ringColor; ring.classList.remove('flash'); void ring.offsetWidth; ring.classList.add('flash'); }
+    if(rx.shakeFrame){ let s=0; const si=setInterval(()=>{ frameEl.style.transform=`translate(${(Math.random()-.5)*6}px,${(Math.random()-.5)*4}px)`; if(++s>10){clearInterval(si);frameEl.style.transform='';} },50); }
+    if(rx.label){ toast.textContent=rx.label(user,ev); toast.classList.add('visible'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove('visible'),4500); }
   }
 
-  const hxG = colorBase.glow.replace('#','');
-  eyeEl.style.setProperty('--c1', colorBase.c1);
-  eyeEl.style.setProperty('--c2', colorBase.c2);
-  eyeEl.style.setProperty('--c3', colorBase.c3);
-  eyeEl.style.setProperty('--glow', `rgba(${parseInt(hxG.slice(0,2),16)},${parseInt(hxG.slice(2,4),16)},${parseInt(hxG.slice(4,6),16)},.85)`);
-
-  // ══ MAPPING ÉVÉNEMENTS TWITCH → RÉACTIONS ════════════
-  const EVENT_REACTIONS = {
-    'channel.follow': {
-      emotion: 'love',
-      ringColor: '#ff44aa',
-      label: u => `♥ ${u} follow !`,
-      gazeY: -120,
-    },
-    'channel.subscribe': {
-      emotion: 'excitement',
-      ringColor: '#aa00ff',
-      label: u => `★ ${u} sub !`,
-      gazeY: -100,
-    },
-    'channel.subscription.gift': {
-      emotion: 'surprise',
-      ringColor: '#ffd700',
-      label: (u, e) => `✨ ${u} offre ${e.total || 1} sub(s) !`,
-      gazeY: -100,
-    },
-    'channel.raid': {
-      emotion: 'surprise',
-      ringColor: '#ff8800',
-      label: (u, e) => `⚡ RAID de ${u} (${e.viewers || '?'}) !`,
-      gazeY: -150,
-      shakeFrame: true,
-    },
-    'channel.cheer': {
-      emotion: 'joy',
-      ringColor: '#00ccff',
-      label: (u, e) => `♦ ${u} : ${e.bits || '?'} bits !`,
-      gazeY: -80,
-    },
-    'channel.channel_points_custom_reward_redemption.add': {
-      emotion: 'confusion',
-      ringColor: '#00ffcc',
-      label: (u, e) => `● ${u} : ${e.reward?.title || 'reward'} !`,
-      gazeY: 0,
-    },
-    // Chat IRC PRIVMSG (mode TMI sans EventSub)
-    'chat.message': {
-      emotion: null, // micro-réaction aléatoire
-      ringColor: null,
-      label: null,
-    },
-  };
-
-  // ══ AFFICHAGE TOAST + RING ═════════════════════════
-  const toast = document.getElementById('event-toast');
-  const ring  = document.getElementById('event-ring');
-  let toastTimer = null;
-
-  function showEvent(type, displayUser, rawEvent) {
-    const rx = EVENT_REACTIONS[type];
-    if (!rx) return;
-
-    // Émotion
-    if (rx.emotion && window.eyes?.emotion) {
-      window.eyes.emotion(rx.emotion);
-      setTimeout(() => window.eyes.emotion?.('joy'), 4000);
-    }
-
-    // Regard vers le haut/halo
-    if (window.eyes?.target && rx.gazeY !== undefined) {
-      window.eyes.target(
-        Math.round((Math.random()-0.5)*80),
-        rx.gazeY,
-        700 + Math.round(Math.random()*300)
-      );
-    }
-
-    // Ring flash
-    if (rx.ringColor) {
-      ring.style.borderColor = rx.ringColor;
-      ring.classList.remove('flash');
-      void ring.offsetWidth; // reflow force
-      ring.classList.add('flash');
-    }
-
-    // Shake cadre sur raid
-    if (rx.shakeFrame) {
-      let s = 0;
-      const shake = setInterval(() => {
-        frameEl.style.transform = `translate(${(Math.random()-0.5)*6}px, ${(Math.random()-0.5)*4}px)`;
-        if (++s > 10) { clearInterval(shake); frameEl.style.transform = ''; }
-      }, 50);
-    }
-
-    // Toast
-    if (rx.label) {
-      const text = rx.label(displayUser, rawEvent);
-      toast.textContent = text;
-      toast.classList.add('visible');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('visible'), 4500);
-    }
-  }
-
-  // ══ MODE A : KORIGAN WS BROADCAST (si ?ws= fourni) ═════
-  function connectKoriganWS(url) {
-    const ws = new WebSocket(url);
-    const dot = document.getElementById('status-dot');
-    dot.className = 'connecting';
-
-    ws.onopen = () => { dot.className = 'connected'; console.log('[ws] Korigan connecté'); };
-    ws.onclose = () => {
-      dot.className = 'disconnected';
-      setTimeout(() => connectKoriganWS(url), 10_000);
-    };
-    ws.onerror = () => dot.className = 'disconnected';
-
-    ws.onmessage = ({ data }) => {
-      try {
-        const msg = JSON.parse(data);
-        if (msg.type === 'lemegeton:emotion' && window.eyes?.emotion) {
-          window.eyes.emotion(msg.emotion);
-          setTimeout(() => window.eyes.emotion?.('joy'), 4000);
-        }
-        if (msg.type === 'twitch:eventsub') {
-          const user = msg.payload?.user_name || msg.payload?.from_broadcaster_user_name || 'viewer';
-          showEvent(msg.eventType, user, msg.payload);
-        }
-      } catch(e) {}
+  function connectKoriganWS(url){
+    const ws=new WebSocket(url),dot=document.getElementById('status-dot');
+    dot.className='connecting';
+    ws.onopen=()=>{ dot.className='connected'; };
+    ws.onclose=()=>{ dot.className='disconnected'; setTimeout(()=>connectKoriganWS(url),10000); };
+    ws.onerror=()=>dot.className='disconnected';
+    ws.onmessage=({data})=>{
+      try{
+        const msg=JSON.parse(data);
+        if(msg.type==='lemegeton:emotion'&&window.eyes?.emotion){ window.eyes.emotion(msg.emotion); setTimeout(()=>window.eyes.emotion?.('joy'),4000); }
+        if(msg.type==='twitch:eventsub'){ const u=msg.payload?.user_name||msg.payload?.from_broadcaster_user_name||'viewer'; showEvent(msg.eventType,u,msg.payload); }
+      }catch(e){}
     };
   }
 
-  // ══ MODE B : TWITCH EVENTSUB DIRECT (si ?token= + ?client_id= + ?broadcaster=) ══
-  async function subscribeEventSub(sessionId) {
-    const SUBS = [
-      { type:'channel.follow',          version:'2', condition:{ broadcaster_user_id:BROADCASTER_ID, moderator_user_id:BROADCASTER_ID } },
-      { type:'channel.subscribe',       version:'1', condition:{ broadcaster_user_id:BROADCASTER_ID } },
-      { type:'channel.subscription.gift', version:'1', condition:{ broadcaster_user_id:BROADCASTER_ID } },
-      { type:'channel.raid',            version:'1', condition:{ to_broadcaster_user_id:BROADCASTER_ID } },
-      { type:'channel.cheer',           version:'1', condition:{ broadcaster_user_id:BROADCASTER_ID } },
-      { type:'channel.channel_points_custom_reward_redemption.add', version:'1', condition:{ broadcaster_user_id:BROADCASTER_ID } },
+  async function subscribeEventSub(sid){
+    const SUBS=[
+      {type:'channel.follow',version:'2',condition:{broadcaster_user_id:BROADCASTER_ID,moderator_user_id:BROADCASTER_ID}},
+      {type:'channel.subscribe',version:'1',condition:{broadcaster_user_id:BROADCASTER_ID}},
+      {type:'channel.subscription.gift',version:'1',condition:{broadcaster_user_id:BROADCASTER_ID}},
+      {type:'channel.raid',version:'1',condition:{to_broadcaster_user_id:BROADCASTER_ID}},
+      {type:'channel.cheer',version:'1',condition:{broadcaster_user_id:BROADCASTER_ID}},
+      {type:'channel.channel_points_custom_reward_redemption.add',version:'1',condition:{broadcaster_user_id:BROADCASTER_ID}},
     ];
-    for (const sub of SUBS) {
-      try {
-        await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
-          method: 'POST',
-          headers: {
-            'Client-Id': CLIENT_ID,
-            'Authorization': `Bearer ${ACCESS_TOKEN}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ ...sub, transport:{ method:'websocket', session_id:sessionId } }),
-        });
-      } catch(e) { console.warn('[eventsub] sub error:', sub.type, e.message); }
+    for(const sub of SUBS){
+      try{ await fetch('https://api.twitch.tv/helix/eventsub/subscriptions',{method:'POST',headers:{'Client-Id':CLIENT_ID,'Authorization':`Bearer ${ACCESS_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({...sub,transport:{method:'websocket',session_id:sid}})}); }catch(e){}
     }
   }
-
-  function connectEventSubDirect() {
-    if (!CLIENT_ID || !ACCESS_TOKEN || !BROADCASTER_ID) return;
-    const dot = document.getElementById('status-dot');
-    const ws = new WebSocket(EVENTSUB_URL);
-    dot.className = 'connecting';
-
-    ws.onopen  = () => console.log('[eventsub] WS ouvert');
-    ws.onclose = () => { dot.className = 'disconnected'; setTimeout(connectEventSubDirect, 10_000); };
-    ws.onerror = () => dot.className = 'disconnected';
-
-    ws.onmessage = ({ data }) => {
-      const msg = JSON.parse(data);
-      const mtype = msg.metadata?.message_type;
-
-      if (mtype === 'session_welcome') {
-        dot.className = 'connected';
-        subscribeEventSub(msg.payload.session.id);
-      }
-      if (mtype === 'session_reconnect') {
-        ws.close();
-        connectEventSubDirect();
-      }
-      if (mtype === 'notification') {
-        const etype = msg.metadata.subscription_type;
-        const ev    = msg.payload.event;
-        const user  = ev.user_name || ev.from_broadcaster_user_name || ev.gifter_user_name || 'viewer';
-        showEvent(etype, user, ev);
-      }
+  function connectEventSubDirect(){
+    if(!CLIENT_ID||!ACCESS_TOKEN||!BROADCASTER_ID) return;
+    const dot=document.getElementById('status-dot'),ws=new WebSocket(EVENTSUB_URL);
+    dot.className='connecting';
+    ws.onclose=()=>{ dot.className='disconnected'; setTimeout(connectEventSubDirect,10000); };
+    ws.onerror=()=>dot.className='disconnected';
+    ws.onmessage=({data})=>{
+      const msg=JSON.parse(data),mt=msg.metadata?.message_type;
+      if(mt==='session_welcome'){ dot.className='connected'; subscribeEventSub(msg.payload.session.id); }
+      if(mt==='session_reconnect'){ ws.close(); connectEventSubDirect(); }
+      if(mt==='notification'){ const et=msg.metadata.subscription_type,ev=msg.payload.event; showEvent(et,ev.user_name||ev.from_broadcaster_user_name||ev.gifter_user_name||'viewer',ev); }
     };
   }
-
-  // ══ MODE C : TMI IRC (chat basique, sans EventSub) ════════
-  // Connexion IRC Twitch via WebSocket TLS (port 443 fallback)
-  function connectTMI() {
-    if (KORIGAN_WS || (CLIENT_ID && ACCESS_TOKEN)) return; // mode prioritaire actif
-    const dot = document.getElementById('status-dot');
-    const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-    dot.className = 'connecting';
-    let buf = '';
-
-    ws.onopen = () => {
-      ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-      ws.send(`PASS oauth:anonymous`);
-      ws.send(`NICK justinfan${Math.floor(Math.random()*99999)}`);
-      ws.send(`JOIN #${CHANNEL}`);
-      dot.className = 'connected';
-    };
-    ws.onclose = () => { dot.className = 'disconnected'; setTimeout(connectTMI, 10_000); };
-    ws.onerror = () => dot.className = 'disconnected';
-
-    ws.onmessage = ({ data }) => {
-      buf += data;
-      const lines = buf.split('\r\n');
-      buf = lines.pop();
-      lines.forEach(line => {
-        if (!line) return;
-        if (line.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
-        // PRIVMSG
-        const m = line.match(/^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.*)$/);
-        if (m) {
-          const author = m[1];
-          const text   = m[2].trim();
-          // Micro-réaction aléatoire au chat (probabilité 5%)
-          if (Math.random() < 0.05 && window.eyes?.emotion) {
-            const quick = ['joy','surprise','confusion'];
-            window.eyes.emotion(quick[Math.floor(Math.random()*quick.length)]);
-            setTimeout(() => window.eyes.emotion?.('joy'), 2000);
+  function connectTMI(){
+    if(KORIGAN_WS||(CLIENT_ID&&ACCESS_TOKEN)) return;
+    const dot=document.getElementById('status-dot'),ws=new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+    let buf='';
+    dot.className='connecting';
+    ws.onopen=()=>{ ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands'); ws.send(`PASS oauth:anonymous`); ws.send(`NICK justinfan${Math.floor(Math.random()*99999)}`); ws.send(`JOIN #${CHANNEL}`); dot.className='connected'; };
+    ws.onclose=()=>{ dot.className='disconnected'; setTimeout(connectTMI,10000); };
+    ws.onerror=()=>dot.className='disconnected';
+    ws.onmessage=({data})=>{
+      buf+=data; const lines=buf.split('\r\n'); buf=lines.pop();
+      lines.forEach(line=>{
+        if(!line) return;
+        if(line.startsWith('PING')){ ws.send('PONG :tmi.twitch.tv'); return; }
+        const m=line.match(/^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG #[^ ]+ :(.*)$/);
+        if(m){
+          const txt=m[2].trim().toLowerCase();
+          if(Math.random()<.05&&window.eyes?.emotion){ const q=['joy','surprise','confusion']; window.eyes.emotion(q[Math.floor(Math.random()*q.length)]); setTimeout(()=>window.eyes.emotion?.('joy'),2000); }
+          if(txt.includes('lemegeton')||txt.includes('robot')||txt.includes('@bot')){
+            if(window.eyes?.emotion){ window.eyes.emotion('surprise'); setTimeout(()=>window.eyes.emotion?.('joy'),3000); }
           }
-          // Détection mots-clés (peut être étendu)
-          const lower = text.toLowerCase();
-          if (lower.includes('lemegeton') || lower.includes('robot') || lower.includes('@bot')) {
-            if (window.eyes?.emotion) {
-              window.eyes.emotion('surprise');
-              setTimeout(() => window.eyes.emotion?.('joy'), 3000);
-            }
-          }
-          if (lower.includes('lol') || lower.includes('haha') || lower.includes('xd')) {
-            if (window.eyes?.emotion) window.eyes.emotion('joy');
-          }
-          if (lower.includes('gg') || lower.includes('bravo') || lower.includes('nice')) {
-            if (window.eyes?.emotion) window.eyes.emotion('love');
-          }
+          if(txt.includes('lol')||txt.includes('haha')||txt.includes('xd')) if(window.eyes?.emotion) window.eyes.emotion('joy');
+          if(txt.includes('gg')||txt.includes('bravo')||txt.includes('nice')) if(window.eyes?.emotion) window.eyes.emotion('love');
         }
       });
     };
   }
 
-  // ══ MOTEUR COMPORTEMENTAL BASE ═══════════════════════
-  let t = 0, seed = Math.random() * 1000;
-  let gx = 0, gy = 0;
-  function sn(x, s) { const v = Math.sin(x*1.234+s*7.89)*43758.5453; return (v-Math.floor(v))*2-1; }
+  let t=0,seed=Math.random()*1000,gx=0,gy=0;
+  function sn(x,s){const v=Math.sin(x*1.234+s*7.89)*43758.5453;return(v-Math.floor(v))*2-1;}
+  function jitter(b,r){return b*(1+(Math.random()-.5)*r);}
+  const EMOTIONS=['joy','surprise','confusion','love','sleepy','excitement'];
+  const W=[12,4,5,7,3,9];
+  let lastEmo=null;
+  function pickEmo(){ const pool=[]; EMOTIONS.forEach((e,i)=>{if(e!==lastEmo) for(let j=0;j<W[i];j++) pool.push(e);}); lastEmo=pool[Math.floor(Math.random()*pool.length)]; return lastEmo; }
+  function microLoop(){ t+=.012+Math.random()*.008; if(window.eyes?.move) window.eyes.move(160+gx+sn(t,seed)*8,95+gy+sn(t,seed+100)*5); setTimeout(microLoop,55+Math.random()*50); }
+  function scheduleEmo(){ setTimeout(()=>{ if(window.eyes?.emotion) window.eyes.emotion(pickEmo()); scheduleEmo(); },jitter(8000,.8)); }
+  function scheduleGaze(){ setTimeout(()=>{ gx=(Math.random()-.5)*120;gy=(Math.random()-.5)*80; if(window.eyes?.target) window.eyes.target(Math.round(gx*2),Math.round(gy*1.5),700+Math.round(Math.random()*500)); scheduleGaze(); },jitter(3500,.8)); }
 
-  function microLoop() {
-    t += 0.012 + Math.random() * 0.008;
-    if (window.eyes?.move) window.eyes.move(160+gx+sn(t,seed)*8, 95+gy+sn(t,seed+100)*5);
-    setTimeout(microLoop, 55 + Math.random() * 50);
-  }
-
-  function jitter(base, r) { return base * (1 + (Math.random()-.5) * r); }
-
-  const EMOTIONS = ['joy','surprise','confusion','love','sleepy','excitement'];
-  const W = [12,4,5,7,3,9];
-  let lastEmo = null;
-  function pickEmo() {
-    const pool = [];
-    EMOTIONS.forEach((e,i) => { if (e!==lastEmo) for(let j=0;j<W[i];j++) pool.push(e); });
-    lastEmo = pool[Math.floor(Math.random()*pool.length)];
-    return lastEmo;
-  }
-
-  function scheduleEmo() {
-    setTimeout(() => {
-      // Seulement si pas d'événement Twitch récent
-      if (window.eyes?.emotion) window.eyes.emotion(pickEmo());
-      scheduleEmo();
-    }, jitter(8000, 0.8));
-  }
-
-  function scheduleGaze() {
-    setTimeout(() => {
-      gx = (Math.random()-.5)*120; gy = (Math.random()-.5)*80;
-      if (window.eyes?.target) window.eyes.target(Math.round(gx*2), Math.round(gy*1.5), 700+Math.round(Math.random()*500));
-      scheduleGaze();
-    }, jitter(3500, 0.8));
-  }
-
-  // ══ BOOT ══════════════════════════════════════════
-  function boot() {
-    if (!window.eyes?.emotion) { requestAnimationFrame(boot); return; }
+  function boot(){
+    if(!window.eyes?.emotion){requestAnimationFrame(boot);return;}
     window.eyes.emotion('joy');
-    const offset = Math.random() * 2000;
-    setTimeout(() => {
-      microLoop();
-      scheduleEmo();
-      scheduleGaze();
-      // Choix du mode de connexion par ordre de priorité
-      if (KORIGAN_WS) {
-        connectKoriganWS(KORIGAN_WS);
-      } else if (CLIENT_ID && ACCESS_TOKEN && BROADCASTER_ID) {
-        connectEventSubDirect();
-      } else {
-        // Fallback : IRC anonyme (chat seulement, pas de follow/sub/raid)
-        connectTMI();
-        // Status dot orange = mode limité
-        document.getElementById('status-dot').className = 'connecting';
-        setTimeout(() => document.getElementById('status-dot').className = 'connected', 3000);
-      }
-    }, offset);
+    setTimeout(()=>{
+      microLoop();scheduleEmo();scheduleGaze();
+      if(KORIGAN_WS) connectKoriganWS(KORIGAN_WS);
+      else if(CLIENT_ID&&ACCESS_TOKEN&&BROADCASTER_ID) connectEventSubDirect();
+      else connectTMI();
+    },Math.random()*2000);
   }
   boot();
   </script>
