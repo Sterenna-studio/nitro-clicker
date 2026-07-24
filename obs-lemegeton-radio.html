@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>LEMEGETON — Radio Reactif</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 320px; height: 190px;
+      background: transparent;
+      overflow: hidden;
+    }
+    body { display: grid; place-items: center; }
+
+    .obs-frame {
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow .15s;
+    }
+    .crt-inner { width:100%; height:100%; position:relative; }
+    .eye-container { position:relative; }
+    .eye-container .eye {
+      background: radial-gradient(circle at 50% 42%,
+        var(--c1,#d6fff5) 0%, var(--c2,#00ffcc) 42%, var(--c3,#00b3ff) 92%) !important;
+      box-shadow: 0 0 20px var(--glow,rgba(0,255,204,.85)), 0 0 44px rgba(0,180,255,.5) !important;
+      transition: transform .08s ease-out;
+    }
+    .scanlines {
+      position:absolute; inset:0; pointer-events:none; z-index:2;
+      background: repeating-linear-gradient(0deg,rgba(0,255,204,.045) 0 1px,transparent 1px 4px);
+      opacity:.7;
+    }
+    .vignette {
+      position:absolute; inset:0; pointer-events:none; z-index:3;
+      background: radial-gradient(ellipse 82% 74% at 50% 50%, transparent 42%, rgba(0,0,0,.28) 100%);
+    }
+    .bump-vignette {
+      position:absolute; inset:0; pointer-events:none; z-index:4; border-radius:inherit;
+    }
+    .crt-glare {
+      position:absolute; inset:0; pointer-events:none; z-index:5; border-radius:inherit;
+      background: radial-gradient(ellipse 55% 35% at 34% 22%, rgba(255,255,255,.08) 0%, transparent 70%);
+    }
+
+    /* Barre de niveau audio */
+    #audio-bar {
+      position: absolute;
+      bottom: 6px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 3px; align-items: flex-end;
+      z-index: 10; pointer-events: none;
+    }
+    #audio-bar span {
+      width: 4px;
+      background: var(--c2, #00ffcc);
+      border-radius: 2px 2px 0 0;
+      opacity: .7;
+      transition: height .05s ease-out;
+    }
+
+    /* Info titre en cours */
+    #now-playing {
+      position: absolute;
+      bottom: 22px; left: 0; right: 0;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+      font-size: 8px;
+      letter-spacing: .1em;
+      color: var(--c2, #00ffcc);
+      opacity: .55;
+      z-index: 10;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 12px;
+      pointer-events: none;
+      text-shadow: 0 0 6px var(--c2, #00ffcc);
+    }
+
+    /* Pulse ring au beat */
+    .beat-ring {
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      pointer-events: none; z-index: 8;
+      box-shadow: inset 0 0 0 0 transparent;
+      transition: box-shadow .06s ease-out;
+    }
+  </style>
+
+  <svg width="0" height="0" style="position:absolute;pointer-events:none">
+    <defs>
+      <filter id="bulge-soft" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" seed="2" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="bulge-mid" x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="1" seed="5" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+</head>
+<body>
+  <div class="obs-frame" id="frame">
+    <div class="crt-inner" id="crt-inner">
+      <div class="eye-container" id="eye"></div>
+      <div class="scanlines"></div>
+      <div class="vignette"></div>
+      <div class="bump-vignette"></div>
+    </div>
+    <div class="crt-glare"></div>
+    <div class="beat-ring" id="beat-ring"></div>
+    <div id="now-playing"></div>
+    <div id="audio-bar"></div>
+  </div>
+
+  <script src="./js/vendor/web-eye-animation.js"></script>
+  <script>
+  // ══ CONFIG URL PARAMS ════════════════════════════════
+  const COLOR_PRESETS = {
+    default:  { c1:'#d6fff5', c2:'#00ffcc', c3:'#00b3ff', glow:'#00ccff', border:'#00b3ff' },
+    red:      { c1:'#fff0f0', c2:'#ff3333', c3:'#cc0000', glow:'#ff2200', border:'#ff2200' },
+    green:    { c1:'#f0fff4', c2:'#00ff88', c3:'#00cc44', glow:'#00ff66', border:'#00cc44' },
+    yellow:   { c1:'#fffef0', c2:'#ffe600', c3:'#cc9900', glow:'#ffcc00', border:'#ddaa00' },
+    nitro:    { c1:'#e8f0ff', c2:'#7744ff', c3:'#3300cc', glow:'#6633ff', border:'#5522ee' },
+    red_hot:  { c1:'#fff5e0', c2:'#ff8800', c3:'#ff2200', glow:'#ff5500', border:'#ff4400' },
+    ice:      { c1:'#ffffff', c2:'#aaddff', c3:'#3399ff', glow:'#88ccff', border:'#55aaff' },
+    pink:     { c1:'#fff0f8', c2:'#ff66cc', c3:'#cc0077', glow:'#ff44aa', border:'#ee33aa' },
+    gold:     { c1:'#fffbe8', c2:'#ffd700', c3:'#b8860b', glow:'#ffcc00', border:'#d4aa00' },
+    void_:    { c1:'#f0e8ff', c2:'#aa00ff', c3:'#440066', glow:'#9900ff', border:'#7700cc' },
+  };
+  const FRAME_CONFIGS = {
+    none:   { w:320, h:190, radius:'0' },
+    oval:   { w:308, h:178, radius:'48% / 38%' },
+    square: { w:190, h:190, radius:'8px' },
+    round:  { w:190, h:190, radius:'50%' },
+  };
+  const BUMP_FILTERS = { none:null, soft:'bulge-soft', mid:'bulge-mid' };
+
+  const P = new URLSearchParams(location.search);
+  const colorKey = P.get('preset') || 'default';
+  const frameKey = P.get('frame')  || 'oval';
+  const bumpKey  = P.get('bump')   || 'soft';
+  const showBar  = P.get('bar') !== '0';
+  const showTitle = P.get('title') !== '0';
+  // URL du state radio (CORS public). Peut être surchargé par ?radio=
+  const RADIO_STATE_URL = P.get('radio') || 'https://korigan.sterenna.fr/api/radio/state';
+  // URL du stream audio pour l'analyse (peut être vide = analyse désactivée si CSP bloque)
+  const STREAM_URL = P.get('stream') || 'https://korigan.sterenna.fr/radio/chronicles.mp3';
+
+  const colorBase = COLOR_PRESETS[colorKey] || COLOR_PRESETS.default;
+  const c1 = P.get('c1') || colorBase.c1;
+  const c2 = P.get('c2') || colorBase.c2;
+  const c3 = P.get('c3') || colorBase.c3;
+  const glow   = P.get('glow')   || colorBase.glow;
+  const border = P.get('border') || colorBase.border;
+  const frameConf  = FRAME_CONFIGS[frameKey] || FRAME_CONFIGS.oval;
+  const bumpFilter = BUMP_FILTERS[bumpKey] ?? BUMP_FILTERS.soft;
+
+  // ══ APPLICATION FRAME & COULEURS ═════════════════════
+  const frameEl  = document.getElementById('frame');
+  const crtInner = document.getElementById('crt-inner');
+  const eyeEl    = document.getElementById('eye');
+
+  frameEl.style.width        = frameConf.w + 'px';
+  frameEl.style.height       = frameConf.h + 'px';
+  frameEl.style.borderRadius = frameConf.radius;
+  eyeEl.style.width  = frameConf.w + 'px';
+  eyeEl.style.height = frameConf.h + 'px';
+
+  if (bumpFilter) crtInner.style.filter = `url(#${bumpFilter})`;
+
+  if (frameKey !== 'none') {
+    frameEl.style.boxShadow = [
+      `0 0 0 2px ${border}`,
+      `0 0 10px 4px ${border}cc`,
+      `0 0 28px 7px ${border}77`,
+      `inset 0 0 18px 4px ${border}22`,
+    ].join(',');
+  }
+
+  eyeEl.style.setProperty('--c1', c1);
+  eyeEl.style.setProperty('--c2', c2);
+  eyeEl.style.setProperty('--c3', c3);
+  const hx = glow.replace('#','');
+  const _r=parseInt(hx.slice(0,2),16), _g=parseInt(hx.slice(2,4),16), _b=parseInt(hx.slice(4,6),16);
+  eyeEl.style.setProperty('--glow', `rgba(${_r},${_g},${_b},.85)`);
+
+  if (!showBar) document.getElementById('audio-bar').style.display = 'none';
+  if (!showTitle) document.getElementById('now-playing').style.display = 'none';
+
+  // ══ BARRE VU-MÈTRE (8 barres) ═════════════════════
+  const barEl = document.getElementById('audio-bar');
+  const NUM_BARS = 8;
+  const bars = [];
+  for (let i = 0; i < NUM_BARS; i++) {
+    const b = document.createElement('span');
+    b.style.height = '2px';
+    barEl.appendChild(b);
+    bars.push(b);
+  }
+
+  // ══ ANALYSE AUDIO WEB AUDIO API ═══════════════════
+  let analyser = null;
+  let freqData = null;
+  let audioCtx  = null;
+  let audioReady = false;
+
+  // Niveau courant (0-1)
+  let currentLevel = 0;
+  let beatCooldown  = 0;
+
+  async function initAudio() {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const resp = await fetch(STREAM_URL, { headers: { Range: 'bytes=0-' } });
+      if (!resp.ok) throw new Error('stream non disponible');
+      const reader = resp.body.getReader();
+      const mediaSource = audioCtx.createMediaStreamDestination();
+
+      // Approche simplifiée : on récupère un élément audio et on l'analyse
+      const audio = new Audio();
+      audio.crossOrigin = 'anonymous';
+      audio.src = STREAM_URL;
+      audio.volume = 0; // silencieux en OBS, analyse seulement
+
+      const source = audioCtx.createMediaElementSource(audio);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.7;
+      freqData = new Uint8Array(analyser.frequencyBinCount);
+
+      source.connect(analyser);
+      // Ne PAS connecter à destination : silencieux dans OBS
+      // (OBS capture l'audio du Browser Source via son système, pas besoin de lecture)
+
+      await audio.play();
+      audioReady = true;
+      console.log('[audio] analyse active');
+    } catch(e) {
+      console.warn('[audio] fallback mode (pas d analyse):', e.message);
+      // fallback : simulation bassée sur les metadata track:started
+      simulateFallback();
+    }
+  }
+
+  function simulateFallback() {
+    // Quand l'audio n'est pas analysable (CORS etc.), on simule
+    // un niveau bas avec des pics aléatoires synchronisés sur les changements de titre
+    setInterval(() => {
+      const base = 0.05 + Math.random() * 0.1;
+      updateVisuals(base, false);
+    }, 80);
+  }
+
+  function getLevel() {
+    if (!analyser || !freqData) return 0;
+    analyser.getByteFrequencyData(freqData);
+    // Moyenne bass (premiers 1/4 des bins)
+    const bassEnd = Math.floor(freqData.length / 4);
+    let sum = 0;
+    for (let i = 0; i < bassEnd; i++) sum += freqData[i];
+    return sum / (bassEnd * 255);
+  }
+
+  function getSpectrum() {
+    if (!analyser || !freqData) return new Array(NUM_BARS).fill(0);
+    analyser.getByteFrequencyData(freqData);
+    const step = Math.floor(freqData.length / NUM_BARS);
+    return Array.from({ length: NUM_BARS }, (_, i) =>
+      freqData[i * step] / 255
+    );
+  }
+
+  // ══ MAPPINGS AUDIO → ÉMOTIONS ════════════════════
+  // 0.0-0.2 = silence/doux  → sleepy / confusion
+  // 0.2-0.5 = medium        → joy / love
+  // 0.5-0.75 = fort         → excitement
+  // 0.75+   = pic           → surprise
+  const LEVEL_EMOTIONS = [
+    { threshold: 0.75, emotions: ['surprise', 'excitement'] },
+    { threshold: 0.5,  emotions: ['excitement', 'joy'] },
+    { threshold: 0.2,  emotions: ['joy', 'love'] },
+    { threshold: 0,    emotions: ['sleepy', 'confusion'] },
+  ];
+  let lastAudioEmo = null;
+  let audioEmoTimer = null;
+
+  function pickAudioEmotion(level) {
+    for (const entry of LEVEL_EMOTIONS) {
+      if (level >= entry.threshold) {
+        const pool = entry.emotions.filter(e => e !== lastAudioEmo);
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+    }
+    return 'joy';
+  }
+
+  // ══ MISE À JOUR VISUELS ══════════════════════════
+  const beatRing = document.getElementById('beat-ring');
+  let smoothLevel = 0;
+
+  function updateVisuals(level, usedAnalyser) {
+    smoothLevel = smoothLevel * 0.75 + level * 0.25;
+    currentLevel = smoothLevel;
+
+    // --- Barres spectrales
+    if (showBar) {
+      const spectrum = usedAnalyser ? getSpectrum() : new Array(NUM_BARS).fill(0).map(() => smoothLevel * (0.4 + Math.random() * 0.6));
+      bars.forEach((b, i) => {
+        const h = Math.max(2, Math.round(spectrum[i] * 24));
+        b.style.height = h + 'px';
+      });
+    }
+
+    // --- Scale des yeux proportionnel au niveau
+    const sc = 1 + smoothLevel * 0.12;
+    if (window.eyes) {
+      // micro-zoom sur beat
+      document.querySelectorAll('.eye').forEach(el => {
+        el.style.transform = `scale(${sc})`;
+      });
+    }
+
+    // --- Beat ring flash
+    if (beatCooldown <= 0 && smoothLevel > 0.55) {
+      beatRing.style.boxShadow = `inset 0 0 0 3px ${border}99`;
+      beatCooldown = 8;
+      setTimeout(() => { beatRing.style.boxShadow = 'none'; }, 120);
+    }
+    if (beatCooldown > 0) beatCooldown--;
+
+    // --- Changement d'émotion sur variation de niveau notable
+    if (!audioEmoTimer && Math.abs(level - currentLevel) > 0.15) {
+      audioEmoTimer = setTimeout(() => {
+        if (window.eyes?.emotion) {
+          const emo = pickAudioEmotion(currentLevel);
+          window.eyes.emotion(emo);
+          lastAudioEmo = emo;
+        }
+        audioEmoTimer = null;
+      }, 200 + Math.random() * 300);
+    }
+  }
+
+  // ══ BOUCLE D'ANALYSE (60 fps) ════════════════════
+  function analysisLoop() {
+    if (audioReady) {
+      const level = getLevel();
+      updateVisuals(level, true);
+    }
+    requestAnimationFrame(analysisLoop);
+  }
+
+  // ══ POLLING METADATA RADIO (toutes les 15s) ═════════
+  // GET /v1/radio/state → { playback: { title, artist } }
+  let lastTrackId = null;
+
+  async function pollRadioState() {
+    try {
+      const resp = await fetch(RADIO_STATE_URL, { signal: AbortSignal.timeout(5000) });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const pb = data?.playback;
+      if (!pb) return;
+
+      const trackId = `${pb.artist}|${pb.title}`;
+      if (showTitle) {
+        const np = document.getElementById('now-playing');
+        const label = pb.artist && pb.title ? `♪ ${pb.artist} — ${pb.title}` : pb.title || pb.artist || '';
+        np.textContent = label;
+      }
+
+      // Nouveau titre → surprise + regard vers le haut (comme si on "entend" quelque chose)
+      if (trackId !== lastTrackId && lastTrackId !== null) {
+        lastTrackId = trackId;
+        if (window.eyes?.emotion) window.eyes.emotion('surprise');
+        if (window.eyes?.target) window.eyes.target(
+          Math.round((Math.random()-0.5)*80),
+          -150 - Math.round(Math.random()*80),
+          800
+        );
+        setTimeout(() => {
+          if (window.eyes?.emotion) window.eyes.emotion('joy');
+        }, 2500);
+      } else {
+        lastTrackId = trackId;
+      }
+    } catch(e) {
+      // silencieux
+    }
+    setTimeout(pollRadioState, 15_000);
+  }
+
+  // ══ MOTEUR COMPORTEMENTAL DE BASE (micro-mvt) ═══════
+  let t = 0, seed = Math.random() * 1000;
+  let gx = 0, gy = 0;
+
+  function sn(x, s) {
+    const v = Math.sin(x * 1.234 + s * 7.89) * 43758.5453;
+    return (v - Math.floor(v)) * 2 - 1;
+  }
+
+  function microLoop() {
+    t += 0.012 + Math.random() * 0.008;
+    // Micro-tremblement réactif au niveau audio
+    const intensity = 8 + currentLevel * 24;
+    const jx = sn(t, seed)       * intensity;
+    const jy = sn(t, seed + 100) * intensity * 0.6;
+    if (window.eyes?.move) {
+      window.eyes.move(160 + gx + jx, 95 + gy + jy);
+    }
+    setTimeout(microLoop, 50 + Math.random() * 50);
+  }
+
+  // Dérive de regard aléatoire (dépend aussi du niveau audio)
+  function scheduleGaze() {
+    const base = audioReady ? 4000 - currentLevel * 2000 : 4000;
+    setTimeout(() => {
+      const x = (Math.random()-0.5) * (80 + currentLevel * 120);
+      const y = (Math.random()-0.5) * (60 + currentLevel * 80);
+      gx = x; gy = y;
+      if (window.eyes?.target) window.eyes.target(
+        Math.round(x * 2), Math.round(y * 1.5),
+        600 + Math.round(Math.random() * 600)
+      );
+      scheduleGaze();
+    }, Math.max(800, base + (Math.random()-0.5) * base));
+  }
+
+  // ══ BOOT ═════════════════════════════════════
+  function boot() {
+    if (!window.eyes?.emotion) { requestAnimationFrame(boot); return; }
+    window.eyes.emotion('joy');
+    microLoop();
+    scheduleGaze();
+    analysisLoop();
+    // Léger décalage avant de créer le contexte audio (nécessite geste user en dehors OBS)
+    // OBS Browser Source autorise autoplay sans geste
+    setTimeout(() => initAudio(), 1000);
+    setTimeout(() => pollRadioState(), 2000);
+  }
+  boot();
+  </script>
+</body>
+</html>
