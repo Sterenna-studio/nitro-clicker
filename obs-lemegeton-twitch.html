@@ -75,7 +75,7 @@
   const BROADCASTER_ID=P.get('broadcaster')||'';
   const KORIGAN_WS=P.get('ws')||'';
   const EVENTSUB_URL='wss://eventsub.wss.twitch.tv/ws';
-  const FRAME_CONFIGS={none:{w:320,h:190,radius:'0'},oval:{w:308,h:178,radius:'48% / 38%'},square:{w:190,h:190,radius:'8px'},round:{w:190,h:190,radius:'50%'}};
+  const FRAME_CONFIGS={none:{w:320,h:190,radius:'0'},oval:{w:308,h:178,radius:'48% / 38%'},square:{w:182,h:182,radius:'8px'},round:{w:178,h:178,radius:'50%'}};
   const colorBase=COLOR_PRESETS[colorKey]||COLOR_PRESETS.default;
   const border=P.get('border')||colorBase.border;
   const frameConf=FRAME_CONFIGS[frameKey]||FRAME_CONFIGS.oval;
