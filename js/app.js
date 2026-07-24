@@ -12,6 +12,7 @@ import {
   getCoreGrowthLevel,
   getCoreShellInfo,
   getCurrency,
+  getPrestigeProgress,
   getPrestigePreview,
   getScalingLayer,
   getVisibleMilestones,
@@ -50,6 +51,7 @@ import {
 import { loadSave, saveAll, readSaveError, getActiveSlot, setActiveSlot, getSlotSummaries } from './engine/clicker-save.js';
 import { setClassToggle, setHtml, setText, setTransformScaleX } from './ui/render-cache.js';
 import { formatValue as fmt } from './ui/value-format.js';
+import { createVisualRuntime } from './ui/visual-runtime.js';
 import { setLiveState } from './ui-panels.js';
 
 const app = document.getElementById('app');
@@ -98,8 +100,8 @@ let lastSubCoreSignature = '';
 let lastOrbitalCount = 0;
 let lastDupCount = 0;
 let audioCtx = null;
-let lastEnergyPulse = 0;
 const bounceParticles = [];
+const visualRuntime = createVisualRuntime();
 let bounceLoop = null;
 let bounceCanvas = null;
 let bounceCtx = null;
@@ -191,6 +193,7 @@ function flushSaveErrorToast() {
 function renderShell() {
   const name = getDisplayNameFromUser(auth.user, profile);
   app.classList.toggle('fx-disabled', !fxEnabled);
+  app.dataset.visualProfile = visualRuntime.profileName;
   app.innerHTML = `
     <svg class="lightning-layer" id="lightning-layer" aria-hidden="true"></svg>
     <header class="topbar">
@@ -214,7 +217,7 @@ function renderShell() {
 
     <section class="stats-grid stats-grid-extended">
       <article class="stat-card energy-stat"><div class="stat-label">ÉNERGIE</div><div class="stat-value primary" id="stat-energy">0</div><div class="stat-meter"><span id="meter-energy"></span></div></article>
-      <article class="stat-card"><div class="stat-label">ÉNERGIE TOTALE</div><div class="stat-value total" id="stat-total-energy">0</div><div class="stat-meter total"><span id="meter-total-energy"></span></div></article>
+      <article class="stat-card"><div class="stat-label">ÉNERGIE SESSION</div><div class="stat-value total" id="stat-total-energy">0</div><div class="stat-meter total"><span id="meter-total-energy"></span></div></article>
       <article class="stat-card"><div class="stat-label">FRAGMENTS</div><div class="stat-value fragment" id="stat-fragments">0</div><div class="stat-meter fragment"><span id="meter-fragments"></span></div></article>
       <article class="stat-card"><div class="stat-label">PAR CLIC</div><div class="stat-value" id="stat-click">1</div><div class="stat-meter small"><span id="meter-click"></span></div></article>
       <article class="stat-card"><div class="stat-label">AUTO / SEC</div><div class="stat-value" id="stat-passive">0</div><div class="stat-meter small"><span id="meter-passive"></span></div></article>
@@ -225,6 +228,15 @@ function renderShell() {
 
     <section class="game-grid game-grid-wide" id="game-grid" data-layout="${currentLayout}">
       <article class="panel core-panel" id="core-panel">
+        <div class="overload-gauge" id="overload-gauge" aria-label="Jauge de surcharge">
+          <span class="overload-gauge-label">SURCHARGE</span>
+          <div class="overload-gauge-track" aria-hidden="true">
+            <i></i>
+            <b style="--tick:25%"></b><b style="--tick:50%"></b><b style="--tick:75%"></b>
+          </div>
+          <strong id="overload-gauge-value">0%</strong>
+          <small id="overload-gauge-cap">0 / 100</small>
+        </div>
         <div class="microscope-lens" aria-hidden="true"></div>
         <div class="scale-radar" id="scale-radar" aria-hidden="true"></div>
         <div class="tendril-layer" id="tendril-layer" aria-hidden="true"></div>
@@ -339,11 +351,15 @@ function handleCoreClick(event) {
   const result = clickCore(state);
   const gain = typeof result === 'number' ? result : result.gain;
   playGameSound('core.click', { volume: result?.crit ? 1 : 0.9 }, 'click');
-  spawnPop(event.clientX, event.clientY, `+${fmt(gain)}`);
-  spawnBouncingBurst(event.clientX, event.clientY, Math.min(14, 4 + Math.floor(gain / Math.max(1, state.clickPower / 3))));
-  pulseReactor();
-  pulseSubCores();
-  sparkTendrils();
+  if (visualRuntime.shouldRun('clickPop')) spawnPop(event.clientX, event.clientY, `+${fmt(gain)}`);
+  if (visualRuntime.shouldRun('clickBurst')) {
+    spawnBouncingBurst(event.clientX, event.clientY, 4 + Math.floor(gain / Math.max(1, state.clickPower / 3)));
+  }
+  if (visualRuntime.shouldRun('corePulse')) {
+    pulseReactor();
+    pulseSubCores();
+    sparkTendrils();
+  }
 
   if (result?.overdrive) {
     playGameSound('overdrive.trigger', { volume: result.crit ? 1 : 0.8 }, 'overdrive');
@@ -377,10 +393,9 @@ function handleCoreClick(event) {
     toast(`LA SPHÈRE CÈDE SOUS LA PRESSION · +${result.shellReleased} fragments`);
     if (result.shellReleased > 0) spawnFragmentOrbs(result.shellReleased);
   }
-  if (Math.random() > 0.45) zapToRandomModule();
-  if (Math.random() > 0.55) reflectLightningToClones({ max: 1 });
+  if (Math.random() > 0.45 && visualRuntime.shouldRun('moduleZap')) zapToRandomModule();
+  if (Math.random() > 0.55 && visualRuntime.shouldRun('cloneFeedback')) reflectLightningToClones({ max: 1 });
 
-  claimMilestonesAndRender();
   scheduleSave();
 }
 
@@ -529,8 +544,8 @@ function claimMilestonesAndRender() {
       toast(`Milestone : ${m.label} · ${bits.join(' · ')}`);
       spawnSystemWave(m.label.toUpperCase());
     }
+    renderAll(true);
   }
-  renderAll(!!claimed.length);
 }
 
 function spawnPop(x, y, text) {
@@ -566,9 +581,11 @@ function ensureBounceCanvas() {
   return true;
 }
 
-function spawnBouncingBurst(clientX, clientY, count = 8) {
+function spawnBouncingBurst(clientX, clientY, count = 8, kind = 'click') {
   if (!fxEnabled) return;
   if (!ensureBounceCanvas()) return;
+  count = visualRuntime.capCount(kind === 'passive' ? 'passiveBouncePerBurst' : 'bouncePerBurst', count);
+  if (count <= 0) return;
   const core = document.getElementById('click-core');
   const rect = core.getBoundingClientRect();
   const w = Math.round(rect.width) || 240;
@@ -602,6 +619,7 @@ function spawnBouncingBurst(clientX, clientY, count = 8) {
       fill: col.fill, glow: col.glow,
     });
   }
+  visualRuntime.trimActive('activeBounce', bounceParticles);
   if (bounceLoop) return;
   let lastTime = performance.now();
   function tick(now) {
@@ -648,7 +666,8 @@ function spawnEnergyBurst(clientX, clientY, count = 12) {
   if (!fxEnabled) return;
   if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
   const layer = ensureEnergyBurstLayer();
-  const n = Math.max(4, Math.min(36, Math.round(count)));
+  const n = visualRuntime.capCount('energyBurst', count);
+  if (n <= 0) return;
   if (n >= 24) {
     const badge = document.createElement('span');
     badge.className = 'dopamine-badge';
@@ -970,7 +989,7 @@ function renderCoreTerminal() {
       <div><span>ÉNERGIE TOTALE</span><strong>${fmt(state.totalEnergy)}</strong></div>
       <div><span>FRAGMENTS</span><strong>${fmt(state.fragments)}</strong></div>
       <div><span>PAR CLIC</span><strong>${fmt(state.clickPower)}</strong></div>
-      <div><span>PRESTIGE</span><strong>${fmt(state.prestige)} · ${fmt(state.energy)}/${fmt(req)}</strong></div>
+      <div><span>PRESTIGE</span><strong>${fmt(state.prestige)} · ${fmt(state.totalEnergy)}/${fmt(req)} générés</strong></div>
       <div><span>SURCHARGE</span><strong>${Math.floor((state.surcharge / state.maxSurcharge) * 100)}%</strong></div>
       <div><span>COQUE</span><strong>${shell.unlocked ? `${shell.storedFragments}/${shell.capacity}F · ${shell.cracks}/${shell.requiredHits} fissures` : 'VERROUILLÉE'}</strong></div>
       <div><span>MULT. NOYAU</span><strong>×${(state.coreMultiplier ?? 1).toFixed(2)} · ×${state.coreCount ?? 1} noyaux</strong></div>
@@ -1263,18 +1282,21 @@ function renderAll(force = false) {
 
 function renderLive() {
   renderStats();
+  applyBoostCoreTint();
+}
+
+function renderLivePanels() {
   renderCoreShell();
-  renderUpgradesLive();
+  refreshUpgradesIfNeeded();
   renderLemegetonSkills();
   renderBoostShop();
-  applyBoostCoreTint();
 }
 
 function getNextAffordableCost() {
   const costs = UPGRADES
     .filter(upgrade => isUpgradeUnlocked(state, upgrade))
     .map(upgrade => upgradeBulkCost(upgrade, state.upgrades[upgrade.id] ?? 0, buyMultiplier));
-  return Math.min(...costs, prestigeRequirement(state));
+  return Math.min(...costs);
 }
 
 function renderStats() {
@@ -1285,6 +1307,7 @@ function renderStats() {
   const energyRatio = Math.min(1, state.energy / Math.max(1, nextCost));
   const passiveRatio = Math.min(1, Number(state.passiveRate ?? 0) / 2500);
   const surchargeRatio = Math.min(1, state.surcharge / Math.max(1, state.maxSurcharge));
+  const prestigeProgress = getPrestigeProgress(state);
   const fragmentRatio = Math.min(1, state.fragments / 25);
   const subCoreCount = Math.floor((state.upgrades?.nitroFactory ?? 0) / 10);
   const moduleLevelTotal = CORE_MODULE_GROUPS.reduce((sum, group) => (
@@ -1307,16 +1330,18 @@ function renderStats() {
     corePanel.style.setProperty('--core-fragment-ratio', fragmentRatio.toFixed(4));
   }
   if (coreStatsMode) renderCoreTerminal();
-  window.NitroSound?.updateCoreAmbience?.({
-    energyRatio,
-    passiveRatio,
-    surchargeRatio,
-    fragmentRatio,
-    shellRatio,
-    subCoreRatio: Math.min(1, subCoreCount / 12),
-    moduleRatio: Math.min(1, moduleLevelTotal / 90),
-    prestigeRatio: Math.min(1, (state.prestige ?? 0) / 25),
-  });
+  if (visualRuntime.shouldRun('coreAmbience', 250)) {
+    window.NitroSound?.updateCoreAmbience?.({
+      energyRatio,
+      passiveRatio,
+      surchargeRatio,
+      fragmentRatio,
+      shellRatio,
+      subCoreRatio: Math.min(1, subCoreCount / 12),
+      moduleRatio: Math.min(1, moduleLevelTotal / 90),
+      prestigeRatio: Math.min(1, (state.prestige ?? 0) / 25),
+    });
+  }
 
   if (lastLayerId && lastLayerId !== layer.id) spawnScaleShift();
   lastLayerId = layer.id;
@@ -1331,25 +1356,31 @@ function renderStats() {
   setText('stat-shell', shell.unlocked ? `${shell.storedFragments}/${shell.capacity}` : 'LOCK');
 
   setMeter('meter-energy', energyRatio);
-  setMeter('meter-total-energy', Math.min(1, state.totalEnergy / Math.max(1, prestigeRequirement(state) * 10)));
+  setMeter('meter-total-energy', prestigeProgress.ratio);
   setMeter('meter-fragments', fragmentRatio);
   setMeter('meter-click', Math.min(1, state.clickPower / 1000));
   setMeter('meter-passive', passiveRatio);
   setMeter('meter-surcharge', surchargeRatio);
+  const overloadGauge = document.getElementById('overload-gauge');
+  if (overloadGauge) {
+    overloadGauge.dataset.critical = String(surchargeRatio >= 0.85);
+    overloadGauge.style.setProperty('--surcharge-ratio', surchargeRatio.toFixed(4));
+  }
+  setText('overload-gauge-value', `${Math.floor(surchargeRatio * 100)}%`);
+  setText('overload-gauge-cap', `${fmt(state.surcharge)} / ${fmt(state.maxSurcharge)}`);
   setMeter('meter-shell', shell.unlocked ? Math.max(shell.fillRatio, shell.crackRatio * 0.35) : 0);
 
-  const req = prestigeRequirement(state);
   const preview = getPrestigePreview(state);
-  const prestigeRatio = Math.min(1, state.energy / Math.max(1, req));
+  const { generatedEnergy, requirement: req, ratio: prestigeRatio, ready } = prestigeProgress;
   setMeter('meter-prestige', prestigeRatio);
   setMeter('prestige-fill', prestigeRatio);
 
   const btn = document.getElementById('prestige-btn');
-  setText('prestige-cost', `${fmt(state.energy)} / ${fmt(req)}`);
-  setText('prestige-desc', `Reset le run · +${fmt(preview.fragmentReward)}F · réserve +${fmt(preview.starterEnergy)}E · conserve tes systèmes permanents.`);
+  setText('prestige-cost', `${fmt(generatedEnergy)} / ${fmt(req)} générés`);
+  setText('prestige-desc', `Toute l’énergie générée ce cycle compte · +${fmt(preview.fragmentReward)}F · réserve +${fmt(preview.starterEnergy)}E.`);
   if (btn) {
-    btn.disabled = state.energy < req;
-    setClassToggle(btn, 'can-buy', state.energy >= req);
+    btn.disabled = !ready;
+    setClassToggle(btn, 'can-buy', ready);
   }
 
   if (!fusionInProgress) {
@@ -1955,7 +1986,7 @@ function startLoop() {
     const now = performance.now();
     const delta = Math.min(2, (now - lastTick) / 1000);
     lastTick = now;
-    if (state.passiveRate > 0) {
+    if (state.passiveRate > 0 || state.factoryRate > 0 || state.autoClickRate > 0) {
       const passiveResult = tickPassive(state, delta);
       if (passiveResult.shellAutoBreaks > 0) {
         playGameSound('shell.shatter', { volume: 0.9 }, 'shatter');
@@ -1965,27 +1996,33 @@ function startLoop() {
       }
     }
     tickBoosts(state);
-    renderLive();
-    refreshUpgradesIfNeeded();
-    if (fxEnabled && now - lastEnergyPulse > 1800) {
-      lastEnergyPulse = now;
-      const panel = document.getElementById('core-panel')?.getBoundingClientRect();
-      if (panel && state.passiveRate > 0) spawnBouncingBurst(panel.left + panel.width * 0.5, panel.top + panel.height * 0.5, Math.min(8, Math.ceil(state.passiveRate / 4)));
-      if (state.passiveRate > 0) {
+  }, 250);
+
+  visualRuntime.start({
+    render: renderLive,
+    panels: renderLivePanels,
+    ambience: () => {
+      if (fxEnabled && state.passiveRate > 0) {
+        const panel = document.getElementById('core-panel')?.getBoundingClientRect();
+        if (panel) {
+          spawnBouncingBurst(
+            panel.left + panel.width * 0.5,
+            panel.top + panel.height * 0.5,
+            Math.ceil(state.passiveRate / 4),
+            'passive',
+          );
+        }
         const subCoreCount = Math.floor((state.upgrades?.nitroFactory ?? 0) / 10);
         playGameSound('core.passivePulse', { volume: Math.min(0.72, 0.26 + state.passiveRate / 140) });
         if (subCoreCount > 0) {
           setTimeout(() => playGameSound('core.subCorePulse', { volume: Math.min(0.58, 0.18 + subCoreCount * 0.026) }), 90);
         }
+        if (Math.random() > 0.35) zapToRandomModule();
       }
-      if (Math.random() > 0.35) zapToRandomModule();
-    }
-  }, 250);
+    },
+  });
 
-  setInterval(() => {
-    const claimed = checkAndClaimMilestones(state);
-    if (claimed.length) claimMilestonesAndRender();
-  }, 1000);
+  setInterval(claimMilestonesAndRender, 1000);
 
   setInterval(runAutoPurchase, 700);
 

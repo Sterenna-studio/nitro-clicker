@@ -197,7 +197,7 @@ function updateBeacon() {
     totalEnergy = Number(state.totalEnergy ?? 0);
   }
 
-  const rawP  = Math.min(energy / Math.max(1, req), 2);
+  const rawP  = Math.min(totalEnergy / Math.max(1, req), 2);
   const isReady      = rawP >= 1;
   const overcharge   = isReady ? Math.min(rawP - 1, 1) : 0;
   const isOverloaded = isReady && overcharge > 0.05;
@@ -223,7 +223,7 @@ function updateBeacon() {
   if (fill) fill.style.transform = `scaleX(${Math.min(rawP, 1).toFixed(4)})`;
 
   const label = document.getElementById('pb-meter-label');
-  if (label) label.textContent = `${fmt(energy)} / ${fmt(req)} · ${pct}%`;
+  if (label) label.textContent = `${fmt(totalEnergy)} / ${fmt(req)} générés · ${pct}%`;
 
   const icon  = document.getElementById('pb-icon');
   const title = document.getElementById('pb-title');

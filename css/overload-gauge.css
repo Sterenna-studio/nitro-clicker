@@ -1,0 +1,103 @@
+.overload-gauge {
+  --surcharge-ratio: 0;
+  position: absolute;
+  top: 50%;
+  right: clamp(12px, 2cqw, 22px);
+  z-index: 12;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  width: 52px;
+  padding: 11px 7px;
+  transform: translateY(-50%);
+  border: 1px solid rgba(255, 61, 242, .28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(13, 5, 25, .9), rgba(3, 15, 22, .86));
+  box-shadow: inset 0 0 20px rgba(255, 61, 242, .08), 0 0 22px rgba(0, 0, 0, .35);
+  pointer-events: none;
+}
+
+.overload-gauge-label {
+  color: rgba(255, 255, 255, .48);
+  font: 700 7px/1 var(--font-display, sans-serif);
+  letter-spacing: .2em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.overload-gauge-track {
+  position: relative;
+  width: 13px;
+  height: clamp(120px, 25cqh, 190px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 42, 76, .12), rgba(255, 61, 242, .08) 45%, rgba(0, 255, 204, .08));
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .9);
+}
+
+.overload-gauge-track i {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(0deg, #00ffcc 0%, #ffcc00 58%, #ff3df2 82%, #ff2a4c 100%);
+  box-shadow: 0 0 12px rgba(255, 61, 242, .7);
+  transform: scaleY(var(--surcharge-ratio));
+  transform-origin: 50% 100%;
+  transition: transform 90ms linear;
+}
+
+.overload-gauge-track b {
+  position: absolute;
+  right: 1px;
+  bottom: var(--tick);
+  left: 1px;
+  height: 1px;
+  background: rgba(255, 255, 255, .3);
+}
+
+.overload-gauge strong {
+  color: #ffcc00;
+  font: 800 11px/1 var(--font-mono, monospace);
+}
+
+.overload-gauge small {
+  color: rgba(255, 255, 255, .46);
+  font: 600 7px/1.2 var(--font-mono, monospace);
+  white-space: nowrap;
+}
+
+.overload-gauge[data-critical='true'] {
+  border-color: rgba(255, 42, 76, .72);
+  box-shadow: inset 0 0 24px rgba(255, 42, 76, .16), 0 0 26px rgba(255, 42, 76, .22);
+  animation: overloadGaugeCritical .55s steps(2, end) infinite;
+}
+
+.overload-gauge[data-critical='true'] strong {
+  color: #ff4867;
+}
+
+[data-visual-profile='reduced'] .overload-gauge,
+[data-visual-profile='low'] .overload-gauge {
+  animation: none;
+}
+
+@keyframes overloadGaugeCritical {
+  50% { filter: brightness(1.25); }
+}
+
+@media (max-width: 560px) {
+  .overload-gauge {
+    right: 8px;
+    width: 42px;
+    padding-inline: 5px;
+  }
+
+  .overload-gauge-track {
+    height: 105px;
+  }
+
+  .overload-gauge-label {
+    display: none;
+  }
+}

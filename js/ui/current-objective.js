@@ -1,4 +1,5 @@
 import { formatValue as format } from './value-format.js';
+import { prestigeRequirement } from '../engine/clicker-state.js';
 
 const SAVE_PREFIX = 'nitro-clicker.save.';
 
@@ -112,12 +113,15 @@ function getObjective(state) {
     return objective('fragment_catalyst', 'Installer le catalyseur permanent', 'Achète Catalyseur de fragments pour conserver un multiplicateur global après les prestiges.', fragments / 3, `${format(fragments)} / 3 F`);
   }
 
-  const prestigeReq = prestigeRequirementApprox(prestige);
-  if (energy < prestigeReq) {
-    const progressText = totalEnergy < prestigeReq
-      ? `${format(totalEnergy)} / ${format(prestigeReq)} E total · réserve ${format(energy)} E`
-      : `${format(energy)} / ${format(prestigeReq)} E en réserve`;
-    return objective('prestige_ready', 'Préparer la surcharge contrôlée', 'Accumule assez d’énergie disponible pour reset proprement et gagner des fragments.', energy / prestigeReq, progressText);
+  const prestigeReq = prestigeRequirement(state);
+  if (totalEnergy < prestigeReq) {
+    return objective(
+      'prestige_ready',
+      'Préparer la surcharge contrôlée',
+      'Toute l’énergie générée pendant ce cycle compte, même si elle est dépensée en modules.',
+      totalEnergy / prestigeReq,
+      `${format(totalEnergy)} / ${format(prestigeReq)} E générés · réserve ${format(energy)} E`,
+    );
   }
 
   if (prestige < 3) {
@@ -151,14 +155,6 @@ function objective(id, title, text, ratio, progressText) {
 
 function cost(base, scale, level) {
   return Math.floor(base * Math.pow(scale, Math.max(0, Number(level ?? 0))));
-}
-
-function prestigeRequirementApprox(prestige) {
-  const p = Math.max(0, Number(prestige ?? 0));
-  const base = 18000;
-  if (p <= 10) return Math.floor(base * Math.pow(2.05, p));
-  const p10 = base * Math.pow(2.05, 10);
-  return Math.floor(p10 * Math.pow(2.3, p - 10));
 }
 
 function approximateBreakCost(state) {

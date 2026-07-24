@@ -1069,7 +1069,7 @@ function visibleSoon(state, milestone) {
 }
 
 export function canPrestige(state) {
-  return Number(state.energy ?? 0) >= prestigeRequirement(state);
+  return getPrestigeProgress(state).ready;
 }
 
 export function prestigeRequirement(state) {
@@ -1077,6 +1077,19 @@ export function prestigeRequirement(state) {
   if (prestige <= 10) return Math.floor(BALANCE.prestigeBase * Math.pow(BALANCE.prestigeEarlyScale, prestige));
   const p10 = BALANCE.prestigeBase * Math.pow(BALANCE.prestigeEarlyScale, 10);
   return Math.floor(p10 * Math.pow(BALANCE.prestigeLateScale, prestige - 10));
+}
+
+export function getPrestigeProgress(state) {
+  const generatedEnergy = Math.max(0, Number(state?.totalEnergy ?? 0));
+  const requirement = prestigeRequirement(state);
+  const rawRatio = generatedEnergy / Math.max(1, requirement);
+  return {
+    generatedEnergy,
+    requirement,
+    ratio: Math.min(1, rawRatio),
+    overchargeRatio: Math.max(0, Math.min(1, rawRatio - 1)),
+    ready: rawRatio >= 1,
+  };
 }
 
 export function getPrestigePreview(state) {
