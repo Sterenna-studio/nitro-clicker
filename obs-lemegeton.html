@@ -5,129 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LEMEGETON OBS</title>
   <style>
-    :root {
-      --c1: #d6fff5;
-      --c2: #00ffcc;
-      --c3: #00b3ff;
-      --glow: rgba(0,255,204,.85);
-      --border-color: #00b3ff;
-      --border-glow: rgba(0,179,255,0.9);
-    }
-
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 320px;
-      height: 190px;
+      margin: 0; padding: 0;
+      width: 320px; height: 190px;
       background: transparent;
       overflow: hidden;
     }
+    body { display: grid; place-items: center; }
 
-    body {
-      display: grid;
-      place-items: center;
-    }
-
-    /* ── Cadre cathodique ─────────────────────────────────── */
     .crt-frame {
       position: relative;
-      width: 308px;
-      height: 178px;
+      width: 308px; height: 178px;
       border-radius: 48% / 38%;
       overflow: hidden;
-      /* Effet bombé : perspective + léger scale aux coins */
-      transform: perspective(600px) scale(1.0);
-      /* Contour lumineux bleu */
       box-shadow:
-        0 0 0 2px var(--border-color),
-        0 0 10px 3px var(--border-glow),
+        0 0 0 2px var(--border-color, #00b3ff),
+        0 0 10px 3px var(--border-glow, rgba(0,179,255,0.9)),
         0 0 28px 6px rgba(0,179,255,0.45),
         0 0 60px 12px rgba(0,100,255,0.2),
         inset 0 0 18px 4px rgba(0,180,255,0.12);
     }
-
-    /* Distorsion bombée via pseudo-element SVG filter */
     .crt-frame::before {
       content: '';
-      position: absolute;
-      inset: -8px;
-      background: radial-gradient(
-        ellipse 80% 80% at 50% 50%,
-        transparent 55%,
-        rgba(0,0,0,0.32) 100%
-      );
-      pointer-events: none;
-      z-index: 4;
+      position: absolute; inset: -8px;
+      background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 55%, rgba(0,0,0,0.32) 100%);
+      pointer-events: none; z-index: 4;
       border-radius: inherit;
     }
-
-    /* Filtre SVG bombé appliqué sur le contenu */
     .crt-inner {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       filter: url(#crt-bulge);
       position: relative;
     }
-
     .eye-container {
-      width: 308px;
-      height: 178px;
+      width: 308px; height: 178px;
       position: relative;
     }
-
     .eye-container .eye {
       background: radial-gradient(circle at 50% 42%,
-        var(--c1) 0%,
-        var(--c2) 42%,
-        var(--c3) 92%) !important;
+        var(--c1, #d6fff5) 0%,
+        var(--c2, #00ffcc) 42%,
+        var(--c3, #00b3ff) 92%) !important;
       box-shadow:
-        0 0 20px var(--glow),
+        0 0 20px var(--glow, rgba(0,255,204,.85)),
         0 0 44px rgba(0,180,255,.5) !important;
     }
-
-    /* Scanlines */
     .scanlines {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 2;
-      background: repeating-linear-gradient(
-        0deg,
-        rgba(0,255,204,.045) 0 1px,
-        transparent 1px 4px
-      );
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 2;
+      background: repeating-linear-gradient(0deg, rgba(0,255,204,.045) 0 1px, transparent 1px 4px);
       opacity: 0.7;
     }
-
-    /* Vignette cathodique interne */
     .vignette {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 3;
-      background: radial-gradient(
-        ellipse 82% 74% at 50% 50%,
-        transparent 42%,
-        rgba(0,0,0,.28) 100%
-      );
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 3;
+      background: radial-gradient(ellipse 82% 74% at 50% 50%, transparent 42%, rgba(0,0,0,.28) 100%);
     }
-
-    /* Reflet de surface cathodique */
     .crt-glare {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 5;
-      background: radial-gradient(
-        ellipse 55% 35% at 34% 22%,
-        rgba(255,255,255,0.07) 0%,
-        transparent 70%
-      );
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 5;
+      background: radial-gradient(ellipse 55% 35% at 34% 22%, rgba(255,255,255,0.07) 0%, transparent 70%);
       border-radius: inherit;
     }
   </style>
 
-  <!-- Filtre SVG bombé (barrel distortion simulé) -->
   <svg width="0" height="0" style="position:absolute">
     <defs>
       <filter id="crt-bulge" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="linearRGB">
@@ -150,15 +91,59 @@
 
   <script src="./js/vendor/web-eye-animation.js"></script>
   <script>
+    // --- Lecture des params URL (?c1=%23ff0000&c2=...)
+    const PRESETS = {
+      default:     { c1:'#d6fff5', c2:'#00ffcc', c3:'#00b3ff', glow:'#00ccff', border:'#00b3ff' },
+      transparent: { c1:'#d6fff5', c2:'#00ffcc', c3:'#00b3ff', glow:'#00ccff', border:'#00b3ff' },
+      red:         { c1:'#fff0f0', c2:'#ff3333', c3:'#cc0000', glow:'#ff2200', border:'#ff2200' },
+      green:       { c1:'#f0fff4', c2:'#00ff88', c3:'#00cc44', glow:'#00ff66', border:'#00cc44' },
+      yellow:      { c1:'#fffef0', c2:'#ffe600', c3:'#cc9900', glow:'#ffcc00', border:'#ddaa00' },
+      nitro:       { c1:'#e8f0ff', c2:'#7744ff', c3:'#3300cc', glow:'#6633ff', border:'#5522ee' },
+      red_hot:     { c1:'#fff5e0', c2:'#ff8800', c3:'#ff2200', glow:'#ff5500', border:'#ff4400' },
+      ice:         { c1:'#ffffff', c2:'#aaddff', c3:'#3399ff', glow:'#88ccff', border:'#55aaff' },
+      pink:        { c1:'#fff0f8', c2:'#ff66cc', c3:'#cc0077', glow:'#ff44aa', border:'#ee33aa' },
+    };
+
+    const params = new URLSearchParams(location.search);
+    const presetKey = params.get('preset') || 'default';
+    const base = PRESETS[presetKey] || PRESETS.default;
+
+    // Les params individuels ?c1=... surchargent le preset
+    const c1     = params.get('c1')     ? decodeURIComponent(params.get('c1'))     : base.c1;
+    const c2     = params.get('c2')     ? decodeURIComponent(params.get('c2'))     : base.c2;
+    const c3     = params.get('c3')     ? decodeURIComponent(params.get('c3'))     : base.c3;
+    const glow   = params.get('glow')   ? decodeURIComponent(params.get('glow'))   : base.glow;
+    const border = params.get('border') ? decodeURIComponent(params.get('border')) : base.border;
+
+    // Applique les couleurs au container des yeux
+    const eyeEl = document.getElementById('eye');
+    eyeEl.style.setProperty('--c1', c1);
+    eyeEl.style.setProperty('--c2', c2);
+    eyeEl.style.setProperty('--c3', c3);
+    const hx = glow.replace('#','');
+    const r = parseInt(hx.slice(0,2),16), g = parseInt(hx.slice(2,4),16), b = parseInt(hx.slice(4,6),16);
+    eyeEl.style.setProperty('--glow', `rgba(${r},${g},${b},.85)`);
+
+    // Couleur du contour CRT
+    document.querySelector('.crt-frame').style.boxShadow = [
+      `0 0 0 2px ${border}`,
+      `0 0 10px 3px ${border}cc`,
+      `0 0 28px 6px ${border}77`,
+      `0 0 60px 12px ${border}33`,
+      `inset 0 0 18px 4px ${border}22`,
+    ].join(',');
+
+    // --- Boucle d'animations
     const EMOTIONS = ['joy', 'surprise', 'confusion', 'love', 'sleepy', 'excitement'];
     let emoIndex = 0;
 
     function setRandomTarget() {
       if (!window.eyes?.target) return;
-      const x = Math.round((Math.random() * 2 - 1) * 260);
-      const y = Math.round((Math.random() * 2 - 1) * 180);
-      const z = 1000 + Math.round(Math.random() * 500);
-      window.eyes.target(x, y, z);
+      window.eyes.target(
+        Math.round((Math.random()*2-1)*260),
+        Math.round((Math.random()*2-1)*180),
+        1000 + Math.round(Math.random()*500)
+      );
     }
 
     function cycleEmotion() {
@@ -168,16 +153,12 @@
     }
 
     function boot() {
-      if (!window.eyes?.emotion) {
-        requestAnimationFrame(boot);
-        return;
-      }
+      if (!window.eyes?.emotion) { requestAnimationFrame(boot); return; }
       window.eyes.emotion('joy');
       setRandomTarget();
       setInterval(cycleEmotion, 6000);
       setInterval(setRandomTarget, 2200);
     }
-
     boot();
   </script>
 </body>
