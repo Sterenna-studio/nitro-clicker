@@ -35,11 +35,40 @@
   </style>
   <svg width="0" height="0" style="position:absolute;pointer-events:none">
     <defs>
+      <!-- Bump filters -->
       <filter id="bulge-soft" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="1" seed="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.5" xChannelSelector="R" yChannelSelector="G"/></filter>
       <filter id="bulge-mid"  x="-8%" y="-8%" width="116%" height="116%"><feTurbulence type="fractalNoise" baseFrequency="0.6"  numOctaves="1" seed="5" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5"   xChannelSelector="R" yChannelSelector="G"/></filter>
       <filter id="bulge-hard" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="1" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="9"   xChannelSelector="R" yChannelSelector="G"/></filter>
       <filter id="persp-3d"   x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceAlpha" stdDeviation="2" result="shadow"/><feOffset in="shadow" dx="3" dy="3" result="offsetShadow"/><feFlood flood-color="rgba(0,0,0,0.5)" result="shadowColor"/><feComposite in="shadowColor" in2="offsetShadow" operator="in" result="dropShadow"/><feMerge><feMergeNode in="dropShadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="ice-filter"  x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.5" numOctaves="3" seed="12" result="n"/><feColorMatrix type="saturate" values="0" in="n" result="gray"/><feBlend in="SourceGraphic" in2="gray" mode="screen" result="blend"/><feDisplacementMap in="blend" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="B"/></filter>
+      <!-- SVG clip-path shapes — coordonnées relatives au frame (w×h centré dans 320×190) -->
+      <!-- HEX : hexagone régulier 178×178, pointy-top, centré -->
+      <!-- cx=89 cy=89 r=85 : points flat-top -->
+      <clipPath id="clip-hex" clipPathUnits="userSpaceOnUse">
+        <polygon points="89,4 168,46.5 168,131.5 89,174 10,131.5 10,46.5"/>
+      </clipPath>
+      <!-- ROBOT : rectangle à coins coupés en haut (trait robot/casque), 182×178 -->
+      <!-- coins supérieurs coupés à 20px, coins inférieurs droits -->
+      <clipPath id="clip-robot" clipPathUnits="userSpaceOnUse">
+        <polygon points="20,0 162,0 182,20 182,178 0,178 0,20"/>
+      </clipPath>
+      <!-- VISOR : trapèze horizontal, plus large en haut, 300×160 -->
+      <clipPath id="clip-visor" clipPathUnits="userSpaceOnUse">
+        <polygon points="0,20 300,20 280,140 20,140"/>
+      </clipPath>
+      <!-- DIAMOND : losange centré, 280×170 -->
+      <clipPath id="clip-diamond" clipPathUnits="userSpaceOnUse">
+        <polygon points="140,0 280,85 140,170 0,85"/>
+      </clipPath>
+      <!-- ARCH : rectangle + demi-cercle en haut (ogive), 182×178 -->
+      <clipPath id="clip-arch" clipPathUnits="userSpaceOnUse">
+        <path d="M0,91 A91,91 0 0,1 182,91 L182,178 L0,178 Z"/>
+      </clipPath>
+      <!-- CROSS : croix octogonale style écran militaire, 182×178 -->
+      <!-- découpe les 4 coins à 36px -->
+      <clipPath id="clip-cross" clipPathUnits="userSpaceOnUse">
+        <polygon points="36,0 146,0 182,36 182,142 146,178 36,178 0,142 0,36"/>
+      </clipPath>
     </defs>
   </svg>
 </head>
@@ -71,7 +100,20 @@
     phosphor:{c1:'#efffef',c2:'#00ff44',c3:'#007722',glow:'#00ff44',border:'#00cc33'},
     amber:{c1:'#fff8e0',c2:'#ffaa00',c3:'#994400',glow:'#ff8800',border:'#cc6600'},
   };
-  const FRAME_CONFIGS={none:{w:320,h:190,radius:'0'},oval:{w:308,h:178,radius:'48% / 38%'},square:{w:182,h:182,radius:'8px'},round:{w:178,h:178,radius:'50%'},mono:{w:178,h:178,radius:'50%',mono:true}};
+  // clip: id du clipPath SVG (sans #). Si défini, appliqué via style.clipPath au lieu de border-radius.
+  const FRAME_CONFIGS={
+    none:    {w:320,h:190,radius:'0'},
+    oval:    {w:308,h:178,radius:'48% / 38%'},
+    square:  {w:182,h:182,radius:'8px'},
+    round:   {w:178,h:178,radius:'50%'},
+    mono:    {w:178,h:178,radius:'50%',mono:true},
+    hex:     {w:178,h:178,radius:'0',clip:'clip-hex'},
+    robot:   {w:182,h:178,radius:'0',clip:'clip-robot'},
+    visor:   {w:300,h:160,radius:'0',clip:'clip-visor'},
+    diamond: {w:280,h:170,radius:'0',clip:'clip-diamond'},
+    arch:    {w:182,h:178,radius:'0',clip:'clip-arch'},
+    cross:   {w:182,h:178,radius:'0',clip:'clip-cross'},
+  };
   const BUMP_FILTERS={none:null,soft:'bulge-soft',mid:'bulge-mid',hard:'bulge-hard','3d':'persp-3d'};
   const P=new URLSearchParams(location.search);
   const colorKey=P.get('preset')||'default';
@@ -91,7 +133,13 @@
   const crtInner=document.getElementById('crt-inner');
   const eyeEl=document.getElementById('eye');
   frameEl.style.width=frameConf.w+'px'; frameEl.style.height=frameConf.h+'px';
-  frameEl.style.borderRadius=frameConf.radius;
+  // Appliquer clip-path SVG ou border-radius selon le frame
+  if(frameConf.clip){
+    frameEl.style.clipPath=`url(#${frameConf.clip})`;
+    frameEl.style.borderRadius='0';
+  } else {
+    frameEl.style.borderRadius=frameConf.radius;
+  }
   eyeEl.style.width=frameConf.w+'px'; eyeEl.style.height=frameConf.h+'px';
   crtInner.style.width=frameConf.w+'px'; crtInner.style.height=frameConf.h+'px';
   if(bgMode==='black')    frameEl.classList.add('has-bg');
