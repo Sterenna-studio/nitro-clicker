@@ -7,79 +7,70 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     body{background:#06090e;font-family:'Courier New',monospace;color:#00ffcc;min-height:100vh;padding:28px;}
     h1{font-size:.95rem;letter-spacing:.2em;text-transform:uppercase;color:#00b3ff;text-shadow:0 0 14px #00b3ff;margin-bottom:4px;}
-    .subtitle{font-size:.68rem;color:#444;margin-bottom:32px;letter-spacing:.1em;}
-    .section{margin-bottom:44px;}
-    .section-title{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:#00b3ff88;border-bottom:1px solid #111;padding-bottom:6px;margin-bottom:8px;}
-    .section-desc{font-size:.58rem;color:#334;margin-bottom:16px;letter-spacing:.06em;line-height:1.6;}
-    .grid{display:flex;flex-wrap:wrap;gap:20px;}
+    .subtitle{font-size:.68rem;color:#444;margin-bottom:20px;letter-spacing:.1em;}
+
+    /* ── Filtres ── */
+    .filters{
+      display:flex;flex-wrap:wrap;gap:16px;
+      background:#080c12;border:1px solid #111;
+      border-radius:6px;padding:14px 16px;
+      margin-bottom:28px;
+    }
+    .filter-group{display:flex;flex-direction:column;gap:5px;}
+    .filter-label{font-size:.52rem;letter-spacing:.15em;text-transform:uppercase;color:#444;}
+    .filter-pills{display:flex;flex-wrap:wrap;gap:4px;}
+    .pill{
+      background:#0a0a18;border:1px solid #1a1a2a;
+      color:#556;font-family:inherit;font-size:.58rem;
+      letter-spacing:.08em;padding:3px 9px;
+      border-radius:20px;cursor:pointer;
+      transition:all .12s;white-space:nowrap;
+    }
+    .pill:hover{border-color:#333;color:#aaa;}
+    .pill.active{background:#00b3ff18;border-color:#00b3ff66;color:#00ccff;}
+
+    /* ── Grille ── */
+    .section-title{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:#00b3ff55;border-bottom:1px solid #0d0d1a;padding-bottom:6px;margin-bottom:16px;}
+    .grid{display:flex;flex-wrap:wrap;gap:18px;}
 
     /* ── Carte ── */
-    .card{display:flex;flex-direction:column;align-items:center;gap:6px;width:160px;}
-
-    /*
-      Preview : l'iframe fait 320x190.
-      On veut un rendu a 160x95 (scale = 0.5).
-      transform:scale ne reduit pas l'espace DOM, donc on utilise :
-        - un outer .preview-wrap de 160x95 avec overflow:hidden
-        - l'iframe a transform:scale(0.5) + transform-origin:top left
-        - margin-right et margin-bottom negatifs pour compenser l'espace DOM restant
-    */
+    .card{display:flex;flex-direction:column;align-items:center;gap:5px;width:160px;}
     .preview-wrap{
-      width:160px;
-      height:95px;
-      overflow:hidden;
-      position:relative;
-      border-radius:5px;
-      border:1px solid #1a1a2a;
+      width:160px;height:95px;
+      overflow:hidden;position:relative;
+      border-radius:5px;border:1px solid #1a1a2a;
       flex-shrink:0;
       background:repeating-conic-gradient(#111 0% 25%,#1a1a2a 0% 50%) 0 0/10px 10px;
     }
-    .preview-wrap.has-bg{background:#000!important;}
-    .preview-wrap.has-bg-phosphor{background:#001200!important;}
-    .preview-wrap.has-bg-amber{background:#0d0800!important;}
+    .preview-wrap.has-bg        {background:#000 !important;}
+    .preview-wrap.has-bg-phosphor{background:#001200 !important;}
+    .preview-wrap.has-bg-amber  {background:#0d0800 !important;}
     .preview-wrap iframe{
-      display:block;
-      border:none;
-      width:320px;
-      height:190px;
-      transform:scale(0.5);
-      transform-origin:top left;
+      display:block;border:none;
+      width:320px;height:190px;
+      transform:scale(0.5);transform-origin:top left;
       pointer-events:none;
-      /* compense l'espace DOM : 320*0.5=160 -> ok, 190*0.5=95 -> ok
-         mais l'element occupe toujours 320x190 en layout,
-         donc on tire vers le haut/gauche avec des margins negatifs */
-      margin-right:-160px;
-      margin-bottom:-95px;
+      margin-right:-160px;margin-bottom:-95px;
     }
-
-    .card-label{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:#ddd;text-align:center;}
-    .card-sub{font-size:.56rem;color:#445;text-align:center;letter-spacing:.05em;line-height:1.4;}
+    .card-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#ddd;text-align:center;}
     .swatches{display:flex;gap:4px;}
-    .swatch{width:11px;height:11px;border-radius:50%;border:1px solid #222;}
+    .swatch{width:10px;height:10px;border-radius:50%;border:1px solid #222;}
 
     /* ── Boutons 4 modes ── */
-    .mode-btns{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%;}
+    .mode-btns{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:100%;}
     .mode-btn{
-      background:#0a0a18;
-      border:1px solid #1a1a2a;
-      color:#555;
-      font-family:inherit;
-      font-size:.53rem;
-      letter-spacing:.07em;
-      padding:4px 3px;
-      cursor:pointer;
-      border-radius:3px;
-      text-align:center;
-      transition:all .15s;
-      line-height:1.3;
+      background:#0a0a18;border:1px solid #1a1a2a;color:#555;
+      font-family:inherit;font-size:.52rem;letter-spacing:.06em;
+      padding:4px 3px;cursor:pointer;border-radius:3px;
+      text-align:center;transition:all .12s;line-height:1.3;
     }
     .mode-btn:hover{color:#00ffcc;border-color:#333;}
     .mode-btn.ok{border-color:#00ffcc!important;color:#00ffcc!important;}
-    .mode-btn[data-mode="normal"]:hover{border-color:#00b3ff;color:#00b3ff;}
-    .mode-btn[data-mode="radio"]:hover{border-color:#ff8800;color:#ff8800;}
+    .mode-btn[data-mode="normal"]:hover    {border-color:#00b3ff;color:#00b3ff;}
+    .mode-btn[data-mode="radio"]:hover     {border-color:#ff8800;color:#ff8800;}
     .mode-btn[data-mode="radio-chat"]:hover{border-color:#ffcc00;color:#ffcc00;}
-    .mode-btn[data-mode="twitch"]:hover{border-color:#9146ff;color:#9146ff;}
-    .mode-label{font-size:.47rem;display:block;opacity:.55;margin-bottom:1px;text-transform:uppercase;letter-spacing:.08em;}
+    .mode-btn[data-mode="twitch"]:hover    {border-color:#9146ff;color:#9146ff;}
+    .mode-icon{font-size:.47rem;display:block;opacity:.5;margin-bottom:1px;text-transform:uppercase;letter-spacing:.08em;}
 
     .hint{font-size:.58rem;color:#2a2a3a;margin-top:28px;letter-spacing:.08em;line-height:1.8;}
     .hint b{color:#3a3a4a;}
@@ -88,90 +79,151 @@
 </head>
 <body>
   <h1>⧡ LEMEGETON — OBS Variants</h1>
-  <p class="subtitle">Browser Source 320 × 190 px — chaque variante disponible en 4 modes</p>
-  <div id="root"></div>
+  <p class="subtitle">Browser Source 320 × 190 px — configure le rendu en haut, copie l’URL OBS du mode voulu</p>
+
+  <!-- Filtres -->
+  <div class="filters" id="filters">
+    <div class="filter-group">
+      <span class="filter-label">Cadre</span>
+      <div class="filter-pills" data-filter="frame">
+        <button class="pill active" data-val="oval">Oval</button>
+        <button class="pill" data-val="round">Rond</button>
+        <button class="pill" data-val="square">Carré</button>
+        <button class="pill" data-val="mono">Mono-œil</button>
+        <button class="pill" data-val="none">Sans cadre</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Shader</span>
+      <div class="filter-pills" data-filter="shader">
+        <button class="pill active" data-val="crt">CRT</button>
+        <button class="pill" data-val="tv">CRT TV</button>
+        <button class="pill" data-val="crt+ice">CRT + Glace</button>
+        <button class="pill" data-val="ice">Glace</button>
+        <button class="pill" data-val="none">Aucun</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Bombage</span>
+      <div class="filter-pills" data-filter="bump">
+        <button class="pill active" data-val="soft">Soft</button>
+        <button class="pill" data-val="mid">Mid</button>
+        <button class="pill" data-val="hard">Hard</button>
+        <button class="pill" data-val="3d">3D</button>
+        <button class="pill" data-val="none">Aucun</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Fond</span>
+      <div class="filter-pills" data-filter="bg">
+        <button class="pill active" data-val="transparent">Transparent</button>
+        <button class="pill" data-val="black">Noir</button>
+        <button class="pill" data-val="phosphor">Phosphore</button>
+        <button class="pill" data-val="amber">Ambre</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-title" id="grid-title">▸ 16 variantes — preset cyan par défaut</p>
+  <div class="grid" id="grid"></div>
+
   <p class="hint">
     <b>► OBS</b> : Browser Source → coller URL → 320×190 → ✓ Transparent background (sauf fond noir/phosphor/amber)<br>
-    <b>4 modes par variante :</b>
-    <code>Normal</code> autonome ·
-    <code>Radio</code> audio-réactif ·
-    <code>Radio+Chat</code> audio + Twitch ·
-    <code>Chat Twitch</code> events Twitch seuls
+    <b>4 modes :</b>
+    <code>◎ Normal</code> autonome ·
+    <code>♫ Radio</code> audio Korigan ·
+    <code>♫✦ Radio+Chat</code> audio + Twitch ·
+    <code>✦ Chat</code> events Twitch seuls
   </p>
 
   <script>
   const BASE=(()=>{ const p=window.location.pathname.replace('obs-lemegeton-variants.html',''); return window.location.origin+p; })();
 
-  const FILES={
-    normal:      'obs-lemegeton.html',
-    radio:       'obs-lemegeton-radio.html',
-    'radio-chat':'obs-lemegeton-radio.html',
-    twitch:      'obs-lemegeton-twitch.html',
-  };
-  const MODE_META={
-    normal:      {label:'Normal',      sub:'Autonome',      icon:'◎'},
-    radio:       {label:'Radio',       sub:'Audio réactif', icon:'♫'},
-    'radio-chat':{label:'Radio+Chat',  sub:'Audio+Twitch',  icon:'♫✦'},
-    twitch:      {label:'Chat Twitch', sub:'Events Twitch', icon:'✦'},
-  };
+  const FILES={ normal:'obs-lemegeton.html', radio:'obs-lemegeton-radio.html', 'radio-chat':'obs-lemegeton-radio.html', twitch:'obs-lemegeton-twitch.html' };
+  const MODE_META={ normal:{label:'Normal',sub:'Autonome',icon:'◎'}, radio:{label:'Radio',sub:'Audio',icon:'♫'}, 'radio-chat':{label:'Radio+Chat',sub:'Audio+Twitch',icon:'♫✦'}, twitch:{label:'Chat Twitch',sub:'Events',icon:'✦'} };
 
-  const VARIANTS=[
-    {label:'Cyan',       sub:'Oval CRT',          params:'preset=default&frame=oval&shader=crt&bump=soft',               colors:['#d6fff5','#00ffcc','#00b3ff']},
-    {label:'Nitro',      sub:'Violet bombé',       params:'preset=nitro&frame=oval&shader=crt&bump=soft',                colors:['#e8f0ff','#7744ff','#3300cc']},
-    {label:'Red Hot',    sub:'Lave oval',           params:'preset=red_hot&frame=oval&shader=crt&bump=hard',              colors:['#fff5e0','#ff8800','#ff2200']},
-    {label:'Pink',       sub:'Rond magie',          params:'preset=pink&frame=round&shader=crt&bump=soft',               colors:['#fff0f8','#ff66cc','#cc0077']},
-    {label:'Gold',       sub:'Légendaire',          params:'preset=gold&frame=oval&shader=crt&bump=soft',                colors:['#fffbe8','#ffd700','#b8860b']},
-    {label:'Void',       sub:'Sombre bombé',        params:'preset=void_&frame=oval&shader=crt&bump=mid',                colors:['#f0e8ff','#aa00ff','#440066']},
-    {label:'Glace',      sub:'Rond + givre',        params:'preset=ice&frame=round&shader=crt+ice&bump=mid',             colors:['#ffffff','#aaddff','#3399ff']},
-    {label:'Mono-œil',   sub:'Cyclope oval',        params:'preset=default&frame=mono&shader=crt&bump=soft',             colors:['#d6fff5','#00ffcc','#00b3ff']},
-    {label:'Noir Cyan',  sub:'Fond noir CRT',       params:'preset=default&frame=oval&shader=crt&bump=soft&bg=black',    colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
-    {label:'Noir Nitro', sub:'Fond noir violet',    params:'preset=nitro&frame=oval&shader=crt&bump=soft&bg=black',      colors:['#e8f0ff','#7744ff','#3300cc'], bgClass:'has-bg'},
-    {label:'Noir Void',  sub:'Fond noir profond',   params:'preset=void_&frame=oval&shader=crt&bump=mid&bg=black',       colors:['#f0e8ff','#aa00ff','#440066'], bgClass:'has-bg'},
-    {label:'CRT TV',     sub:'Tube cathodique',     params:'preset=default&frame=oval&shader=tv&bump=hard&bg=black',     colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
-    {label:'CRT TV Red', sub:'Tube TV danger',      params:'preset=red&frame=oval&shader=tv&bump=hard&bg=black',         colors:['#fff0f0','#ff3333','#cc0000'], bgClass:'has-bg'},
-    {label:'Terminal',   sub:'Phosphore vert',      params:'preset=phosphor&frame=none&shader=tv&bump=none&bg=phosphor', colors:['#efffef','#00ff44','#007722'], bgClass:'has-bg-phosphor'},
-    {label:'Ambre',      sub:'Tube vintage',        params:'preset=amber&frame=none&shader=tv&bump=none&bg=amber',       colors:['#fff8e0','#ffaa00','#994400'], bgClass:'has-bg-amber'},
-    {label:'Plein écran', sub:'Sans cadre',         params:'preset=default&frame=none&shader=none&bump=none',            colors:['#d6fff5','#00ffcc','#00b3ff']},
+  // Presets couleur
+  const PRESETS=[
+    {key:'default', label:'Cyan',     colors:['#d6fff5','#00ffcc','#00b3ff']},
+    {key:'nitro',   label:'Nitro',    colors:['#e8f0ff','#7744ff','#3300cc']},
+    {key:'red_hot', label:'Red Hot',  colors:['#fff5e0','#ff8800','#ff2200']},
+    {key:'pink',    label:'Pink',     colors:['#fff0f8','#ff66cc','#cc0077']},
+    {key:'gold',    label:'Gold',     colors:['#fffbe8','#ffd700','#b8860b']},
+    {key:'void_',   label:'Void',     colors:['#f0e8ff','#aa00ff','#440066']},
+    {key:'ice',     label:'Glace',    colors:['#ffffff','#aaddff','#3399ff']},
+    {key:'red',     label:'Red',      colors:['#fff0f0','#ff3333','#cc0000']},
+    {key:'green',   label:'Green',    colors:['#f0fff4','#00ff88','#00cc44']},
+    {key:'yellow',  label:'Yellow',   colors:['#fffef0','#ffe600','#cc9900']},
+    {key:'phosphor',label:'Phosphore',colors:['#efffef','#00ff44','#007722']},
+    {key:'amber',   label:'Ambre',    colors:['#fff8e0','#ffaa00','#994400']},
   ];
 
+  // État des filtres
+  const state={ frame:'oval', shader:'crt', bump:'soft', bg:'transparent' };
+
+  // Classe bg pour preview-wrap
+  function bgClass(bg){
+    if(bg==='black')    return 'has-bg';
+    if(bg==='phosphor') return 'has-bg-phosphor';
+    if(bg==='amber')    return 'has-bg-amber';
+    return '';
+  }
+
+  function buildParams(presetKey){
+    return `preset=${presetKey}&frame=${state.frame}&shader=${state.shader}&bump=${state.bump}&bg=${state.bg}`;
+  }
   function extraParams(mode){
     if(mode==='radio-chat') return '&twitch_chat=1&channel=mutenrock';
     if(mode==='twitch')     return '&channel=mutenrock';
     return '';
   }
   function buildUrl(mode,p){ return BASE+FILES[mode]+'?'+p+extraParams(mode); }
-  function buildSrc(mode,p){ return FILES[mode]+'?'+p+extraParams(mode); }
+  function buildSrc(mode,p){ return     FILES[mode]+'?'+p+extraParams(mode); }
 
-  const root=document.getElementById('root');
-  const sec=document.createElement('div'); sec.className='section';
-  sec.innerHTML=`<p class="section-title">▸ Toutes les variantes — 4 modes par skin</p>
-<p class="section-desc">Preview = mode Normal. Chaque bouton copie l’URL OBS pour le mode correspondant.</p>`;
-  const grid=document.createElement('div'); grid.className='grid';
+  // Rendu de la grille
+  function renderGrid(){
+    const grid=document.getElementById('grid');
+    grid.innerHTML='';
+    const title=document.getElementById('grid-title');
+    title.textContent=`▸ ${PRESETS.length} presets couleur — cadre: ${state.frame} · shader: ${state.shader} · bump: ${state.bump} · fond: ${state.bg}`;
 
-  VARIANTS.forEach(v=>{
-    const card=document.createElement('div'); card.className='card';
-    const bgCls=v.bgClass?' '+v.bgClass:'';
-    const swatchHtml=(v.colors||[]).map(c=>`<span class="swatch" style="background:${c}"></span>`).join('');
-    const previewSrc=buildSrc('normal',v.params);
-    const btnHtml=['normal','radio','radio-chat','twitch'].map(mode=>{
-      const m=MODE_META[mode];
-      const url=buildUrl(mode,v.params);
-      return `<button class="mode-btn" data-mode="${mode}" data-url="${url}" title="${url}"><span class="mode-label">${m.icon} ${m.label}</span>${m.sub}</button>`;
-    }).join('');
-    card.innerHTML=`
-      <div class="preview-wrap${bgCls}">
-        <iframe src="${previewSrc}" scrolling="no"></iframe>
-      </div>
-      <div class="card-label">${v.label}</div>
-      ${swatchHtml?`<div class="swatches">${swatchHtml}</div>`:''}
-      <div class="card-sub">${v.sub}</div>
-      <div class="mode-btns">${btnHtml}</div>
-    `;
-    grid.appendChild(card);
+    PRESETS.forEach(v=>{
+      const params=buildParams(v.key);
+      const card=document.createElement('div'); card.className='card';
+      const bgCls=bgClass(state.bg);
+      const swatchHtml=v.colors.map(c=>`<span class="swatch" style="background:${c}"></span>`).join('');
+      const previewSrc=buildSrc('normal',params);
+      const btnHtml=['normal','radio','radio-chat','twitch'].map(mode=>{
+        const m=MODE_META[mode];
+        const url=buildUrl(mode,params);
+        return `<button class="mode-btn" data-mode="${mode}" data-url="${url}" title="${url}"><span class="mode-icon">${m.icon} ${m.label}</span>${m.sub}</button>`;
+      }).join('');
+      card.innerHTML=`
+        <div class="preview-wrap ${bgCls}">
+          <iframe src="${previewSrc}" scrolling="no" loading="lazy"></iframe>
+        </div>
+        <div class="card-label">${v.label}</div>
+        <div class="swatches">${swatchHtml}</div>
+        <div class="mode-btns">${btnHtml}</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // Gestion des pills
+  document.getElementById('filters').addEventListener('click',e=>{
+    const pill=e.target.closest('.pill');
+    if(!pill) return;
+    const group=pill.closest('[data-filter]');
+    if(!group) return;
+    const key=group.dataset.filter;
+    group.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    pill.classList.add('active');
+    state[key]=pill.dataset.val;
+    renderGrid();
   });
-  sec.appendChild(grid);
-  root.appendChild(sec);
 
+  // Copie
   document.addEventListener('click',e=>{
     const btn=e.target.closest('.mode-btn');
     if(!btn) return;
@@ -182,6 +234,8 @@
       setTimeout(()=>{ btn.innerHTML=orig; btn.classList.remove('ok'); },1600);
     });
   });
+
+  renderGrid();
   </script>
 </body>
 </html>
