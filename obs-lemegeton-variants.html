@@ -13,23 +13,68 @@
     .section-desc{font-size:.58rem;color:#334;margin-bottom:16px;letter-spacing:.06em;line-height:1.6;}
     .grid{display:flex;flex-wrap:wrap;gap:20px;}
 
-    /* Carte */
-    .card{display:flex;flex-direction:column;align-items:center;gap:6px;width:172px;}
-    .preview-wrap{width:172px;height:102px;overflow:hidden;position:relative;border-radius:5px;cursor:default;border:1px solid #1a1a2a;background:repeating-conic-gradient(#111 0% 25%,#1a1a2a 0% 50%) 0 0/10px 10px;}
+    /* ── Carte ── */
+    .card{display:flex;flex-direction:column;align-items:center;gap:6px;width:160px;}
+
+    /*
+      Preview : l'iframe fait 320x190.
+      On veut un rendu a 160x95 (scale = 0.5).
+      transform:scale ne reduit pas l'espace DOM, donc on utilise :
+        - un outer .preview-wrap de 160x95 avec overflow:hidden
+        - l'iframe a transform:scale(0.5) + transform-origin:top left
+        - margin-right et margin-bottom negatifs pour compenser l'espace DOM restant
+    */
+    .preview-wrap{
+      width:160px;
+      height:95px;
+      overflow:hidden;
+      position:relative;
+      border-radius:5px;
+      border:1px solid #1a1a2a;
+      flex-shrink:0;
+      background:repeating-conic-gradient(#111 0% 25%,#1a1a2a 0% 50%) 0 0/10px 10px;
+    }
     .preview-wrap.has-bg{background:#000!important;}
     .preview-wrap.has-bg-phosphor{background:#001200!important;}
     .preview-wrap.has-bg-amber{background:#0d0800!important;}
-    .preview-wrap iframe{display:block;border:none;width:320px;height:190px;transform:scale(0.5375);transform-origin:top left;pointer-events:none;}
+    .preview-wrap iframe{
+      display:block;
+      border:none;
+      width:320px;
+      height:190px;
+      transform:scale(0.5);
+      transform-origin:top left;
+      pointer-events:none;
+      /* compense l'espace DOM : 320*0.5=160 -> ok, 190*0.5=95 -> ok
+         mais l'element occupe toujours 320x190 en layout,
+         donc on tire vers le haut/gauche avec des margins negatifs */
+      margin-right:-160px;
+      margin-bottom:-95px;
+    }
+
     .card-label{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:#ddd;text-align:center;}
     .card-sub{font-size:.56rem;color:#445;text-align:center;letter-spacing:.05em;line-height:1.4;}
     .swatches{display:flex;gap:4px;}
     .swatch{width:11px;height:11px;border-radius:50%;border:1px solid #222;}
 
-    /* Boutons 4 modes */
+    /* ── Boutons 4 modes ── */
     .mode-btns{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%;}
-    .mode-btn{background:#0a0a18;border:1px solid #1a1a2a;color:#555;font-family:inherit;font-size:.53rem;letter-spacing:.07em;padding:4px 3px;cursor:pointer;border-radius:3px;text-align:center;transition:all .15s;line-height:1.3;}
+    .mode-btn{
+      background:#0a0a18;
+      border:1px solid #1a1a2a;
+      color:#555;
+      font-family:inherit;
+      font-size:.53rem;
+      letter-spacing:.07em;
+      padding:4px 3px;
+      cursor:pointer;
+      border-radius:3px;
+      text-align:center;
+      transition:all .15s;
+      line-height:1.3;
+    }
     .mode-btn:hover{color:#00ffcc;border-color:#333;}
-    .mode-btn.ok{border-color:#00ffcc;color:#00ffcc;}
+    .mode-btn.ok{border-color:#00ffcc!important;color:#00ffcc!important;}
     .mode-btn[data-mode="normal"]:hover{border-color:#00b3ff;color:#00b3ff;}
     .mode-btn[data-mode="radio"]:hover{border-color:#ff8800;color:#ff8800;}
     .mode-btn[data-mode="radio-chat"]:hover{border-color:#ffcc00;color:#ffcc00;}
@@ -57,83 +102,62 @@
   <script>
   const BASE=(()=>{ const p=window.location.pathname.replace('obs-lemegeton-variants.html',''); return window.location.origin+p; })();
 
-  // Fichiers par mode
   const FILES={
-    normal:     'obs-lemegeton.html',
-    radio:      'obs-lemegeton-radio.html',
-    'radio-chat':'obs-lemegeton-radio.html',  // radio + param twitch_chat=1 (le fichier radio supporte le chat en bonus)
-    twitch:     'obs-lemegeton-twitch.html',
+    normal:      'obs-lemegeton.html',
+    radio:       'obs-lemegeton-radio.html',
+    'radio-chat':'obs-lemegeton-radio.html',
+    twitch:      'obs-lemegeton-twitch.html',
   };
-
-  // Labels & couleurs des boutons
   const MODE_META={
-    normal:     {label:'Normal',      sub:'Autonome',      icon:'◎'},
-    radio:      {label:'Radio',       sub:'Audio réactif', icon:'♫'},
-    'radio-chat':{label:'Radio+Chat', sub:'Audio + Twitch',icon:'♫✦'},
-    twitch:     {label:'Chat Twitch', sub:'Events Twitch', icon:'✦'},
+    normal:      {label:'Normal',      sub:'Autonome',      icon:'◎'},
+    radio:       {label:'Radio',       sub:'Audio réactif', icon:'♫'},
+    'radio-chat':{label:'Radio+Chat',  sub:'Audio+Twitch',  icon:'♫✦'},
+    twitch:      {label:'Chat Twitch', sub:'Events Twitch', icon:'✦'},
   };
 
-  // Variantes visuelles — params communs (sans le fichier)
   const VARIANTS=[
-    // ── Fond transparent ──
-    {label:'Cyan',      sub:'Oval CRT',          params:'preset=default&frame=oval&shader=crt&bump=soft',              colors:['#d6fff5','#00ffcc','#00b3ff']},
-    {label:'Nitro',     sub:'Violet bombé',      params:'preset=nitro&frame=oval&shader=crt&bump=soft',               colors:['#e8f0ff','#7744ff','#3300cc']},
-    {label:'Red Hot',   sub:'Lave oval',          params:'preset=red_hot&frame=oval&shader=crt&bump=hard',             colors:['#fff5e0','#ff8800','#ff2200']},
-    {label:'Pink',      sub:'Rond magie',         params:'preset=pink&frame=round&shader=crt&bump=soft',              colors:['#fff0f8','#ff66cc','#cc0077']},
-    {label:'Gold',      sub:'Légendaire',         params:'preset=gold&frame=oval&shader=crt&bump=soft',               colors:['#fffbe8','#ffd700','#b8860b']},
-    {label:'Void',      sub:'Sombre bombé',       params:'preset=void_&frame=oval&shader=crt&bump=mid',               colors:['#f0e8ff','#aa00ff','#440066']},
-    {label:'Glace',     sub:'Rond + givre',       params:'preset=ice&frame=round&shader=crt+ice&bump=mid',            colors:['#ffffff','#aaddff','#3399ff']},
-    {label:'Mono-œil',  sub:'Cyclope oval',       params:'preset=default&frame=mono&shader=crt&bump=soft',            colors:['#d6fff5','#00ffcc','#00b3ff']},
-    // ── Fond noir ──
-    {label:'Noir Cyan', sub:'Fond noir CRT',      params:'preset=default&frame=oval&shader=crt&bump=soft&bg=black',   colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
-    {label:'Noir Nitro',sub:'Fond noir violet',   params:'preset=nitro&frame=oval&shader=crt&bump=soft&bg=black',     colors:['#e8f0ff','#7744ff','#3300cc'], bgClass:'has-bg'},
-    {label:'Noir Void', sub:'Fond noir profond',  params:'preset=void_&frame=oval&shader=crt&bump=mid&bg=black',      colors:['#f0e8ff','#aa00ff','#440066'], bgClass:'has-bg'},
-    // ── CRT TV ──
-    {label:'CRT TV',    sub:'Tube cathodique',    params:'preset=default&frame=oval&shader=tv&bump=hard&bg=black',    colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
-    {label:'CRT TV Red',sub:'Tube TV danger',     params:'preset=red&frame=oval&shader=tv&bump=hard&bg=black',        colors:['#fff0f0','#ff3333','#cc0000'], bgClass:'has-bg'},
-    // ── Terminal ──
-    {label:'Terminal',  sub:'Phosphore vert',     params:'preset=phosphor&frame=none&shader=tv&bump=none&bg=phosphor',colors:['#efffef','#00ff44','#007722'], bgClass:'has-bg-phosphor'},
-    {label:'Ambre',     sub:'Tube vintage',       params:'preset=amber&frame=none&shader=tv&bump=none&bg=amber',      colors:['#fff8e0','#ffaa00','#994400'], bgClass:'has-bg-amber'},
-    {label:'Plein écran',sub:'Sans cadre',        params:'preset=default&frame=none&shader=none&bump=none',           colors:['#d6fff5','#00ffcc','#00b3ff']},
+    {label:'Cyan',       sub:'Oval CRT',          params:'preset=default&frame=oval&shader=crt&bump=soft',               colors:['#d6fff5','#00ffcc','#00b3ff']},
+    {label:'Nitro',      sub:'Violet bombé',       params:'preset=nitro&frame=oval&shader=crt&bump=soft',                colors:['#e8f0ff','#7744ff','#3300cc']},
+    {label:'Red Hot',    sub:'Lave oval',           params:'preset=red_hot&frame=oval&shader=crt&bump=hard',              colors:['#fff5e0','#ff8800','#ff2200']},
+    {label:'Pink',       sub:'Rond magie',          params:'preset=pink&frame=round&shader=crt&bump=soft',               colors:['#fff0f8','#ff66cc','#cc0077']},
+    {label:'Gold',       sub:'Légendaire',          params:'preset=gold&frame=oval&shader=crt&bump=soft',                colors:['#fffbe8','#ffd700','#b8860b']},
+    {label:'Void',       sub:'Sombre bombé',        params:'preset=void_&frame=oval&shader=crt&bump=mid',                colors:['#f0e8ff','#aa00ff','#440066']},
+    {label:'Glace',      sub:'Rond + givre',        params:'preset=ice&frame=round&shader=crt+ice&bump=mid',             colors:['#ffffff','#aaddff','#3399ff']},
+    {label:'Mono-œil',   sub:'Cyclope oval',        params:'preset=default&frame=mono&shader=crt&bump=soft',             colors:['#d6fff5','#00ffcc','#00b3ff']},
+    {label:'Noir Cyan',  sub:'Fond noir CRT',       params:'preset=default&frame=oval&shader=crt&bump=soft&bg=black',    colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+    {label:'Noir Nitro', sub:'Fond noir violet',    params:'preset=nitro&frame=oval&shader=crt&bump=soft&bg=black',      colors:['#e8f0ff','#7744ff','#3300cc'], bgClass:'has-bg'},
+    {label:'Noir Void',  sub:'Fond noir profond',   params:'preset=void_&frame=oval&shader=crt&bump=mid&bg=black',       colors:['#f0e8ff','#aa00ff','#440066'], bgClass:'has-bg'},
+    {label:'CRT TV',     sub:'Tube cathodique',     params:'preset=default&frame=oval&shader=tv&bump=hard&bg=black',     colors:['#d6fff5','#00ffcc','#00b3ff'], bgClass:'has-bg'},
+    {label:'CRT TV Red', sub:'Tube TV danger',      params:'preset=red&frame=oval&shader=tv&bump=hard&bg=black',         colors:['#fff0f0','#ff3333','#cc0000'], bgClass:'has-bg'},
+    {label:'Terminal',   sub:'Phosphore vert',      params:'preset=phosphor&frame=none&shader=tv&bump=none&bg=phosphor', colors:['#efffef','#00ff44','#007722'], bgClass:'has-bg-phosphor'},
+    {label:'Ambre',      sub:'Tube vintage',        params:'preset=amber&frame=none&shader=tv&bump=none&bg=amber',       colors:['#fff8e0','#ffaa00','#994400'], bgClass:'has-bg-amber'},
+    {label:'Plein écran', sub:'Sans cadre',         params:'preset=default&frame=none&shader=none&bump=none',            colors:['#d6fff5','#00ffcc','#00b3ff']},
   ];
 
-  // Params supplémentaires par mode (fusionnés avec les params de la variante)
-  function buildUrl(mode, baseParams){
-    let extra='';
-    if(mode==='radio-chat') extra='&twitch_chat=1&channel=mutenrock';
-    if(mode==='twitch')     extra='&channel=mutenrock';
-    return BASE + FILES[mode] + '?' + baseParams + extra;
+  function extraParams(mode){
+    if(mode==='radio-chat') return '&twitch_chat=1&channel=mutenrock';
+    if(mode==='twitch')     return '&channel=mutenrock';
+    return '';
   }
-  function buildSrc(mode, baseParams){
-    let extra='';
-    if(mode==='radio-chat') extra='&twitch_chat=1&channel=mutenrock';
-    if(mode==='twitch')     extra='&channel=mutenrock';
-    return FILES[mode] + '?' + baseParams + extra;
-  }
+  function buildUrl(mode,p){ return BASE+FILES[mode]+'?'+p+extraParams(mode); }
+  function buildSrc(mode,p){ return FILES[mode]+'?'+p+extraParams(mode); }
 
   const root=document.getElementById('root');
   const sec=document.createElement('div'); sec.className='section';
-  sec.innerHTML=`<p class="section-title">▸ Toutes les variantes — 4 modes disponibles par skin</p>
-    <p class="section-desc">Preview = mode Normal. Chaque bouton copie l'URL OBS pour le mode correspondant.</p>`;
+  sec.innerHTML=`<p class="section-title">▸ Toutes les variantes — 4 modes par skin</p>
+<p class="section-desc">Preview = mode Normal. Chaque bouton copie l’URL OBS pour le mode correspondant.</p>`;
   const grid=document.createElement('div'); grid.className='grid';
 
   VARIANTS.forEach(v=>{
     const card=document.createElement('div'); card.className='card';
     const bgCls=v.bgClass?' '+v.bgClass:'';
     const swatchHtml=(v.colors||[]).map(c=>`<span class="swatch" style="background:${c}"></span>`).join('');
-
-    // Preview = mode normal
     const previewSrc=buildSrc('normal',v.params);
-
-    // Boutons 4 modes
     const btnHtml=['normal','radio','radio-chat','twitch'].map(mode=>{
       const m=MODE_META[mode];
       const url=buildUrl(mode,v.params);
-      return `<button class="mode-btn" data-mode="${mode}" data-url="${url}" title="${url}">
-        <span class="mode-label">${m.icon} ${m.label}</span>${m.sub}
-      </button>`;
+      return `<button class="mode-btn" data-mode="${mode}" data-url="${url}" title="${url}"><span class="mode-label">${m.icon} ${m.label}</span>${m.sub}</button>`;
     }).join('');
-
     card.innerHTML=`
       <div class="preview-wrap${bgCls}">
         <iframe src="${previewSrc}" scrolling="no"></iframe>
@@ -145,16 +169,13 @@
     `;
     grid.appendChild(card);
   });
-
   sec.appendChild(grid);
   root.appendChild(sec);
 
-  // Copie au clic
   document.addEventListener('click',e=>{
     const btn=e.target.closest('.mode-btn');
     if(!btn) return;
-    const url=btn.dataset.url;
-    navigator.clipboard.writeText(url).then(()=>{
+    navigator.clipboard.writeText(btn.dataset.url).then(()=>{
       const orig=btn.innerHTML;
       btn.textContent='✓ Copié !';
       btn.classList.add('ok');
