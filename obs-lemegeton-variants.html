@@ -10,263 +10,173 @@
       font-family: 'Courier New', monospace;
       color: #00ffcc;
       min-height: 100vh;
-      padding: 32px;
+      padding: 28px;
     }
-    h1 {
-      font-size: 1rem;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      color: #00b3ff;
-      text-shadow: 0 0 14px #00b3ff;
-      margin-bottom: 6px;
-    }
-    .subtitle { font-size: .7rem; color: #444; margin-bottom: 36px; letter-spacing: .1em; }
+    h1 { font-size:.95rem; letter-spacing:.2em; text-transform:uppercase; color:#00b3ff; text-shadow:0 0 14px #00b3ff; margin-bottom:4px; }
+    .subtitle { font-size:.68rem; color:#444; margin-bottom:28px; letter-spacing:.1em; }
 
-    .grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 32px;
+    /* ── Sections ── */
+    .section { margin-bottom: 36px; }
+    .section-title {
+      font-size:.6rem; letter-spacing:.22em; text-transform:uppercase;
+      color:#333; border-bottom:1px solid #111; padding-bottom:6px; margin-bottom:18px;
     }
+    .grid { display:flex; flex-wrap:wrap; gap:24px; }
 
-    .card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      width: 160px;
-    }
-
-    /* preview = iframe 320x190 scalée à 50% */
+    /* ── Cartes ── */
+    .card { display:flex; flex-direction:column; align-items:center; gap:8px; width:160px; }
     .preview-wrap {
-      width: 160px;
-      height: 95px;
-      overflow: hidden;
-      position: relative;
-      border-radius: 4px;
-      cursor: pointer;
-      border: 1px solid #1a1a2a;
-      transition: border-color .2s;
+      width:160px; height:95px;
+      overflow:hidden; position:relative;
+      border-radius:4px; cursor:pointer;
+      border:1px solid #1a1a2a;
+      transition:border-color .2s;
+      background: repeating-conic-gradient(#111 0% 25%, #1a1a2a 0% 50%) 0 0 / 10px 10px;
     }
-    .preview-wrap:hover { border-color: #555; }
+    .preview-wrap:hover { border-color:#555; }
     .preview-wrap iframe {
-      display: block;
-      border: none;
-      width: 320px;
-      height: 190px;
-      transform: scale(0.5);
-      transform-origin: top left;
-      pointer-events: none;
+      display:block; border:none;
+      width:320px; height:190px;
+      transform:scale(0.5); transform-origin:top left;
+      pointer-events:none;
     }
-    /* fond damier pour transparent */
-    .preview-wrap.checker {
-      background:
-        repeating-conic-gradient(#111 0% 25%, #1a1a2a 0% 50%)
-        0 0 / 12px 12px;
-    }
-
-    .swatch {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-    .swatch span {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      border: 1px solid #222;
-      display: inline-block;
-    }
-
-    .card-label {
-      font-size: .72rem;
-      letter-spacing: .15em;
-      text-transform: uppercase;
-      color: #ccc;
-      text-align: center;
-    }
-    .card-sub {
-      font-size: .6rem;
-      color: #444;
-      text-align: center;
-      letter-spacing: .08em;
-    }
+    .swatches { display:flex; gap:4px; }
+    .swatch { width:12px; height:12px; border-radius:50%; border:1px solid #222; }
+    .card-label { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:#ccc; text-align:center; }
+    .card-sub { font-size:.58rem; color:#444; text-align:center; letter-spacing:.06em; line-height:1.4; }
 
     .copy-btn {
-      width: 100%;
-      background: #0d0d1a;
-      border: 1px solid #222;
-      color: #00ffcc;
-      font-family: inherit;
-      font-size: .62rem;
-      letter-spacing: .1em;
-      padding: 6px 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-      border-radius: 3px;
-      transition: border-color .15s;
+      width:100%; background:#0d0d1a; border:1px solid #222; color:#00ffcc;
+      font-family:inherit; font-size:.6rem; letter-spacing:.1em;
+      padding:5px 6px; cursor:pointer; text-transform:uppercase;
+      border-radius:3px; transition:border-color .15s;
     }
-    .copy-btn:hover { border-color: #00b3ff; }
-    .copy-btn.ok { color: #00ffcc; border-color: #00ffcc; }
-
+    .copy-btn:hover { border-color:#00b3ff; }
+    .copy-btn.ok { border-color:#00ffcc; }
     .open-btn {
-      width: 100%;
-      text-align: center;
-      display: block;
-      background: transparent;
-      border: 1px solid #1a1a2a;
-      color: #444;
-      font-family: inherit;
-      font-size: .6rem;
-      letter-spacing: .1em;
-      padding: 5px 8px;
-      cursor: pointer;
-      text-transform: uppercase;
-      border-radius: 3px;
-      text-decoration: none;
-      transition: all .15s;
+      width:100%; text-align:center; display:block;
+      background:transparent; border:1px solid #1a1a2a; color:#444;
+      font-family:inherit; font-size:.58rem; letter-spacing:.1em;
+      padding:4px 6px; cursor:pointer; text-transform:uppercase;
+      border-radius:3px; text-decoration:none; transition:all .15s;
     }
-    .open-btn:hover { color: #00ffcc; border-color: #333; }
+    .open-btn:hover { color:#00ffcc; border-color:#333; }
 
-    .divider {
-      width: 100%;
-      border: none;
-      border-top: 1px solid #1a1a2a;
-      margin: 12px 0 24px;
-    }
-    .section-title {
-      font-size: .65rem;
-      letter-spacing: .2em;
-      color: #333;
-      text-transform: uppercase;
-      margin-bottom: 20px;
-    }
-
-    .hint {
-      font-size: .6rem;
-      color: #2a2a3a;
-      margin-top: 32px;
-      letter-spacing: .08em;
-      line-height: 1.7;
-    }
-    .hint b { color: #444; }
+    .hint { font-size:.58rem; color:#2a2a3a; margin-top:24px; letter-spacing:.08em; line-height:1.8; }
+    .hint b { color:#3a3a4a; }
+    code { background:#0d0d1a; padding:1px 5px; border-radius:3px; color:#555; font-size:.56rem; }
   </style>
 </head>
 <body>
   <h1>⬡ LEMEGETON — OBS Variants</h1>
-  <p class="subtitle">Browser Source 320 × 190 px — cliquer sur une carte pour copier l'URL</p>
+  <p class="subtitle">Browser Source 320 × 190 px — clic = copier URL dans le presse-papier</p>
 
-  <p class="section-title">▸ Couleurs des yeux</p>
-  <div class="grid" id="grid"></div>
+  <div id="root"></div>
 
   <p class="hint">
-    <b>► OBS</b> : Browser Source → coller l'URL → largeur 320 • hauteur 190<br>
-    ✓ Cocher &laquo; Transparent background &raquo; dans les propriétés OBS<br>
-    Paramètres individuels : <b>?preset=red</b> ou <b>?c1=%23ff0000&amp;c2=...&amp;c3=...&amp;glow=...</b>
+    <b>► OBS</b> : Browser Source → coller URL → 320×190 → ✓ Transparent background<br>
+    <b>Params URL :</b>
+    <code>?preset=</code> couleur des yeux ·
+    <code>?frame=</code> cadre (none/oval/square/round/mono) ·
+    <code>?shader=</code> effets (none/crt/ice/crt+ice) ·
+    <code>?bump=</code> bombage (none/soft/mid/hard/3d)
   </p>
 
   <script>
-    const BASE_URL = (() => {
-      const p = window.location.pathname.replace('obs-lemegeton-variants.html', '');
-      return window.location.origin + p;
-    })();
+  const BASE = (() => {
+    const p = window.location.pathname.replace('obs-lemegeton-variants.html','');
+    return window.location.origin + p;
+  })();
 
-    const VARIANTS = [
-      {
-        preset: 'transparent',
-        label: 'Transparent',
-        sub: 'Default — fond pur alpha',
-        checker: true,
-        colors: { c1:'#d6fff5', c2:'#00ffcc', c3:'#00b3ff', border:'#00b3ff' },
-      },
-      {
-        preset: 'red',
-        label: 'Red',
-        sub: 'Danger / colère',
-        colors: { c1:'#fff0f0', c2:'#ff3333', c3:'#cc0000', border:'#ff2200' },
-        bg: '#1a0000',
-      },
-      {
-        preset: 'green',
-        label: 'Green',
-        sub: 'Hacking / soin',
-        colors: { c1:'#f0fff4', c2:'#00ff88', c3:'#00cc44', border:'#00cc44' },
-        bg: '#001a08',
-      },
-      {
-        preset: 'yellow',
-        label: 'Yellow',
-        sub: 'Alerte / énergie',
-        colors: { c1:'#fffef0', c2:'#ffe600', c3:'#cc9900', border:'#ddaa00' },
-        bg: '#141100',
-      },
-      {
-        preset: 'nitro',
-        label: 'Nitro',
-        sub: 'Style Nitro Clicker',
-        colors: { c1:'#e8f0ff', c2:'#7744ff', c3:'#3300cc', border:'#5522ee' },
-        bg: '#0a0010',
-      },
-      {
-        preset: 'red_hot',
-        label: 'Red Hot',
-        sub: 'Lave / boss',
-        colors: { c1:'#fff5e0', c2:'#ff8800', c3:'#ff2200', border:'#ff4400' },
-        bg: '#120500',
-      },
-      {
-        preset: 'ice',
-        label: 'Ice',
-        sub: 'Cryogénique',
-        colors: { c1:'#ffffff', c2:'#aaddff', c3:'#3399ff', border:'#55aaff' },
-        bg: '#000a14',
-      },
-      {
-        preset: 'pink',
-        label: 'Pink',
-        sub: 'Amour / magie',
-        colors: { c1:'#fff0f8', c2:'#ff66cc', c3:'#cc0077', border:'#ee33aa' },
-        bg: '#140010',
-      },
-    ];
+  // ── Données ─────────────────────────────────────────
+  const COLOR_PRESETS = [
+    { key:'default', label:'Cyan',    sub:'Default',          colors:['#d6fff5','#00ffcc','#00b3ff'] },
+    { key:'red',     label:'Red',     sub:'Danger / colère',   colors:['#fff0f0','#ff3333','#cc0000'] },
+    { key:'green',   label:'Green',   sub:'Hack / soin',       colors:['#f0fff4','#00ff88','#00cc44'] },
+    { key:'yellow',  label:'Yellow',  sub:'Alerte / énergie',  colors:['#fffef0','#ffe600','#cc9900'] },
+    { key:'nitro',   label:'Nitro',   sub:'Violet Nitro',      colors:['#e8f0ff','#7744ff','#3300cc'] },
+    { key:'red_hot', label:'Red Hot', sub:'Lave / boss',       colors:['#fff5e0','#ff8800','#ff2200'] },
+    { key:'ice',     label:'Ice',     sub:'Cryogénique',       colors:['#ffffff','#aaddff','#3399ff'] },
+    { key:'pink',    label:'Pink',    sub:'Magie / amour',     colors:['#fff0f8','#ff66cc','#cc0077'] },
+    { key:'gold',    label:'Gold',    sub:'Légendaire',        colors:['#fffbe8','#ffd700','#b8860b'] },
+    { key:'void_',   label:'Void',    sub:'Sombre',            colors:['#f0e8ff','#aa00ff','#440066'] },
+  ];
 
-    const grid = document.getElementById('grid');
+  const FRAME_PRESETS = [
+    { key:'oval',   label:'Oval CRT',    sub:'Bombé léger, contour lumineux', frame:'oval',   shader:'crt',     bump:'soft' },
+    { key:'none',   label:'Sans cadre',  sub:'Transparent pur, plein écran',  frame:'none',   shader:'none',    bump:'none' },
+    { key:'square', label:'Carré',       sub:'Format carré, coins arrondis',  frame:'square', shader:'crt',     bump:'soft' },
+    { key:'round',  label:'Rond',        sub:'Cercle parfait, CRT',           frame:'round',  shader:'crt',     bump:'soft' },
+    { key:'mono',   label:'Mono-œil',   sub:'Un seul œil central, rond',     frame:'mono',   shader:'crt',     bump:'soft' },
+    { key:'oval_nobump', label:'Oval plat', sub:'Ovale sans bombage',         frame:'oval',   shader:'crt',     bump:'none' },
+    { key:'oval_hard',   label:'Oval bombé', sub:'Bombage fort CRT',          frame:'oval',   shader:'crt',     bump:'hard' },
+    { key:'oval_3d',     label:'Oval 3D', sub:'Relief perspectif',            frame:'oval',   shader:'crt',     bump:'3d'   },
+    { key:'round_ice',   label:'Rond Glace', sub:'Filtre givre + ovale',      frame:'round',  shader:'crt+ice', bump:'mid'  },
+    { key:'square_ice',  label:'Carré Glace', sub:'Filtre givre carré',       frame:'square', shader:'crt+ice', bump:'mid'  },
+    { key:'none_ice',    label:'Plein Glace', sub:'Glace plein écran',        frame:'none',   shader:'ice',     bump:'none' },
+    { key:'none_crt',    label:'Plein CRT',   sub:'Scanlines plein écran',    frame:'none',   shader:'crt',     bump:'none' },
+  ];
 
-    VARIANTS.forEach(v => {
-      const url = `${BASE_URL}obs-lemegeton.html?preset=${v.preset}`;
+  // ── Rendu ────────────────────────────────────────────
+  const root = document.getElementById('root');
 
+  function buildSection(title, items, urlFn) {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    sec.innerHTML = `<p class="section-title">▸ ${title}</p>`;
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    items.forEach(item => {
+      const url = BASE + urlFn(item);
+      const iframeSrc = urlFn(item);
       const card = document.createElement('div');
       card.className = 'card';
 
-      const wrapBg = v.checker ? '' : `background:${v.bg || '#0a0a0f'};`;
-      const wrapClass = v.checker ? 'preview-wrap checker' : 'preview-wrap';
-
-      // swatches des 3 couleurs d'iris
-      const swatchHtml = [v.colors.c1, v.colors.c2, v.colors.c3].map(c =>
-        `<span style="background:${c}"></span>`
+      const swatchHtml = (item.colors || []).map(c =>
+        `<span class="swatch" style="background:${c}"></span>`
       ).join('');
 
       card.innerHTML = `
-        <div class="${wrapClass}" style="${wrapBg}" onclick="copy('${url}', this)" title="${url}">
-          <iframe src="obs-lemegeton.html?preset=${v.preset}" scrolling="no"></iframe>
+        <div class="preview-wrap" onclick="copyUrl('${url}', this)" title="${url}">
+          <iframe src="${iframeSrc}" scrolling="no"></iframe>
         </div>
-        <div class="card-label">${v.label}</div>
-        <div class="swatch">${swatchHtml}</div>
-        <div class="card-sub">${v.sub}</div>
-        <button class="copy-btn" onclick="copy('${url}', this)">⎘ Copier URL OBS</button>
-        <a class="open-btn" href="obs-lemegeton.html?preset=${v.preset}" target="_blank">↗ Ouvrir</a>
+        <div class="card-label">${item.label}</div>
+        ${swatchHtml ? `<div class="swatches">${swatchHtml}</div>` : ''}
+        <div class="card-sub">${item.sub}</div>
+        <button class="copy-btn" onclick="copyUrl('${url}', this)">⎘ Copier URL OBS</button>
+        <a class="open-btn" href="${iframeSrc}" target="_blank">↗ Ouvrir</a>
       `;
-
       grid.appendChild(card);
     });
 
-    function copy(url, el) {
-      navigator.clipboard.writeText(url).then(() => {
-        const btn = el.tagName === 'BUTTON' ? el : el.closest('.card').querySelector('.copy-btn');
-        const orig = btn.textContent;
-        btn.textContent = '✓ Copié !';
-        btn.classList.add('ok');
-        setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1800);
-      });
-    }
+    sec.appendChild(grid);
+    root.appendChild(sec);
+  }
+
+  // Section 1 : couleurs (frame oval crt soft par défaut)
+  buildSection(
+    'Couleurs des yeux — cadre oval CRT par défaut',
+    COLOR_PRESETS,
+    item => `obs-lemegeton.html?preset=${item.key}&frame=oval&shader=crt&bump=soft`
+  );
+
+  // Section 2 : cadres (preset cyan par défaut)
+  buildSection(
+    'Cadres & effets — couleur cyan par défaut',
+    FRAME_PRESETS,
+    item => `obs-lemegeton.html?preset=default&frame=${item.frame}&shader=${item.shader}&bump=${item.bump}`
+  );
+
+  function copyUrl(url, el) {
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = el.tagName === 'BUTTON' ? el : el.closest('.card').querySelector('.copy-btn');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copié !';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1800);
+    });
+  }
   </script>
 </body>
 </html>
