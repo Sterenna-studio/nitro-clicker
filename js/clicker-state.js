@@ -583,11 +583,13 @@ export function spendCurrency(state, currency, amount) {
   else state.energy -= amount;
 }
 
-function addEnergy(state, amount) {
+function addEnergy(state, amount, { countTowardRun = true } = {}) {
   const gain = Math.max(0, Number(amount) || 0);
   if (gain <= 0) return 0;
   state.energy += gain;
-  state.totalEnergy += gain;
+  // countTowardRun=false : réserve de départ offerte au prestige, pas de l'énergie
+  // produite par le joueur — ne doit pas pré-remplir la jauge de la run suivante.
+  if (countTowardRun) state.totalEnergy += gain;
   state.lifetimeEnergy = Math.max(0, Number(state.lifetimeEnergy ?? 0)) + gain;
   return gain;
 }
@@ -1139,6 +1141,6 @@ export function doPrestige(state) {
   next.milestones = keptMilestones;
   next.totalClicks = keptTotalClicks;
   recalcDerivedStats(next);
-  addEnergy(next, starterEnergy);
+  addEnergy(next, starterEnergy, { countTowardRun: false });
   return { ok: true, state: next, keptPersistentUpgrades, prestigeReward, starterEnergy };
 }
