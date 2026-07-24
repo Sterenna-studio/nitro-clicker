@@ -41,34 +41,112 @@
       <filter id="bulge-hard" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="1" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="9"   xChannelSelector="R" yChannelSelector="G"/></filter>
       <filter id="persp-3d"   x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceAlpha" stdDeviation="2" result="shadow"/><feOffset in="shadow" dx="3" dy="3" result="offsetShadow"/><feFlood flood-color="rgba(0,0,0,0.5)" result="shadowColor"/><feComposite in="shadowColor" in2="offsetShadow" operator="in" result="dropShadow"/><feMerge><feMergeNode in="dropShadow"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="ice-filter"  x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.9 0.5" numOctaves="3" seed="12" result="n"/><feColorMatrix type="saturate" values="0" in="n" result="gray"/><feBlend in="SourceGraphic" in2="gray" mode="screen" result="blend"/><feDisplacementMap in="blend" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="B"/></filter>
-      <!-- SVG clip-path shapes — coordonnées relatives au frame (w×h centré dans 320×190) -->
-      <!-- HEX : hexagone régulier 178×178, pointy-top, centré -->
-      <!-- cx=89 cy=89 r=85 : points flat-top -->
+
+      <!-- ═══ FORMES GÉOMÉTRIQUES (lot 1) ═══ -->
+      <!-- HEX : hexagone flat-top 178×178 -->
       <clipPath id="clip-hex" clipPathUnits="userSpaceOnUse">
         <polygon points="89,4 168,46.5 168,131.5 89,174 10,131.5 10,46.5"/>
       </clipPath>
-      <!-- ROBOT : rectangle à coins coupés en haut (trait robot/casque), 182×178 -->
-      <!-- coins supérieurs coupés à 20px, coins inférieurs droits -->
+      <!-- ROBOT : coins sup coupés, casque mécanique 182×178 -->
       <clipPath id="clip-robot" clipPathUnits="userSpaceOnUse">
         <polygon points="20,0 162,0 182,20 182,178 0,178 0,20"/>
       </clipPath>
-      <!-- VISOR : trapèze horizontal, plus large en haut, 300×160 -->
+      <!-- VISOR : trapèze horizontal 300×160 -->
       <clipPath id="clip-visor" clipPathUnits="userSpaceOnUse">
         <polygon points="0,20 300,20 280,140 20,140"/>
       </clipPath>
-      <!-- DIAMOND : losange centré, 280×170 -->
+      <!-- DIAMOND : losange 280×170 -->
       <clipPath id="clip-diamond" clipPathUnits="userSpaceOnUse">
         <polygon points="140,0 280,85 140,170 0,85"/>
       </clipPath>
-      <!-- ARCH : rectangle + demi-cercle en haut (ogive), 182×178 -->
+      <!-- ARCH : ogive demi-cercle haut 182×178 -->
       <clipPath id="clip-arch" clipPathUnits="userSpaceOnUse">
         <path d="M0,91 A91,91 0 0,1 182,91 L182,178 L0,178 Z"/>
       </clipPath>
-      <!-- CROSS : croix octogonale style écran militaire, 182×178 -->
-      <!-- découpe les 4 coins à 36px -->
+      <!-- CROSS : octogone militaire 182×178 -->
       <clipPath id="clip-cross" clipPathUnits="userSpaceOnUse">
         <polygon points="36,0 146,0 182,36 182,142 146,178 36,178 0,142 0,36"/>
       </clipPath>
+
+      <!-- ═══ FORMES VISAGE / ALIEN / ROBOT (lot 2) ═══ -->
+      <!-- canvas 180×185 pour tous les visages -->
+
+      <!-- FACE : visage humanoïde — crâne arrondi large, pommettes pleines, menton pointu -->
+      <!-- Crâne : arc haut très bombé. Joues larges au milieu. Menton effilé au centre. -->
+      <clipPath id="clip-face" clipPathUnits="userSpaceOnUse">
+        <path d="
+          M90,2
+          C140,2 178,30 178,75
+          C178,110 165,135 148,155
+          C135,170 115,183 90,183
+          C65,183 45,170 32,155
+          C15,135 2,110 2,75
+          C2,30 40,2 90,2 Z
+        "/>
+      </clipPath>
+
+      <!-- ALIEN : crâne hyper-élargi en haut, tempes ultra-évasées, menton très fin -->
+      <clipPath id="clip-alien" clipPathUnits="userSpaceOnUse">
+        <path d="
+          M90,0
+          C155,0 180,20 180,58
+          C180,90 170,115 155,138
+          C145,155 120,175 90,182
+          C60,175 35,155 25,138
+          C10,115 0,90 0,58
+          C0,20 25,0 90,0 Z
+        "/>
+      </clipPath>
+
+      <!-- GOBLIN : crâne court et large, oreilles latérales angulaires saillantes, menton carré -->
+      <clipPath id="clip-goblin" clipPathUnits="userSpaceOnUse">
+        <path d="
+          M90,5
+          C130,5 170,18 178,48
+          L180,55
+          C180,55 178,62 168,65
+          C178,80 178,105 165,130
+          C152,155 122,178 90,180
+          C58,178 28,155 15,130
+          C2,105 2,80 12,65
+          C2,62 0,55 0,55
+          L2,48
+          C10,18 50,5 90,5 Z
+        "/>
+      </clipPath>
+
+      <!-- MECH : casque mecha — sommet plat, épaulettes angulaires, menton trapézoïdal -->
+      <clipPath id="clip-mech" clipPathUnits="userSpaceOnUse">
+        <path d="
+          M20,0 L160,0
+          L180,15
+          L180,55
+          C180,55 172,58 168,65
+          C175,80 178,105 170,135
+          C160,160 130,180 90,182
+          C50,180 20,160 10,135
+          C2,105 5,80 12,65
+          C8,58 0,55 0,55
+          L0,15 Z
+        "/>
+      </clipPath>
+
+      <!-- SKULL : crâne bombé large, pommettes larges, mâchoire rétrécie nette -->
+      <clipPath id="clip-skull" clipPathUnits="userSpaceOnUse">
+        <path d="
+          M90,2
+          C148,2 178,32 178,72
+          C178,108 162,130 145,145
+          C138,152 130,158 130,165
+          L130,178
+          L50,178
+          L50,165
+          C50,158 42,152 35,145
+          C18,130 2,108 2,72
+          C2,32 32,2 90,2 Z
+        "/>
+      </clipPath>
+
     </defs>
   </svg>
 </head>
@@ -100,7 +178,6 @@
     phosphor:{c1:'#efffef',c2:'#00ff44',c3:'#007722',glow:'#00ff44',border:'#00cc33'},
     amber:{c1:'#fff8e0',c2:'#ffaa00',c3:'#994400',glow:'#ff8800',border:'#cc6600'},
   };
-  // clip: id du clipPath SVG (sans #). Si défini, appliqué via style.clipPath au lieu de border-radius.
   const FRAME_CONFIGS={
     none:    {w:320,h:190,radius:'0'},
     oval:    {w:308,h:178,radius:'48% / 38%'},
@@ -113,6 +190,11 @@
     diamond: {w:280,h:170,radius:'0',clip:'clip-diamond'},
     arch:    {w:182,h:178,radius:'0',clip:'clip-arch'},
     cross:   {w:182,h:178,radius:'0',clip:'clip-cross'},
+    face:    {w:180,h:185,radius:'0',clip:'clip-face'},
+    alien:   {w:180,h:185,radius:'0',clip:'clip-alien'},
+    goblin:  {w:180,h:185,radius:'0',clip:'clip-goblin'},
+    mech:    {w:180,h:185,radius:'0',clip:'clip-mech'},
+    skull:   {w:180,h:185,radius:'0',clip:'clip-skull'},
   };
   const BUMP_FILTERS={none:null,soft:'bulge-soft',mid:'bulge-mid',hard:'bulge-hard','3d':'persp-3d'};
   const P=new URLSearchParams(location.search);
@@ -133,7 +215,6 @@
   const crtInner=document.getElementById('crt-inner');
   const eyeEl=document.getElementById('eye');
   frameEl.style.width=frameConf.w+'px'; frameEl.style.height=frameConf.h+'px';
-  // Appliquer clip-path SVG ou border-radius selon le frame
   if(frameConf.clip){
     frameEl.style.clipPath=`url(#${frameConf.clip})`;
     frameEl.style.borderRadius='0';
