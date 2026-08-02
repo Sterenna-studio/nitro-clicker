@@ -304,11 +304,6 @@
   height: 0;
   pointer-events: none;
   z-index: 2;
-  animation: subFieldSpin 50s linear infinite;
-}
-
-@keyframes subFieldSpin {
-  to { transform: rotate(360deg); }
 }
 
 .sub-core {
@@ -380,7 +375,7 @@
     0 0 26px rgba(0,255,204,.55),
     0 0 52px rgba(0,255,204,.22),
     inset 0 0 20px rgba(255,255,255,.14);
-  animation: subCoreCounterSpin 50s linear infinite, subCorePulse 3.8s ease-in-out infinite;
+  animation: subCorePulse 3.8s ease-in-out infinite;
   overflow: hidden;
   z-index: 3;
 }
@@ -412,17 +407,15 @@
   border: 1px solid rgba(0,255,204,.22);
   pointer-events: none;
   z-index: 4;
-  animation: ringSpin 9s linear infinite;
 }
 .sub-core-rings::before,
 .sub-core-rings::after {
   content: '';
   position: absolute;
   border-radius: 50%;
-  animation: ringSpin 13s linear infinite;
 }
 .sub-core-rings::before { inset: -16%; border: 1px solid rgba(255,204,0,.18); }
-.sub-core-rings::after  { inset: 22%;  border: 1px solid rgba(255,61,242,.2); animation-duration: 5s; }
+.sub-core-rings::after  { inset: 22%;  border: 1px solid rgba(255,61,242,.2); }
 
 /* Pulse de réflexion d'éclair sur un clone : flash bref, comme le noyau central. */
 .sub-core.is-dup.clone-pulse { filter: brightness(1.32) saturate(1.1); }
@@ -430,9 +423,7 @@
 
 /* Le plus jeune noyau orbital « se développe » : respiration plus marquée. */
 .sub-core.is-growing .sub-core-inner {
-  animation:
-    subCoreCounterSpin 50s linear infinite,
-    subCoreDevelop 2.4s ease-in-out infinite;
+  animation: subCoreDevelop 2.4s ease-in-out infinite;
 }
 
 /* Apparition d'un clone : division cellulaire (bourgeonnement depuis le centre). */
@@ -478,10 +469,6 @@
 
 @keyframes subCoreLinkFlow {
   to { filter: hue-rotate(34deg) brightness(1.12); }
-}
-
-@keyframes subCoreCounterSpin {
-  to { transform: translate(-50%, -50%) rotate(-360deg); }
 }
 
 /* Noyau orbital en croissance : pulse de « développement » sous le microscope. */
@@ -680,7 +667,7 @@
 }
 
 .sub-core.fusion-resonating .sub-core-inner {
-  animation: fusionResonance 0.26s ease-in-out infinite, subCoreCounterSpin 50s linear infinite !important;
+  animation: fusionResonance 0.26s ease-in-out infinite !important;
   border-color: rgba(255,183,0,.90) !important;
   box-shadow:
     0 0 30px rgba(255,183,0,.60),
