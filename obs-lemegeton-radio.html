@@ -70,7 +70,7 @@
   const showBar=P.get('bar')!=='0';
   const showTitle=P.get('title')!=='0';
   const bgMode=P.get('bg')||'transparent';
-  const RADIO_STATE_URL=P.get('radio')||'https://korigan.sterenna.fr/api/radio/state';
+  const RADIO_STATE_URL=P.get('radio')||'https://korigan.sterenna.fr/api/korigan/radio/state';
   const STREAM_URL=P.get('stream')||'https://korigan.sterenna.fr/radio/chronicles.mp3';
   const colorBase=COLOR_PRESETS[colorKey]||COLOR_PRESETS.default;
   const c1=P.get('c1')||colorBase.c1,c2=P.get('c2')||colorBase.c2,c3=P.get('c3')||colorBase.c3;
@@ -165,9 +165,12 @@
   async function pollRadioState(){
     try{
       const r=await fetch(RADIO_STATE_URL,{signal:AbortSignal.timeout(5000)});
-      if(!r.ok) return;
+      // Un échec (Korigan injoignable, réponse vide) ne doit pas arrêter le sondage : on réessaie dans 15 s.
+      if(!r.ok) throw new Error('radio HTTP '+r.status);
       const data=await r.json();
-      const pb=data?.playback; if(!pb) return;
+      // Réponse de Korigan : { ok, state: { playback: { currentTrack: { artist, title } } } }.
+      // Ancien format accepté : { playback: { artist, title } }.
+      const pb=data?.state?.playback?.currentTrack||data?.playback; if(!pb) throw new Error('pas de morceau');
       const tid=`${pb.artist}|${pb.title}`;
       if(showTitle){ const label=pb.artist&&pb.title?`\u266a ${pb.artist} \u2014 ${pb.title}`:pb.title||pb.artist||''; document.getElementById('now-playing').textContent=label; }
       if(tid!==lastTrackId&&lastTrackId!==null){ lastTrackId=tid; if(window.eyes?.emotion) window.eyes.emotion('surprise'); if(window.eyes?.target) window.eyes.target(Math.round((Math.random()-.5)*60),-100-Math.round(Math.random()*60),800); setTimeout(()=>{ if(window.eyes?.emotion) window.eyes.emotion('joy'); },2500); } else { lastTrackId=tid; }
